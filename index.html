@@ -4715,24 +4715,26 @@
 
       // 🔥 2. BUSCA E REMOVE NA COLEÇÃO DE FORNECEDORES (BUSCA MULTI-TIPO)
       try {
-        // Query Minúsculo
-        const snapshot = await db.collection("fornecedores")
-          .where("email", "==", emailCaminho)
-          .get();
-
-        // Query Original (Caso tenha sido salvo com maiúsculas antes da normalização)
-        const snapshotOriginal = await db.collection("fornecedores")
-          .where("email", "==", email.trim())
-          .get();
+        // Query 1: E-mail minúsculo no campo 'email'
+        const snapshot1 = await db.collection("fornecedores").where("email", "==", emailCaminho).get();
+        // Query 2: E-mail original no campo 'email'
+        const snapshot2 = await db.collection("fornecedores").where("email", "==", email.trim()).get();
+        // Query 3: E-mail minúsculo no campo 'emails' (plural)
+        const snapshot3 = await db.collection("fornecedores").where("emails", "==", emailCaminho).get();
+        // Query 4: E-mail original no campo 'emails'
+        const snapshot4 = await db.collection("fornecedores").where("emails", "==", email.trim()).get();
 
         const batch = db.batch();
-        snapshot.docs.forEach(doc => batch.delete(doc.ref));
-        snapshotOriginal.docs.forEach(doc => {
-          if (doc.id !== emailCaminho) batch.delete(doc.ref); // evita duplicar delete se ID for email
+        [snapshot1, snapshot2, snapshot3, snapshot4].forEach(snap => {
+          snap.docs.forEach(doc => batch.delete(doc.ref));
         });
 
+        // Tenta também pelo ID direto (caso o ID do doc seja o email)
+        batch.delete(db.collection("fornecedores").doc(emailCaminho));
+        batch.delete(db.collection("fornecedores").doc(email.trim()));
+
         await batch.commit();
-        console.log(`✅ Registro(s) de fornecedor vinculado removido(s) do Firestore.`);
+        console.log(`✅ Fornecedores vinculados removidos via busca multivariada.`);
 
       } catch (fErr) {
         console.warn("Aviso ao buscar/remover fornecedor vinculado:", fErr);
@@ -5389,17 +5391,22 @@
       const snapshot = await db.collection("fornecedores").get();
       let listaCrua = snapshot.docs.map(doc => doc.data());
 
-      // 🔥 DEDUPLICAÇÃO AGRESSIVA (NOME + EMAIL)
+      // 🔥 DEDUPLICAÇÃO AGRESSIVA (NOME + EMAIL) - Case Insensitive
       const mapaDeduplicado = new Map();
       listaCrua.forEach(f => {
         const emailKey = (f.email || f.emails || "").toLowerCase().trim();
         const nomeKey = (f.nome || "").toLowerCase().trim();
 
-        // Se já temos esse email OU esse nome (exato), ignoramos duplicatas
         if (emailKey && !mapaDeduplicado.has(emailKey)) {
           mapaDeduplicado.set(emailKey, f);
-        } else if (!emailKey && nomeKey && !mapaDeduplicado.has(nomeKey)) {
-          mapaDeduplicado.set(nomeKey, f);
+        } else if (nomeKey && !mapaDeduplicado.has(nomeKey)) {
+          // Se já tem um pelo e-mail, não adiciona pelo nome se o nome for igual
+          const jaExistePorNome = Array.from(mapaDeduplicado.values()).some(existing =>
+            (existing.nome || "").toLowerCase().trim() === nomeKey
+          );
+          if (!jaExistePorNome) {
+            mapaDeduplicado.set(nomeKey, f);
+          }
         }
       });
       const listaForn = Array.from(mapaDeduplicado.values());
@@ -8020,12 +8027,19 @@
         const snapshot = await db.collection("fornecedores").get();
         const listaCrua = snapshot.docs.map(doc => doc.data());
 
-        // 🔥 DEDUPLICAÇÃO POR EMAIL
+        // 🔥 DEDUPLICAÇÃO AGRESSIVA (Sincronizada com Modal)
         const mapaDeduplicado = new Map();
         listaCrua.forEach(f => {
           const emailKey = (f.email || f.emails || "").toLowerCase().trim();
+          const nomeKey = (f.nome || "").toLowerCase().trim();
+
           if (emailKey && !mapaDeduplicado.has(emailKey)) {
             mapaDeduplicado.set(emailKey, f);
+          } else if (nomeKey && !mapaDeduplicado.has(nomeKey)) {
+            const jaExistePorNome = Array.from(mapaDeduplicado.values()).some(existing =>
+              (existing.nome || "").toLowerCase().trim() === nomeKey
+            );
+            if (!jaExistePorNome) mapaDeduplicado.set(nomeKey, f);
           }
         });
         fornecedores = Array.from(mapaDeduplicado.values());
