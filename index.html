@@ -5389,7 +5389,11 @@
   async function carregarFornecedoresModal() {
     try {
       const snapshot = await db.collection("fornecedores").get();
-      let listaCrua = snapshot.docs.map(doc => doc.data());
+      // 🔥 MAPEIA COM O ID DO DOCUMENTO (DOCID)
+      let listaCrua = snapshot.docs.map(doc => ({
+        docId: doc.id,
+        ...doc.data()
+      }));
 
       // 🔥 DEDUPLICAÇÃO AGRESSIVA (NOME + EMAIL) - Case Insensitive
       const mapaDeduplicado = new Map();
@@ -8025,7 +8029,11 @@
       let fornecedores = [];
       try {
         const snapshot = await db.collection("fornecedores").get();
-        const listaCrua = snapshot.docs.map(doc => doc.data());
+        // 🔥 MAPEIA COM O ID DO DOCUMENTO (DOCID)
+        const listaCrua = snapshot.docs.map(doc => ({
+          docId: doc.id,
+          ...doc.data()
+        }));
 
         // 🔥 DEDUPLICAÇÃO AGRESSIVA (Sincronizada com Modal)
         const mapaDeduplicado = new Map();
