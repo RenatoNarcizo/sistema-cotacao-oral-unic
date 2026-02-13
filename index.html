@@ -8127,32 +8127,34 @@
 
       if (!fornecedor) return;
 
+      const docIdForn = fornecedor.docId;
       const emailForn = (fornecedor.email || fornecedor.emails || "").toLowerCase().trim();
       if (!confirm(`Deseja realmente excluir o fornecedor ${fornecedor.nome}?`)) return;
 
-      // 🔥 1. REMOVE NO FIRESTORE VIA QUERY (PARA PEGAR DUPLICADOS E IDs DIFERENTES)
-      if (emailForn) {
-        try {
-          const snapshot = await db.collection("fornecedores")
-            .where("email", "==", emailForn)
-            .get();
+      // 🔥 1. REMOVE NO FIRESTORE (ID DIRETO + QUERY P/ DUPLICADOS)
+      try {
+        const batch = db.batch();
 
-          const snapshot2 = await db.collection("fornecedores")
-            .where("emails", "==", emailForn)
-            .get();
-
-          const batch = db.batch();
-          snapshot.docs.forEach(doc => batch.delete(doc.ref));
-          snapshot2.docs.forEach(doc => batch.delete(doc.ref));
-
-          // Tenta também deletar pelo ID direto caso o ID do Doc seja o e-mail
-          batch.delete(db.collection("fornecedores").doc(emailForn));
-
-          await batch.commit();
-          console.log("✅ Fornecedor(es) removido(s) do Firestore via consulta por e-mail.");
-        } catch (e) {
-          console.error("❌ Erro ao excluir do Firestore:", e);
+        // A. Remove pelo ID Único do Documento (MAIS SEGURO)
+        if (docIdForn) {
+          batch.delete(db.collection("fornecedores").doc(docIdForn));
         }
+
+        // B. Remove duplicatas pelo e-mail
+        if (emailForn) {
+          const snap1 = await db.collection("fornecedores").where("email", "==", emailForn).get();
+          const snap2 = await db.collection("fornecedores").where("emails", "==", emailForn).get();
+          snap1.docs.forEach(doc => batch.delete(doc.ref));
+          snap2.docs.forEach(doc => batch.delete(doc.ref));
+
+          // Tenta também pelo e-mail como ID caso tenha sido criado assim
+          batch.delete(db.collection("fornecedores").doc(emailForn));
+        }
+
+        await batch.commit();
+        console.log("✅ Fornecedor eliminado totalmente do Firestore.");
+      } catch (e) {
+        console.error("❌ Erro ao excluir do Firestore:", e);
       }
 
       // 2. Local Cleanup
