@@ -8333,6 +8333,48 @@
   }
 
   /* ===============================
+     📦 MATERIAIS – EDITAR / EXCLUIR
+  =============================== */
+
+  function editarMaterial(index) {
+    const materiais = JSON.parse(localStorage.getItem("materiais")) || [];
+    const m = materiais[index];
+    if (!m) return;
+
+    // Preenche formulário
+    document.getElementById("matNome").value = m.nome || "";
+    document.getElementById("matCodigo").value = m.codigo || "";
+    document.getElementById("matEmbalagem").value = m.embalagem || "";
+    document.getElementById("matQtdEmb").value = m.qtdEmb || "";
+
+    // Remove para salvar novamente (edição)
+    materiais.splice(index, 1);
+    localStorage.setItem("materiais", JSON.stringify(materiais));
+
+    // Atualiza lista se aberta
+    const lista = document.getElementById("listaMateriais");
+    if (lista && lista.style.display === "block") {
+      mostrarListaMateriais();
+    }
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function excluirMaterial(index) {
+    if (!confirm("❌ Deseja realmente excluir este material?")) return;
+
+    const materiais = JSON.parse(localStorage.getItem("materiais")) || [];
+    materiais.splice(index, 1);
+    localStorage.setItem("materiais", JSON.stringify(materiais));
+
+    // Atualiza lista se aberta
+    const lista = document.getElementById("listaMateriais");
+    if (lista && lista.style.display === "block") {
+      mostrarListaMateriais();
+    }
+  }
+
+  /* ===============================
      🛠️ SERVIÇOS – ABERTURA
   =============================== */
 
