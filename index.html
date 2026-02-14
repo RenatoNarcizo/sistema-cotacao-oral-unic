@@ -8692,57 +8692,53 @@
   }
 
 
-  if (typeof editarServico !== "function") {
-    function editarServico(docId) {
-      const servicos = JSON.parse(localStorage.getItem("servicos")) || [];
-      const index = servicos.findIndex(item => item.docId === docId);
-      const s = servicos[index];
-      if (!s) return;
+  window.editarServico = function (docId) {
+    const servicos = JSON.parse(localStorage.getItem("servicos")) || [];
+    const index = servicos.findIndex(item => item.docId === docId);
+    const s = servicos[index];
+    if (!s) return;
 
-      // Preenche formulário
-      document.getElementById("servNome").value = s.nome || "";
-      document.getElementById("servCodigo").value = s.codigo || "";
-      document.getElementById("servCategoria").value = s.categoria || "";
-      document.getElementById("servDescricao").value = s.descricao || "";
-      document.getElementById("servPreco").value = s.preco || "";
+    // Preenche formulário
+    document.getElementById("servNome").value = s.nome || "";
+    document.getElementById("servCodigo").value = s.codigo || "";
+    document.getElementById("servCategoria").value = s.categoria || "";
+    document.getElementById("servDescricao").value = s.descricao || "";
+    document.getElementById("servPreco").value = s.preco || "";
 
-      // Guarda referência para salvarServico saber quem atualizar
-      window.servicoEditandoIndex = index;
-      window.servicoEditandoDocId = s.docId;
+    // Guarda referência para salvarServico saber quem atualizar
+    window.servicoEditandoIndex = index;
+    window.servicoEditandoDocId = s.docId;
 
-      // Garante que o usuário veja o formulário
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
-  }
+    // Garante que o usuário veja o formulário
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
-  if (typeof excluirServico !== "function") {
-    async function excluirServico(docId) {
-      const servicos = JSON.parse(localStorage.getItem("servicos")) || [];
-      const index = servicos.findIndex(item => item.docId === docId);
-      const s = servicos[index];
-      if (!s) return;
+  window.excluirServico = async function (docId) {
+    const servicos = JSON.parse(localStorage.getItem("servicos")) || [];
+    const index = servicos.findIndex(item => item.docId === docId);
+    const s = servicos[index];
+    if (!s) return;
 
-      if (!confirm(`❌ Deseja realmente excluir o serviço "${s.nome}"?`)) return;
+    if (!confirm(`❌ Deseja realmente excluir o serviço "${s.nome}"?`)) return;
 
-      try {
-        if (typeof db !== "undefined" && s.docId) {
-          await db.collection("servicos").doc(s.docId).delete();
-          console.log("✅ Serviço removido do Firestore");
-        }
-      } catch (e) {
-        console.error("❌ Erro ao excluir do Firestore:", e);
+    try {
+      if (typeof db !== "undefined" && s.docId) {
+        await db.collection("servicos").doc(s.docId).delete();
+        console.log("✅ Serviço removido do Firestore");
       }
-
-      servicos.splice(index, 1);
-      localStorage.setItem("servicos", JSON.stringify(servicos));
-
-      // Atualiza lista se estiver aberta
-      const lista = document.getElementById("listaServicos");
-      if (lista && lista.style.display === "block") {
-        mostrarListaServicos();
-      }
+    } catch (e) {
+      console.error("❌ Erro ao excluir do Firestore:", e);
     }
-  }
+
+    servicos.splice(index, 1);
+    localStorage.setItem("servicos", JSON.stringify(servicos));
+
+    // Atualiza lista se estiver aberta
+    const lista = document.getElementById("listaServicos");
+    if (lista && lista.style.display === "block") {
+      mostrarListaServicos();
+    }
+  };
 
   function cotacaoEstaAbertaParaFornecedor(cotacao, fornecedorEmail) {
     if (cotacao.status === "fechada") return false;
