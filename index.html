@@ -4033,13 +4033,15 @@
 
   function salvarCotacoes(lista) {
     localStorage.setItem("cotacoes", JSON.stringify(lista));
-    // Sincroniza com Firebase se o usuário estiver logado
+    // ⚠️ SINCRONIZAÇÃO EM MASSA DESATIVADA PARA ECONOMIZAR COTA DO FIREBASE
+    /*
     const usuario = getUsuarioLogado();
     if (usuario) {
       lista.forEach(c => {
         db.collection("cotacoes").doc(String(c.numero || c.id)).set(c);
       });
     }
+    */
   }
 
   async function migrarDadosParaCloud() {
@@ -4300,10 +4302,12 @@
       aplicarPermissoes(usuario.tipo);
     }
 
-    // 🔄 Tenta migrar materiais e cotações em background se for admin
+    // ⚠️ MIGRAÇÃO AUTOMÁTICA DESATIVADA PARA EVITAR ERRO DE QUOTA EXCEEDED
+    /*
     if (usuario.tipo === "administrador" || usuario.tipo === "comprador") {
       setTimeout(migrarDadosParaCloud, 1000);
     }
+    */
 
     console.log("✅ Login realizado com sucesso para:", usuario.email);
   }
