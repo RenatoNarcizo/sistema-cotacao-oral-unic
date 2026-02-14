@@ -3090,9 +3090,9 @@
           💾 Salvar Serviço
         </button>
 
-        <button onclick="abrirListaServicos()"
-          style="width:100%;background:#333;color:white;border:1px solid #661155;padding:12px;border-radius:6px;">
-          📋 Lista de Serviços
+        <button onclick="limparServicosFantasmas()"
+          style="width:100%;background:#842029;color:white;border:none;padding:12px;border-radius:6px;margin-top:12px;">
+          🗑️ Limpar Serviços Duplicados
         </button>
       </div>
 
@@ -5369,9 +5369,18 @@
       return;
     }
 
-    servicos.sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
+    // 🔥 DEDUPLICAÇÃO NO LADO DO CLIENTE (PARA UI LIMPA IMEDIATA)
+    const nomesVistos = new Set();
+    const servicosUnicos = servicos.filter(s => {
+      const nomeNormal = (s.nome || "").toLowerCase().trim();
+      if (nomesVistos.has(nomeNormal)) return false;
+      nomesVistos.add(nomeNormal);
+      return true;
+    });
 
-    servicos.forEach((s, i) => {
+    servicosUnicos.sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
+
+    servicosUnicos.forEach((s, i) => {
       const div = document.createElement("div");
       div.className = "linha-cotacao";
 
@@ -8673,9 +8682,65 @@
     alert("✅ Serviço salvo com sucesso!");
   }
 
-  /* ===============================
-     🛠️ SERVIÇOS – EDITAR / EXCLUIR
-  =============================== */
+    }
+  }
+
+  /* ======================================================
+     🧹 LIMPEZA DE SERVIÇOS FANTASMAS (DUPLICADOS)
+  ====================================================== */
+  async function limparServicosFantasmas() {
+    if (!confirm("⚠️ Esta ação irá remover todos os serviços duplicados (mesmo nome), mantendo apenas um de cada. Deseja continuar?")) return;
+
+    try {
+      if (typeof db === "undefined") {
+        alert("Erro: Firestore não está disponível.");
+        return;
+      }
+
+      console.log("🧹 Iniciando limpeza de serviços duplicados...");
+      const snapshot = await db.collection("servicos").get();
+      const servicos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      const nomesVistos = new Map();
+      const idsParaDeletar = [];
+
+      servicos.forEach(s => {
+        const nomeNormal = (s.nome || "").toLowerCase().trim();
+        if (nomesVistos.has(nomeNormal)) {
+          // Já vimos esse nome, marca para deletar
+          idsParaDeletar.push(s.id);
+        } else {
+          nomesVistos.set(nomeNormal, s.id);
+        }
+      });
+
+      if (idsParaDeletar.length === 0) {
+        alert("✅ Nenhum serviço duplicado encontrado!");
+        return;
+      }
+
+      if (!confirm(`Foram encontrados ${idsParaDeletar.length} serviços duplicados. Deseja excluí-los agora?`)) return;
+
+      const batch = db.batch();
+      idsParaDeletar.forEach(id => {
+        batch.delete(db.collection("servicos").doc(id));
+      });
+
+      await batch.commit();
+
+      // Recarrega lista local
+      const novosServicos = servicos.filter(s => !idsParaDeletar.includes(s.id));
+      localStorage.setItem("servicos", JSON.stringify(novosServicos));
+
+      alert(`✅ Limpeza concluída! ${idsParaDeletar.length} duplicatas removidas.`);
+      if (typeof mostrarListaServicos === "function") mostrarListaServicos();
+      if (typeof carregarServicosParaCotacao === "function") carregarServicosParaCotacao();
+
+    } catch (e) {
+      console.error("❌ Erro ao limpar serviços:", e);
+      alert("Ocorreu um erro durante a limpeza.");
+    }
+  }
 
   if (typeof editarServico !== "function") {
     function editarServico(index) {
