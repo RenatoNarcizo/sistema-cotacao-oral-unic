@@ -10142,8 +10142,7 @@
      - Analise mostra: respondida + reanalise
   ====================================================== */
   // Toggling tabs - CORRIGIDO PARA FECHAR SE ESTIVER ABERTO
-  window.toggleListaRespondidas = function (status) {
-
+  window.toggleListaRespondidas = function (status, force = false) {
     // Mapeamento de status para IDs
     const map = {
       'publicadas': { listId: 'listaPublicadas', btnId: 'btnPublicadas' },
@@ -10158,8 +10157,8 @@
     const listEl = document.getElementById(target.listId);
     const btnEl = document.getElementById(target.btnId);
 
-    // 1. Verifica se JÁ está aberto para fechar (Toggle OFF)
-    if (listEl && listEl.style.display === "block") {
+    // 1. Verifica se JÁ está aberto para fechar (Toggle OFF) - A menos que seja um force refresh
+    if (!force && listEl && listEl.style.display === "block") {
       listEl.style.display = "none";
       if (btnEl) btnEl.classList.remove("ativo");
       return; // Encerra aqui
@@ -11487,7 +11486,7 @@
   */
 </script>
 
-<script src="premium_render.js?v=10013"></script>
+<script src="premium_render.js?v=10014"></script>
 </body>
 
 </html>
