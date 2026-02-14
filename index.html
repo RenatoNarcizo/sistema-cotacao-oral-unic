@@ -3985,7 +3985,16 @@
      🔑 STORAGE HELPERS
   ====================================================== */
   function getCotacoes() {
-    return JSON.parse(localStorage.getItem("cotacoes")) || [];
+    const raw = localStorage.getItem("cotacoes");
+    let cotacoes = JSON.parse(raw) || [];
+
+    // 🛡️ FILTRO DE BLACKLIST LOCAL
+    const blacklist = JSON.parse(localStorage.getItem("cotacoes_deletadas_local")) || [];
+    if (blacklist.length > 0) {
+      cotacoes = cotacoes.filter(c => !blacklist.includes(String(c.numero)) && !blacklist.includes(String(c.id)));
+    }
+
+    return cotacoes;
   }
 
   /* ======================================================
@@ -6536,12 +6545,16 @@
       const snapshot = await db.collection("cotacoes").get();
       const listaCloud = snapshot.docs.map(doc => doc.data());
 
-      // Merge inteligente ou proteção: Se deletamos algo localmente e o Firestore ainda tem,
-      // confiamos no LocalStorage se a exclusão foi recente (Manual).
-      // Por agora, vamos apenas garantir que se o Firestore estiver acessível, usamos ele,
-      // mas se houver erro de quota ou rede, usamos o local sem medo.
+      // 🛡️ PROTEÇÃO CONTRA EFEITO FANTASMA (BLACKLIST)
+      // Se deletamos algo localmente e o Firestore ainda tem (quota/cache), o blacklist barra.
+      const blacklist = JSON.parse(localStorage.getItem("cotacoes_deletadas_local")) || [];
+      const listaFiltrada = listaCloud.filter(c =>
+        !blacklist.includes(String(c.numero)) &&
+        !blacklist.includes(String(c.id))
+      );
+
       if (listaCloud && listaCloud.length > 0) {
-        cotacoes = listaCloud;
+        cotacoes = listaFiltrada;
         localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
       } else {
         cotacoes = getCotacoes();
