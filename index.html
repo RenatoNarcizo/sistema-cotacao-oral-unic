@@ -3036,36 +3036,36 @@
             style="width:100%;background:#1a1a1a;border:1px solid #661155;border-radius:5px;color:white;padding:8px;">
             <option value="">Selecione uma categoria...</option>
             <option>Assessoria jurídica</option>
-<option>Calibração de aparelhos e testes de radiação</option>
-<option>Coleta de resíduos biológicos e perfurocortantes</option>
-<option>Contabilidade</option>
-<option>Dedetização e controle de pragas</option>
-<option>Impermeabilização de estofados</option>
-<option>Jardinagem e paisagismo</option>
-<option>Laboratório de prótese dentária</option>
-<option>Lavanderia hospitalar (para jalecos e campos)</option>
-<option>Limpeza de caixa d'água</option>
-<option>Limpeza de fachada e vidros externos</option>
-<option>Limpeza e conservação interna (terceirizada)</option>
-<option>Limpeza e polimento de pisos</option>
-<option>Manutenção de ar-condicionado (limpeza e recarga de gás)</option>
-<option>Manutenção de compressores e bombas de vácuo</option>
-<option>Manutenção de telhado e calhas</option>
-<option>Manutenção preventiva e corretiva de equipamentos odontológicos</option>
-<option>Marcenaria (manutenção de móveis planejados)</option>
-<option>Marketing e gestão de redes sociais</option>
-<option>Monitoramento de alarmes e câmeras</option>
-<option>Pedreiro e pequenas reformas</option>
-<option>Pintura</option>
-<option>Radiologia e documentação ortodôntica</option>
-<option>Recarga de extintores de incêndio</option>
-<option>Segurança patrimonial / Portaria</option>
-<option>Serralheria</option>
-<option>Serviços de elétrica</option>
-<option>Serviços de hidráulica</option>
-<option>Suporte de TI (redes e computadores)</option>
-<option>Transporte e motoboy (entrega de exames e próteses)</option>
-<option>Vidraçaria</option>
+            <option>Calibração de aparelhos e testes de radiação</option>
+            <option>Coleta de resíduos biológicos e perfurocortantes</option>
+            <option>Contabilidade</option>
+            <option>Dedetização e controle de pragas</option>
+            <option>Impermeabilização de estofados</option>
+            <option>Jardinagem e paisagismo</option>
+            <option>Laboratório de prótese dentária</option>
+            <option>Lavanderia hospitalar (para jalecos e campos)</option>
+            <option>Limpeza de caixa d'água</option>
+            <option>Limpeza de fachada e vidros externos</option>
+            <option>Limpeza e conservação interna (terceirizada)</option>
+            <option>Limpeza e polimento de pisos</option>
+            <option>Manutenção de ar-condicionado (limpeza e recarga de gás)</option>
+            <option>Manutenção de compressores e bombas de vácuo</option>
+            <option>Manutenção de telhado e calhas</option>
+            <option>Manutenção preventiva e corretiva de equipamentos odontológicos</option>
+            <option>Marcenaria (manutenção de móveis planejados)</option>
+            <option>Marketing e gestão de redes sociais</option>
+            <option>Monitoramento de alarmes e câmeras</option>
+            <option>Pedreiro e pequenas reformas</option>
+            <option>Pintura</option>
+            <option>Radiologia e documentação ortodôntica</option>
+            <option>Recarga de extintores de incêndio</option>
+            <option>Segurança patrimonial / Portaria</option>
+            <option>Serralheria</option>
+            <option>Serviços de elétrica</option>
+            <option>Serviços de hidráulica</option>
+            <option>Suporte de TI (redes e computadores)</option>
+            <option>Transporte e motoboy (entrega de exames e próteses)</option>
+            <option>Vidraçaria</option>
           </select>
         </div>
 
@@ -5262,17 +5262,35 @@
 
   async function carregarMateriaisParaCotacao() {
     const lista = document.getElementById("listaMateriaisCotacao");
+    if (!lista) return;
+
+    lista.innerHTML = "<p style='text-align:center;color:#aaa;'>⌛ Carregando materiais...</p>";
 
     let materiais = [];
     try {
-      const snapshot = await db.collection("materiais").get();
-      materiais = snapshot.docs.map(doc => doc.data());
-      localStorage.setItem("materiais", JSON.stringify(materiais));
+      if (typeof db !== "undefined") {
+        const snapshot = await db.collection("materiais").get();
+        materiais = snapshot.docs.map(doc => ({
+          docId: doc.id,
+          ...doc.data()
+        }));
+        localStorage.setItem("materiais", JSON.stringify(materiais));
+      } else {
+        throw new Error("Firestore não disponível");
+      }
     } catch (e) {
+      console.warn("Erro ao carregar materiais para cotação:", e);
       materiais = JSON.parse(localStorage.getItem("materiais")) || [];
     }
 
     lista.innerHTML = "";
+
+    if (materiais.length === 0) {
+      lista.innerHTML = "<p style='text-align:center;color:#ccc;padding:10px;'>Nenhum material disponível para cotação.</p>";
+      return;
+    }
+
+    materiais.sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
 
     materiais.forEach((m, i) => {
       const div = document.createElement("div");
@@ -5280,8 +5298,8 @@
 
       div.innerHTML = `
       <label style="display:flex;gap:10px;align-items:center;">
-        <input type="checkbox" id="mat_${i}" data-nome="${m.nome}" data-marca="${m.marca || ""}">
-        <strong>${m.nome}</strong> (${m.codigo})
+        <input type="checkbox" id="mat_${i}" data-nome="${m.nome}" data-marca="${m.marca || ""}" data-docid="${m.docId}">
+        <strong>${m.nome}</strong> ${m.codigo ? `(${m.codigo})` : ""}
       </label>
 
       <input type="number" id="qtd_mat_${i}"
@@ -5323,17 +5341,35 @@
 
   async function carregarServicosParaCotacao() {
     const lista = document.getElementById("listaServicosCotacao");
+    if (!lista) return;
+
+    lista.innerHTML = "<p style='text-align:center;color:#aaa;'>⌛ Carregando serviços...</p>";
 
     let servicos = [];
     try {
-      const snapshot = await db.collection("servicos").get();
-      servicos = snapshot.docs.map(doc => doc.data());
-      localStorage.setItem("servicos", JSON.stringify(servicos));
+      if (typeof db !== "undefined") {
+        const snapshot = await db.collection("servicos").get();
+        servicos = snapshot.docs.map(doc => ({
+          docId: doc.id,
+          ...doc.data()
+        }));
+        localStorage.setItem("servicos", JSON.stringify(servicos));
+      } else {
+        throw new Error("Firestore não disponível");
+      }
     } catch (e) {
+      console.warn("Erro ao carregar serviços para cotação:", e);
       servicos = JSON.parse(localStorage.getItem("servicos")) || [];
     }
 
     lista.innerHTML = "";
+
+    if (servicos.length === 0) {
+      lista.innerHTML = "<p style='text-align:center;color:#ccc;padding:10px;'>Nenhum serviço disponível para cotação.</p>";
+      return;
+    }
+
+    servicos.sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
 
     servicos.forEach((s, i) => {
       const div = document.createElement("div");
@@ -5341,8 +5377,8 @@
 
       div.innerHTML = `
       <label style="display:flex;gap:10px;align-items:center;">
-        <input type="checkbox" id="srv_${i}" data-nome="${s.nome}">
-        <strong>${s.nome}</strong> (${s.codigo})
+        <input type="checkbox" id="srv_${i}" data-nome="${s.nome}" data-docid="${s.docId}">
+        <strong>${s.nome}</strong> ${s.codigo ? `(${s.codigo})` : ""}
       </label>
 
       <input type="number" id="qtd_srv_${i}"
@@ -5354,6 +5390,16 @@
     `;
 
       lista.appendChild(div);
+    });
+  }
+
+  function filtrarServicosCotacao() {
+    const termo = document.getElementById("buscaServicoCotacao").value.toLowerCase();
+    const linhas = document.querySelectorAll("#listaServicosCotacao .linha-cotacao");
+
+    linhas.forEach(linha => {
+      const texto = linha.innerText.toLowerCase();
+      linha.style.display = texto.includes(termo) ? "block" : "none";
     });
   }
 
