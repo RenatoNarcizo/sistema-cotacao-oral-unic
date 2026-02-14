@@ -8715,29 +8715,50 @@
 
   window.excluirServico = async function (docId) {
     const servicos = JSON.parse(localStorage.getItem("servicos")) || [];
-    const index = servicos.findIndex(item => item.docId === docId);
-    const s = servicos[index];
-    if (!s) return;
+    const indexAlvo = servicos.findIndex(item => item.docId === docId);
+    const alvo = servicos[indexAlvo];
+    if (!alvo) return;
 
-    if (!confirm(`❌ Deseja realmente excluir o serviço "${s.nome}"?`)) return;
+    if (!confirm(`❌ Deseja realmente excluir o serviço "${alvo.nome}" e todas as suas duplicatas?`)) return;
 
     try {
-      if (typeof db !== "undefined" && s.docId) {
-        await db.collection("servicos").doc(s.docId).delete();
-        console.log("✅ Serviço removido do Firestore");
+      if (typeof db !== "undefined") {
+        const nomeAlvo = (alvo.nome || "").toLowerCase().trim();
+
+        // Busca todos os serviços para encontrar duplicatas por nome
+        const snapshot = await db.collection("servicos").get();
+        const docsParaDeletar = snapshot.docs.filter(doc => {
+          const nomeDoc = (doc.data().nome || "").toLowerCase().trim();
+          return nomeDoc === nomeAlvo;
+        });
+
+        if (docsParaDeletar.length > 0) {
+          const batch = db.batch();
+          docsParaDeletar.forEach(doc => {
+            batch.delete(db.collection("servicos").doc(doc.id));
+          });
+          await batch.commit();
+          console.log(`✅ ${docsParaDeletar.length} registros de "${alvo.nome}" removidos do Firestore`);
+        }
       }
     } catch (e) {
       console.error("❌ Erro ao excluir do Firestore:", e);
+      alert("Erro ao excluir do banco de dados.");
+      return;
     }
 
-    servicos.splice(index, 1);
-    localStorage.setItem("servicos", JSON.stringify(servicos));
+    // Atualiza LocalStorage removendo todos com o mesmo nome
+    const nomeNormalAlvo = (alvo.nome || "").toLowerCase().trim();
+    const novosServicos = servicos.filter(s => (s.nome || "").toLowerCase().trim() !== nomeNormalAlvo);
+    localStorage.setItem("servicos", JSON.stringify(novosServicos));
 
     // Atualiza lista se estiver aberta
     const lista = document.getElementById("listaServicos");
     if (lista && lista.style.display === "block") {
       mostrarListaServicos();
     }
+
+    alert(`✅ O serviço "${alvo.nome}" foi removido completamente.`);
   };
 
   function cotacaoEstaAbertaParaFornecedor(cotacao, fornecedorEmail) {
