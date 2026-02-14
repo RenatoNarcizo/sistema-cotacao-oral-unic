@@ -6532,12 +6532,22 @@
     // 🔍 BUSCA NO FIRESTORE (TEMPO REAL)
     let cotacoes = [];
     try {
+      // Tenta buscar da nuvem, mas mantém fallback local robusto
       const snapshot = await db.collection("cotacoes").get();
-      cotacoes = snapshot.docs.map(doc => doc.data());
-      // Mantém LS atualizado para compatibilidade
-      localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
+      const listaCloud = snapshot.docs.map(doc => doc.data());
+
+      // Merge inteligente ou proteção: Se deletamos algo localmente e o Firestore ainda tem,
+      // confiamos no LocalStorage se a exclusão foi recente (Manual).
+      // Por agora, vamos apenas garantir que se o Firestore estiver acessível, usamos ele,
+      // mas se houver erro de quota ou rede, usamos o local sem medo.
+      if (listaCloud && listaCloud.length > 0) {
+        cotacoes = listaCloud;
+        localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
+      } else {
+        cotacoes = getCotacoes();
+      }
     } catch (e) {
-      console.warn("Erro ao buscar do Firebase, usando local:", e);
+      console.warn("Erro ao buscar do Firebase (Quota ou Rede), usando cache local:", e);
       cotacoes = getCotacoes();
     }
 
@@ -7573,67 +7583,7 @@
   /* ======================================================
      TOGGLE LISTA RESPONDIDAS (FILTRO)
   ====================================================== */
-  window.toggleListaRespondidas = async function (modo) {
-    const usuario = getUsuarioLogado();
-    if (!usuario) return;
-
-    // 🔥 SINCRONIZA COTAÇÕES COM FIRESTORE ANTES DE RENDERIZAR
-    try {
-      const snapshot = await db.collection("cotacoes").get();
-      const listaCotacoes = snapshot.docs.map(doc => doc.data());
-      localStorage.setItem("cotacoes", JSON.stringify(listaCotacoes));
-      console.log("✅ Cotações sincronizadas para listagem");
-    } catch (e) {
-      console.warn("⚠️ Usando dados locais para listagem:", e);
-    }
-
-    // 1. Reset buttons
-    document.querySelectorAll('.btn-status').forEach(btn => btn.classList.remove('ativo'));
-
-    // 2. Hide all lists
-    const listas = ['listaPublicadas', 'listaAnalise', 'listaAprovacao', 'listaFechadas'];
-    listas.forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.style.display = 'none';
-    });
-
-    // 3. Setup based on mode
-    let targetId = '';
-    let statusFiltro = '';
-    let btnId = '';
-
-    switch (modo) {
-      case 'publicadas':
-        targetId = 'listaPublicadas';
-        statusFiltro = 'aberta';
-        btnId = 'btnPublicadas';
-        break;
-      case 'analise':
-        targetId = 'listaAnalise';
-        statusFiltro = ['analise', 'reanalise'];
-        btnId = 'btnAnalise';
-        break;
-      case 'aprovacao':
-        targetId = 'listaAprovacao';
-        statusFiltro = 'aprovacao';
-        btnId = 'btnAprovacao';
-        break;
-      case 'fechada':
-        targetId = 'listaFechadas';
-        statusFiltro = 'fechada';
-        btnId = 'btnFechadas';
-        break;
-    }
-
-    const container = document.getElementById(targetId);
-    const btn = document.getElementById(btnId);
-
-    if (container) {
-      container.style.display = 'block';
-      if (btn) btn.classList.add('ativo');
-      carregarRespondidas(statusFiltro, container);
-    }
-  };
+  /* Omitted duplicate toggleListaRespondidas to avoid conflicts with verified version at end of file */
 
   function renderizarListaParaFornecedor(filtroStatus) {
     const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
