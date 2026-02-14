@@ -8194,7 +8194,7 @@
     const div = document.getElementById("conteudoVerFornecedor");
 
     div.innerHTML = `
-        < div style = "background:#111;border:1px solid #661155;border-radius:10px;padding:20px;color:white;" >
+        <div style="background:#111;border:1px solid #661155;border-radius:10px;padding:20px;color:white;">
       <p><strong>Nome da Empresa:</strong> ${f.nome || "-"}</p>
       <p><strong>CNPJ:</strong> ${f.cnpj || "-"}</p>
       <p><strong>Endereço:</strong>
@@ -8206,7 +8206,7 @@
       <p><strong>E-mails:</strong> ${f.emails || "-"}</p>
       <p><strong>Responsável:</strong> ${f.responsavel || "-"}</p>
       <p><strong>Tipo:</strong> ${f.tipo || "-"}</p>
-    </div >
+    </div>
         `;
 
     document.getElementById("modalVerFornecedor").style.display = "flex";
@@ -8236,39 +8236,58 @@
   }
 
   // Monta a lista de materiais (NÃO controla visibilidade)
-  function mostrarListaMateriais() {
+  async function mostrarListaMateriais() {
     const listaDiv = document.getElementById("listaMateriais");
     const tabela = document.getElementById("materiaisTabela");
 
     if (!listaDiv || !tabela) return;
 
-    const materiais = JSON.parse(localStorage.getItem("materiais")) || [];
+    tabela.innerHTML = "<tr><td colspan='5' style='text-align:center;'>⌛ Carregando materiais da nuvem...</td></tr>";
+
+    let materiais = [];
+    try {
+      if (typeof db !== "undefined") {
+        const snapshot = await db.collection("materiais").get();
+        materiais = snapshot.docs.map(doc => ({
+          docId: doc.id,
+          ...doc.data()
+        }));
+        localStorage.setItem("materiais", JSON.stringify(materiais));
+        console.log("✅ Materiais sincronizados com Firestore");
+      } else {
+        throw new Error("Firestore não disponível");
+      }
+    } catch (e) {
+      console.warn("Erro ao buscar materiais do Firebase, usando local:", e);
+      materiais = JSON.parse(localStorage.getItem("materiais")) || [];
+    }
+
     tabela.innerHTML = "";
 
     if (materiais.length === 0) {
       tabela.innerHTML = `
-        < tr >
+        <tr>
         <td colspan="5" style="text-align:center;padding:10px;">
           Nenhum material cadastrado.
         </td>
-      </tr >
-        `;
+        </tr>
+      `;
       return;
     }
 
-    materiais.sort((a, b) => a.nome.localeCompare(b.nome));
+    materiais.sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
 
     materiais.forEach((m, i) => {
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        < td > ${m.nome}</td >
+        <td>${m.nome}</td>
       <td>${m.codigo || "-"}</td>
       <td>${m.embalagem || "-"}</td>
       <td>${m.qtdEmb || "-"}</td>
       <td style="text-align:center;">
         <div style="display:flex; justify-content:center; gap:8px;">
-          <button onclick="editarMaterial(${i})">✏️</button>
-          <button onclick="excluirMaterial(${i})">🗑️</button>
+          <button onclick="editarMaterial(${i})" title="Editar">✏️</button>
+          <button onclick="excluirMaterial(${i})" title="Excluir">🗑️</button>
         </div>
       </td>
       `;
@@ -8293,7 +8312,7 @@
     listaDiv.style.display = "block";
   }
 
-  function salvarMaterial() {
+  async function salvarMaterial() {
     const nome = document.getElementById("matNome")?.value.trim();
     const codigo = document.getElementById("matCodigo")?.value.trim();
     const embalagem = document.getElementById("matEmbalagem")?.value.trim();
@@ -8305,17 +8324,49 @@
       return;
     }
 
-    const materiais = JSON.parse(localStorage.getItem("materiais")) || [];
-
-    materiais.push({
+    const novoMaterial = {
       nome,
       codigo: codigo || "",       // opcional
       embalagem: embalagem || "", // opcional
-      qtdEmb: qtdEmb || ""        // opcional
-    });
+      qtdEmb: qtdEmb || "",        // opcional
+      dataCriacao: new Date().toISOString()
+    };
 
-    materiais.sort((a, b) => a.nome.localeCompare(b.nome));
-    localStorage.setItem("materiais", JSON.stringify(materiais));
+    try {
+      if (typeof db !== "undefined") {
+        let materiais = JSON.parse(localStorage.getItem("materiais")) || [];
+
+        if (window.materialEditandoDocId) {
+          // 🔥 MODO EDIÇÃO (UPDATE)
+          await db.collection("materiais").doc(window.materialEditandoDocId).update(novoMaterial);
+          console.log("✅ Material atualizado no Firestore:", window.materialEditandoDocId);
+
+          if (window.materialEditandoIndex !== undefined && window.materialEditandoIndex !== null) {
+            materiais[window.materialEditandoIndex] = { docId: window.materialEditandoDocId, ...novoMaterial };
+          }
+        } else {
+          // ✨ MODO CRIAÇÃO (ADD)
+          const docRef = await db.collection("materiais").add(novoMaterial);
+          console.log("✅ Material salvo no Firestore com ID:", docRef.id);
+          materiais.push({ docId: docRef.id, ...novoMaterial });
+        }
+
+        materiais.sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
+        localStorage.setItem("materiais", JSON.stringify(materiais));
+      } else {
+        throw new Error("Firestore não disponível");
+      }
+    } catch (e) {
+      console.error("❌ Erro ao salvar/atualizar no Firestore:", e);
+      // Fallback local simples
+      const materiais = JSON.parse(localStorage.getItem("materiais")) || [];
+      materiais.push(novoMaterial);
+      localStorage.setItem("materiais", JSON.stringify(materiais));
+    }
+
+    // Reset variáveis de edição
+    window.materialEditandoDocId = null;
+    window.materialEditandoIndex = null;
 
     alert("✅ Material salvo com sucesso!");
 
@@ -8347,23 +8398,33 @@
     document.getElementById("matEmbalagem").value = m.embalagem || "";
     document.getElementById("matQtdEmb").value = m.qtdEmb || "";
 
-    // Remove para salvar novamente (edição)
-    materiais.splice(index, 1);
-    localStorage.setItem("materiais", JSON.stringify(materiais));
-
-    // Atualiza lista se aberta
-    const lista = document.getElementById("listaMateriais");
-    if (lista && lista.style.display === "block") {
-      mostrarListaMateriais();
-    }
+    // Guarda referência do material sendo editado para salvarMaterial saber o que fazer
+    // Como a lógica atual de salvarMaterial deleta e cria de novo (splices), 
+    // vamos manter o docId globalmente para atualizar caso queira fazer um UPDATE real,
+    // ou manter o comportamento atual de splice se for o desejado pelo sistema.
+    // Para simplificar e manter compatibilidade com o fluxo atual:
+    window.materialEditandoIndex = index;
+    window.materialEditandoDocId = m.docId;
 
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  function excluirMaterial(index) {
-    if (!confirm("❌ Deseja realmente excluir este material?")) return;
-
+  async function excluirMaterial(index) {
     const materiais = JSON.parse(localStorage.getItem("materiais")) || [];
+    const m = materiais[index];
+    if (!m) return;
+
+    if (!confirm(`❌ Deseja realmente excluir o material "${m.nome}"?`)) return;
+
+    try {
+      if (typeof db !== "undefined" && m.docId) {
+        await db.collection("materiais").doc(m.docId).delete();
+        console.log("✅ Material removido do Firestore");
+      }
+    } catch (e) {
+      console.error("❌ Erro ao excluir do Firestore:", e);
+    }
+
     materiais.splice(index, 1);
     localStorage.setItem("materiais", JSON.stringify(materiais));
 
@@ -8410,15 +8471,33 @@
   }
 
 
-  function mostrarListaServicos() {
+  async function mostrarListaServicos() {
     const tabela = document.getElementById("servicosTabela");
     const lista = document.getElementById("listaServicos");
 
     if (!tabela || !lista) return;
 
-    tabela.innerHTML = "";
+    tabela.innerHTML = "<tr><td colspan='5' style='text-align:center;'>⌛ Carregando serviços da nuvem...</td></tr>";
 
-    const servicos = JSON.parse(localStorage.getItem("servicos")) || [];
+    let servicos = [];
+    try {
+      if (typeof db !== "undefined") {
+        const snapshot = await db.collection("servicos").get();
+        servicos = snapshot.docs.map(doc => ({
+          docId: doc.id,
+          ...doc.data()
+        }));
+        localStorage.setItem("servicos", JSON.stringify(servicos));
+        console.log("✅ Serviços sincronizados com Firestore");
+      } else {
+        throw new Error("Firestore não disponível");
+      }
+    } catch (e) {
+      console.warn("Erro ao buscar serviços do Firebase, usando local:", e);
+      servicos = JSON.parse(localStorage.getItem("servicos")) || [];
+    }
+
+    tabela.innerHTML = "";
 
     if (servicos.length === 0) {
       tabela.innerHTML = `
@@ -8431,19 +8510,19 @@
       return;
     }
 
-    servicos.sort((a, b) => a.nome.localeCompare(b.nome));
+    servicos.sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
 
     servicos.forEach((s, i) => {
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        < td > ${s.nome}</td >
+        <td>${s.nome}</td>
       <td>${s.codigo || "-"}</td>
       <td>${s.categoria}</td>
       <td>${s.preco || "-"}</td>
       <td style="text-align:center;">
         <div style="display:flex; justify-content:center; gap:8px;">
-          <button onclick="editarServico(${i})">✏️</button>
-          <button onclick="excluirServico(${i})">🗑️</button>
+          <button onclick="editarServico(${i})" title="Editar">✏️</button>
+          <button onclick="excluirServico(${i})" title="Excluir">🗑️</button>
         </div>
       </td>
     `;
@@ -8454,7 +8533,7 @@
   /* ===============================
      🛠️ SERVIÇOS – SALVAR
   =============================== */
-  function salvarServico() {
+  async function salvarServico() {
     const nome = document.getElementById("servNome")?.value.trim();
     const codigo = document.getElementById("servCodigo")?.value.trim();
     const categoria = document.getElementById("servCategoria")?.value;
@@ -8467,18 +8546,50 @@
       return;
     }
 
-    const servicos = JSON.parse(localStorage.getItem("servicos")) || [];
-
-    servicos.push({
+    const novoServico = {
       nome,
       codigo: codigo || "",        // opcional
       categoria,
       descricao: descricao || "",  // opcional
-      preco: preco || ""           // opcional
-    });
+      preco: preco || "",           // opcional
+      dataCriacao: new Date().toISOString()
+    };
 
-    servicos.sort((a, b) => a.nome.localeCompare(b.nome));
-    localStorage.setItem("servicos", JSON.stringify(servicos));
+    try {
+      if (typeof db !== "undefined") {
+        let servicos = JSON.parse(localStorage.getItem("servicos")) || [];
+
+        if (window.servicoEditandoDocId) {
+          // 🔥 MODO EDIÇÃO (UPDATE)
+          await db.collection("servicos").doc(window.servicoEditandoDocId).update(novoServico);
+          console.log("✅ Serviço atualizado no Firestore:", window.servicoEditandoDocId);
+
+          if (window.servicoEditandoIndex !== undefined && window.servicoEditandoIndex !== null) {
+            servicos[window.servicoEditandoIndex] = { docId: window.servicoEditandoDocId, ...novoServico };
+          }
+        } else {
+          // ✨ MODO CRIAÇÃO (ADD)
+          const docRef = await db.collection("servicos").add(novoServico);
+          console.log("✅ Serviço salvo no Firestore com ID:", docRef.id);
+          servicos.push({ docId: docRef.id, ...novoServico });
+        }
+
+        servicos.sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
+        localStorage.setItem("servicos", JSON.stringify(servicos));
+      } else {
+        throw new Error("Firestore não disponível");
+      }
+    } catch (e) {
+      console.error("❌ Erro ao salvar/atualizar no Firestore:", e);
+      // Fallback local simples
+      const servicos = JSON.parse(localStorage.getItem("servicos")) || [];
+      servicos.push(novoServico);
+      localStorage.setItem("servicos", JSON.stringify(servicos));
+    }
+
+    // Reset variáveis de edição
+    window.servicoEditandoDocId = null;
+    window.servicoEditandoIndex = null;
 
     // 🔹 limpa formulário
     document.getElementById("servNome").value = "";
@@ -8513,15 +8624,9 @@
       document.getElementById("servDescricao").value = s.descricao || "";
       document.getElementById("servPreco").value = s.preco || "";
 
-      // Remove o item para salvar novamente ao editar
-      servicos.splice(index, 1);
-      localStorage.setItem("servicos", JSON.stringify(servicos));
-
-      // Atualiza lista se estiver aberta
-      const lista = document.getElementById("listaServicos");
-      if (lista && lista.style.display === "block") {
-        mostrarListaServicos();
-      }
+      // Guarda referência para salvarServico saber quem atualizar
+      window.servicoEditandoIndex = index;
+      window.servicoEditandoDocId = s.docId;
 
       // Garante que o usuário veja o formulário
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -8529,10 +8634,22 @@
   }
 
   if (typeof excluirServico !== "function") {
-    function excluirServico(index) {
-      if (!confirm("❌ Deseja realmente excluir este serviço?")) return;
-
+    async function excluirServico(index) {
       const servicos = JSON.parse(localStorage.getItem("servicos")) || [];
+      const s = servicos[index];
+      if (!s) return;
+
+      if (!confirm(`❌ Deseja realmente excluir o serviço "${s.nome}"?`)) return;
+
+      try {
+        if (typeof db !== "undefined" && s.docId) {
+          await db.collection("servicos").doc(s.docId).delete();
+          console.log("✅ Serviço removido do Firestore");
+        }
+      } catch (e) {
+        console.error("❌ Erro ao excluir do Firestore:", e);
+      }
+
       servicos.splice(index, 1);
       localStorage.setItem("servicos", JSON.stringify(servicos));
 
