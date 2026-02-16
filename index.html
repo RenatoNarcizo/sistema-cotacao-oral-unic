@@ -4998,6 +4998,364 @@
       }
 
       /* ======================================================
+         ✅ GESTÃO DE APROVAÇÕES E COTAÇÕES RESPONDIDAS
+      ====================================================== */
+      window.abrirAprovarCompras = function () {
+        abrirTela("aprovacoes");
+        carregarPendentesAprovacao();
+      };
+
+      window.carregarPendentesAprovacao = async function () {
+        const lista = document.getElementById("listaPendentesAprovacao");
+        if (!lista) return;
+        lista.innerHTML = "<p style='text-align:center;'>⌛ Carregando...</p>";
+        try {
+          const snap = await db.collection("cotacoes").where("status", "==", "aprovacao").get();
+          const pendentes = snap.docs.map(doc => doc.data());
+          if (pendentes.length === 0) {
+            lista.innerHTML = "<p style='text-align:center; color:#aaa;'>Nenhuma cotação aguardando aprovação final.</p>";
+            return;
+          }
+          lista.innerHTML = pendentes.map(c => `
+            <div class="linha-cotacao">
+              <div class="info">
+                <strong>Cotação ${c.numero}</strong><br>
+                <small>${c.descricao || "Sem descrição"}</small>
+              </div>
+              <div class="acoes">
+                <button onclick="analisarCotacao('${c.numero}')">Analisar</button>
+              </div>
+            </div>
+          `).join("");
+        } catch (e) {
+          console.error(e);
+          lista.innerHTML = "Erro ao carregar.";
+        }
+      };
+
+      window.abrirResponderCotacao = function () {
+        abrirTela("responderCotacao");
+        carregarResponderCotacao();
+      };
+
+      window.carregarResponderCotacao = async function () {
+        const lista = document.getElementById("listaResponderCotacao");
+        if (!lista) return;
+        lista.innerHTML = "<p style='text-align:center;'>⌛ Buscando cotações...</p>";
+        try {
+          const user = getUsuarioLogado();
+          if (!user) return;
+          const snap = await db.collection("cotacoes").where("status", "==", "aberta").get();
+          let cotacoes = snap.docs.map(doc => doc.data());
+
+          // Filtra as que o fornecedor está convidado
+          cotacoes = cotacoes.filter(c => {
+            return (c.fornecedores || []).some(f => f.email.toLowerCase() === user.email.toLowerCase());
+          });
+
+          if (cotacoes.length === 0) {
+            lista.innerHTML = "<p style='text-align:center; color:#aaa;'>Nenhuma cotação aberta para você no momento.</p>";
+            return;
+          }
+
+          lista.innerHTML = cotacoes.map(c => `
+            <div class="linha-cotacao">
+              <div class="info">
+                <strong>Cotação ${c.numero}</strong><br>
+                <small>Prazo: ${c.dataFechamento}</small>
+              </div>
+              <div class="acoes">
+                <button onclick="abrirModalResponder('${c.numero}')">Responder</button>
+              </div>
+            </div>
+          `).join("");
+        } catch (e) {
+          console.error(e);
+          lista.innerHTML = "Erro ao carregar.";
+        }
+      };
+
+      window.carregarRespondidas = async function (statusFiltro, container) {
+        if (!container) return;
+        container.innerHTML = "<p style='text-align:center;'>⌛ Carregando...</p>";
+        try {
+          const statusArray = Array.isArray(statusFiltro) ? statusFiltro : [statusFiltro];
+          const snap = await db.collection("cotacoes").where("status", "in", statusArray).get();
+          const lista = snap.docs.map(doc => doc.data());
+
+          if (lista.length === 0) {
+            container.innerHTML = "<p style='text-align:center; color:#aaa;'>Nenhuma cotação neste status.</p>";
+            return;
+          }
+
+          container.innerHTML = lista.map(c => `
+            <div class="linha-cotacao">
+              <div class="info">
+                <strong>${c.numero}</strong> - ${c.descricao || ""}<br>
+                <small>Data: ${c.dataCriacao || c.data}</small>
+              </div>
+              <div class="acoes">
+                <button onclick="analisarCotacao('${c.numero}')">Visualizar</button>
+              </div>
+            </div>
+          `).join("");
+        } catch (e) {
+          console.error(e);
+          container.innerHTML = "Erro.";
+        }
+      };
+
+      /* ======================================================
+         📊 ANÁLISE E APROVAÇÃO FINAL
+      ====================================================== */
+      window.analisarCotacao = function (idOuNumero) {
+        if (typeof renderizarTabelaAnalise === "function") {
+          document.getElementById("modalAnaliseCotacao").style.display = "flex";
+          document.body.style.overflow = "hidden";
+          renderizarTabelaAnalise(idOuNumero);
+        } else {
+          alert("Erro: Sistema de renderização premium não carregado.");
+        }
+      };
+
+      window.finalizarCotacao = async function () {
+        const modal = document.getElementById("modalAnaliseCotacao");
+        const numero = modal.getAttribute("data-cotacao");
+        if (!numero) return alert("Cotação não identificada.");
+
+        if (!confirm("Deseja realmente FINALIZAR esta cotação e gerar o pedido?")) return;
+
+        try {
+          const snap = await db.collection("cotacoes").doc(String(numero)).get();
+          const cotacao = snap.exists ? snap.data() : null;
+
+          // Atualiza Status para Fechada
+          await db.collection("cotacoes").doc(String(numero)).update({
+            status: "fechada",
+            dataFinalizacao: new Date().toLocaleString()
+          });
+
+          // Atualiza local
+          const cotacoesLocal = JSON.parse(localStorage.getItem("cotacoes")) || [];
+          const idx = cotacoesLocal.findIndex(c => c.numero === numero || c.id === numero);
+          if (idx !== -1) {
+            cotacoesLocal[idx].status = "fechada";
+            localStorage.setItem("cotacoes", JSON.stringify(cotacoesLocal));
+          }
+
+          alert("✅ Cotação FINALIZADA com sucesso! O pedido foi gerado.");
+          modal.style.display = "none";
+          document.body.style.overflow = "auto";
+
+          if (typeof carregarPendentesAprovacao === "function") carregarPendentesAprovacao();
+          if (typeof toggleListaRespondidas === "function") toggleListaRespondidas("fechada");
+
+        } catch (e) {
+          console.error(e);
+          alert("Erro ao finalizar cotação.");
+        }
+      };
+
+      /* ======================================================
+         💾 GESTÃO DE FORNECEDORES (CADASTRO E LISTAGEM)
+      ====================================================== */
+      window.salvarFornecedor = async function () {
+        const nome = document.getElementById("fornNome")?.value.trim();
+        const cnpj = document.getElementById("fornCnpj")?.value.trim();
+        const email = (document.getElementById("fornEmails")?.value || "").toLowerCase().trim();
+        const tipo = document.getElementById("fornTipo")?.value;
+
+        if (!nome) return alert("⚠️ Preencha ao menos o Nome da Empresa");
+
+        const novoFornecedor = {
+          nome, cnpj, email, tipo,
+          logradouro: document.getElementById("fornLogradouro")?.value.trim(),
+          numero: document.getElementById("fornNumero")?.value.trim(),
+          bairro: document.getElementById("fornBairro")?.value.trim(),
+          cidade: document.getElementById("fornCidade")?.value.trim(),
+          cep: document.getElementById("fornCep")?.value.trim(),
+          telefone: document.getElementById("fornTelefone")?.value.trim(),
+          whats: document.getElementById("fornWhats")?.value.trim(),
+          responsavel: document.getElementById("fornResponsavel")?.value.trim(),
+          status: "ativo",
+          dataCriacao: new Date().toLocaleString()
+        };
+        novoFornecedor.endereco = `${novoFornecedor.logradouro || ""} ${novoFornecedor.numero || ""}`.trim();
+
+        try {
+          let fornecedoresLocais = JSON.parse(localStorage.getItem("fornecedores")) || [];
+          if (window.fornecedorEditando !== null && typeof window.fornecedorEditando !== 'undefined') {
+            fornecedoresLocais.splice(window.fornecedorEditando, 1);
+            window.fornecedorEditando = null;
+          }
+          fornecedoresLocais.push(novoFornecedor);
+          localStorage.setItem("fornecedores", JSON.stringify(fornecedoresLocais));
+
+          const docId = (email || nome).toLowerCase().trim();
+          await db.collection("fornecedores").doc(docId).set(novoFornecedor);
+
+          alert("✅ Fornecedor salvo com sucesso!");
+          if (typeof limparFormFornecedor === "function") limparFormFornecedor();
+
+          const listaDiv = document.getElementById("listaFornecedoresCadastrados");
+          if (listaDiv && listaDiv.style.display === "block") mostrarListaFornecedores(true);
+        } catch (e) {
+          console.error(e);
+          alert("Erro ao salvar.");
+        }
+      };
+
+      window.mostrarListaFornecedores = async function (apenasRecarregar = false) {
+        const listaDiv = document.getElementById("listaFornecedoresCadastrados");
+        const tbody = document.getElementById("tabelaFornecedores");
+        if (!listaDiv || !tbody) return;
+
+        if (!apenasRecarregar) {
+          if (listaDiv.style.display === "block") {
+            listaDiv.style.display = "none";
+            return;
+          }
+          listaDiv.style.display = "block";
+        }
+
+        tbody.innerHTML = "<tr><td colspan='5' style='text-align:center;'>⌛ Carregando...</td></tr>";
+
+        try {
+          const snap = await db.collection("fornecedores").get();
+          const empresas = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          empresas.sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
+          localStorage.setItem("fornecedores", JSON.stringify(empresas));
+
+          tbody.innerHTML = "";
+          if (empresas.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Nenhuma empresa cadastrada.</td></tr>';
+            return;
+          }
+
+          empresas.forEach((f, index) => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+              <td><strong>${f.nome || "-"}</strong><br><small style="color:#0dcaf0;">${f.tipo || "Geral"}</small></td>
+              <td style="font-size:12px; color:#aaa;">${f.endereco || f.logradouro || "-"}</td>
+              <td>${f.whats || f.whatsapp || "-"}</td>
+              <td>${f.responsavel || "-"}</td>
+              <td style="text-align:center;">
+                <button onclick="editarFornecedor(${index})" style="background:none; border:none; color:#ffd900; cursor:pointer;"><i class="fa-solid fa-pen"></i></button>
+                <button onclick="removerFornecedor('${f.id}')" style="background:none; border:none; color:#ff4444; cursor:pointer;"><i class="fa-solid fa-trash"></i></button>
+              </td>
+            `;
+            tbody.appendChild(tr);
+          });
+        } catch (error) {
+          console.error(error);
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Erro.</td></tr>';
+        }
+      };
+
+      window.removerFornecedor = async function (id) {
+        if (!confirm("Remover fornecedor?")) return;
+        try {
+          await db.collection("fornecedores").doc(id).delete();
+          mostrarListaFornecedores(true);
+        } catch (e) { console.error(e); }
+      };
+
+      window.editarFornecedor = function (index) {
+        const fornecedoresLocais = JSON.parse(localStorage.getItem("fornecedores")) || [];
+        const f = fornecedoresLocais[index];
+        if (!f) return;
+        document.getElementById("fornNome").value = f.nome || "";
+        document.getElementById("fornCnpj").value = f.cnpj || "";
+        document.getElementById("fornLogradouro").value = f.logradouro || "";
+        document.getElementById("fornNumero").value = f.numero || "";
+        document.getElementById("fornBairro").value = f.bairro || "";
+        document.getElementById("fornCidade").value = f.cidade || "";
+        document.getElementById("fornCep").value = f.cep || "";
+        document.getElementById("fornTelefone").value = f.telefone || "";
+        document.getElementById("fornWhats").value = f.whats || "";
+        document.getElementById("fornEmails").value = f.email || "";
+        document.getElementById("fornResponsavel").value = f.responsavel || "";
+        document.getElementById("fornTipo").value = f.tipo || "";
+        window.fornecedorEditando = index;
+        document.getElementById("conteudoFornManual").scrollIntoView();
+      };
+
+      /* ======================================================
+         📎 GESTÃO DE DOCUMENTOS (NOTAS/BOLETOS)
+      ====================================================== */
+      window.visualizarDocumentos = async function (numeroCotacao) {
+        const modal = document.getElementById("modalVisualizarDocumentos");
+        const lista = document.getElementById("listaDocumentosModal");
+        if (!modal || !lista) return;
+
+        lista.innerHTML = "<p style='text-align:center;'>⌛ Carregando documentos...</p>";
+        modal.style.display = "flex";
+
+        try {
+          // Busca no Firestore para garantir dados mais recentes
+          const snap = await db.collection("cotacoes").doc(String(numeroCotacao)).get();
+          const cot = snap.exists ? snap.data() : {};
+
+          // Consolida anexos da cotação e das respostas
+          let documentos = [];
+          if (cot.anexos) documentos = [...cot.anexos];
+
+          if (cot.respostasFornecedores) {
+            cot.respostasFornecedores.forEach(r => {
+              if (r.arquivos) {
+                r.arquivos.forEach(arq => {
+                  documentos.push({ ...arq, fornecedor: r.fornecedor });
+                });
+              }
+            });
+          }
+
+          if (documentos.length === 0) {
+            lista.innerHTML = "<p style='text-align:center; color:#aaa;'>Nenhum documento encontrado para esta cotação.</p>";
+            return;
+          }
+
+          lista.innerHTML = documentos.map(doc => `
+            <div style="background:#111; border:1px solid #333; padding:12px; border-radius:8px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <strong style="color:#0dcaf0;">${doc.nome}</strong><br>
+                <small style="color:#888;">${doc.fornecedor ? `Enviado por: ${doc.fornecedor}` : 'Documento da Cotação'}</small>
+              </div>
+              <button onclick="abrirArquivoAnexo('${doc.url || ""}', '${doc.base64 || ""}')" 
+                      style="background:#661155; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer; font-weight:bold;">
+                👁️ Ver
+              </button>
+            </div>
+          `).join("");
+        } catch (e) {
+          console.error(e);
+          lista.innerHTML = "Erro ao carregar lista de documentos.";
+        }
+      };
+
+      window.abrirArquivoAnexo = function (url, base64) {
+        if (url) {
+          window.open(url, '_blank');
+        } else if (base64) {
+          const win = window.open();
+          win.document.write(`<iframe src="${base64}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`);
+        } else {
+          alert("Erro: Link do arquivo não disponível.");
+        }
+      };
+
+      /* ======================================================
+         🚀 FINALIZAÇÃO E MIGRAÇÃO
+      ====================================================== */
+      window.migrarParaFirebaseCompleto = async function () {
+        if (!confirm("Deseja iniciar a migração completa dos dados locais para a nuvem?")) return;
+        console.log("Migração iniciada...");
+        // ... (Lógica de migração já existe no topo como migrarDadosParaCloud)
+        await migrarDadosParaCloud();
+        alert("Migração concluída!");
+      };
+
+      /* ======================================================
          MODAL COTAÇÃO
       ====================================================== */
       function abrirModalCotacao() {
@@ -5626,6 +5984,144 @@
         } else {
           alternarAbaFornecedor('manual');
         }
+      };
+
+      /* ======================================================
+         🔄 ABA FORNECEDOR: ALTERNAR (MANUAL / APROVAÇÃO)
+      ====================================================== */
+      window.alternarAbaFornecedor = function (aba) {
+        const manualDiv = document.getElementById("conteudoFornManual");
+        const aprovacaoDiv = document.getElementById("conteudoFornAprovacao");
+        const btnManual = document.getElementById("btnAbaManual");
+        const btnAprovacao = document.getElementById("btnAbaAprovacao");
+
+        if (!manualDiv || !aprovacaoDiv) return;
+
+        if (aba === 'manual') {
+          manualDiv.style.display = "block";
+          aprovacaoDiv.style.display = "none";
+          if (btnManual) btnManual.style.background = "#661155";
+          if (btnAprovacao) btnAprovacao.style.background = "#333";
+        } else {
+          manualDiv.style.display = "none";
+          aprovacaoDiv.style.display = "block";
+          if (btnManual) btnManual.style.background = "#333";
+          if (btnAprovacao) btnAprovacao.style.background = "#661155";
+          carregarPreCadastros();
+        }
+      };
+
+      /* ======================================================
+         ⌛ GESTÃO DE PRÉ-CADASTROS (APROVAÇÃO ONLINE)
+      ====================================================== */
+      window.carregarPreCadastros = async function () {
+        const container = document.getElementById("listaFornPendentes");
+        const badge = document.getElementById("badgeFornPendentes");
+        if (!container) return;
+
+        container.innerHTML = "<p style='text-align:center;'>⌛ Carregando solicitações...</p>";
+
+        try {
+          const snap = await db.collection("pre_cadastros_fornecedores")
+            .where("status", "==", "pendente")
+            .get();
+
+          const pendentes = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          localStorage.setItem("pre_cadastros_fornecedores", JSON.stringify(pendentes));
+
+          // Atualiza Badge
+          if (badge) {
+            badge.innerText = pendentes.length;
+            badge.style.display = pendentes.length > 0 ? "inline-block" : "none";
+          }
+
+          if (pendentes.length === 0) {
+            container.innerHTML = "<p style='text-align:center; color:#aaa; padding:20px;'>Nenhuma solicitação pendente.</p>";
+            return;
+          }
+
+          container.innerHTML = pendentes.map(p => `
+            <div style="background:#1a1a1a; border:1px solid #333; border-radius:8px; padding:15px; margin-bottom:15px; display:flex; justify-content:space-between; align-items:flex-start;">
+              <div>
+                <h4 style="color:#661155; margin-bottom:5px;">${p.nome || 'Sem Nome'}</h4>
+                <p style="font-size:13px; color:#ccc; margin-bottom:3px;"><strong>CNPJ:</strong> ${p.cnpj || '-'}</p>
+                <p style="font-size:13px; color:#ccc; margin-bottom:3px;"><strong>E-mail:</strong> ${p.email || '-'}</p>
+                <p style="font-size:13px; color:#ccc;"><strong>Ramo/Tipo:</strong> ${p.tipo || p.categoria || 'Geral'}</p>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:8px;">
+                <button onclick="aprovarPreCadastro('${p.id}')" style="background:#00ff99; color:#000; border:none; padding:8px 15px; border-radius:5px; cursor:pointer; font-weight:bold; font-size:12px;">✅ Aprovar</button>
+                <button onclick="rejeitarPreCadastro('${p.id}')" style="background:#ff4444; color:#fff; border:none; padding:8px 15px; border-radius:5px; cursor:pointer; font-weight:bold; font-size:12px;">❌ Rejeitar</button>
+              </div>
+            </div>
+          `).join("");
+
+        } catch (error) {
+          console.error("Erro ao carregar pré-cadastros:", error);
+          container.innerHTML = "<p style='text-align:center; color:red;'>Erro ao carregar lista.</p>";
+        }
+      };
+
+      window.aprovarPreCadastro = async function (id) {
+        if (!confirm("Confirmar aprovação deste fornecedor?")) return;
+
+        try {
+          const docRef = db.collection("pre_cadastros_fornecedores").doc(id);
+          const snap = await docRef.get();
+          if (!snap.exists) return alert("Solicitação não encontrada.");
+
+          const dados = snap.data();
+
+          // 1. Move para coleção oficial de 'fornecedores'
+          const novoForn = {
+            ...dados,
+            status: "ativo",
+            dataAprovacao: new Date().toLocaleString()
+          };
+          delete novoForn.statusOriginal; // Limpa flags se houver
+
+          const fornecedorId = (dados.email || dados.nome).toLowerCase().trim();
+          await db.collection("fornecedores").doc(fornecedorId).set(novoForn);
+
+          // 2. Cria Usuário de Acesso automaticamente
+          const novoUser = {
+            nome: dados.nome,
+            email: (dados.email || "").toLowerCase().trim(),
+            senha: "oralunicTemporary123", // Senha padrão inicial
+            perfil: "fornecedor",
+            empresaVinculada: dados.nome,
+            status: "ativo",
+            trocarSenha: true
+          };
+          await db.collection("usuarios").doc(novoUser.email).set(novoUser);
+
+          // 3. Atualiza status do pré-cadastro
+          await docRef.update({ status: "aprovado" });
+
+          alert("✅ Fornecedor aprovado e Usuário criado com sucesso!");
+          carregarPreCadastros();
+        } catch (error) {
+          console.error("Erro ao aprovar:", error);
+          alert("Erro ao aprovar fornecedor.");
+        }
+      };
+
+      window.rejeitarPreCadastro = async function (id) {
+        if (!confirm("Deseja realmente REJEITAR este cadastro?")) return;
+
+        try {
+          await db.collection("pre_cadastros_fornecedores").doc(id).update({ status: "rejeitado" });
+          alert("🚫 Cadastro rejeitado.");
+          carregarPreCadastros();
+        } catch (error) {
+          console.error("Erro ao rejeitar:", error);
+        }
+      };
+
+      window.limparFormFornecedor = function () {
+        ["fornNome", "fornCnpj", "fornLogradouro", "fornNumero", "fornBairro", "fornCidade", "fornCep", "fornTelefone", "fornWhats", "fornEmails", "fornResponsavel", "fornTipo"].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.value = "";
+        });
       };
 
       /* ======================================================
