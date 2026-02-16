@@ -11301,7 +11301,12 @@
       window.dispararNotificacaoFornecedores = async function (cotacao) {
         console.log("🚀 [AUTOMAÇÃO] Preparando disparos para fornecedores...");
 
-        // Dados consolidados para o Webhook
+        // Verificação de segurança: Protocolo Local
+        if (window.location.protocol === "file:") {
+          alert("⚠️ Atenção: O envio automático de notificações não funciona abrindo o arquivo diretamente pelo Windows (file://).\n\nPara funcionar, você deve:\n1. Abrir o projeto usando o 'Live Server' (no VS Code);\n2. Ou acessar o sistema pelo link do Vercel/Hospedagem.");
+          return;
+        }
+
         const payload = {
           evento: "nova_cotacao",
           numero: cotacao.numero,
@@ -11315,30 +11320,42 @@
           }))
         };
 
-        console.log("📡 Enviando payload para Webhook:", payload);
+        console.log("📡 Payload:", payload);
 
-        if (CONFIG_NOTIFICACOES.ativo && CONFIG_NOTIFICACOES.webhook_url !== "SUA_URL_DO_WEBHOOK_AQUI") {
+        if (CONFIG_NOTIFICACOES.ativo && CONFIG_NOTIFICACOES.webhook_url.startsWith("http")) {
           try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
+
             const response = await fetch(CONFIG_NOTIFICACOES.webhook_url, {
               method: "POST",
+              mode: "cors", // Força o modo cors
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(payload)
+              body: JSON.stringify(payload),
+              signal: controller.signal
             });
+
+            clearTimeout(timeoutId);
 
             if (response.ok) {
               console.log("✅ Webhook disparado com sucesso!");
-              mostrarNotificacaoToast("Notificações automáticas enviadas via Webhook! ✉️📱");
+              mostrarNotificacaoToast("Notificações automáticas enviadas! ✉️📱");
             } else {
-              console.warn("⚠️ O Webhook respondeu com erro:", response.status);
-              mostrarNotificacaoToast("Erro parcial no disparo das notificações.");
+              const errorText = await response.text();
+              console.error("❌ Erro do Webhook:", response.status, errorText);
+              alert(`⚠️ O serviço de notificações (Make) retornou um erro (${response.status}). Verifique se o cenário está ligado.`);
             }
           } catch (error) {
-            console.error("❌ Erro ao conectar com o Webhook:", error);
-            mostrarNotificacaoToast("Falha na conexão de notificações automáticas.");
+            console.error("❌ Erro de Conexão:", error);
+            if (error.name === 'AbortError') {
+              alert("⚠️ Tempo esgotado ao tentar enviar notificações. Verifique sua internet.");
+            } else {
+              alert("⚠️ Falha na conexão de notificações.\n\nPossível causa: O navegador bloqueou a requisição por segurança (CORS). Tente publicar o sistema no Vercel ou abrir via Servidor Local para resolver.");
+            }
           }
         } else {
-          console.warn("⚠️ Webhook não configurado. As notificações permanecem em modo SIMULAÇÃO.");
-          mostrarNotificacaoToast("Simulação: Notificações geradas no console. (Configure o Webhook para envio real)");
+          console.warn("⚠️ Webhook não configurado adequadamente.");
+          mostrarNotificacaoToast("Simulação: Configure a URL para envio real.");
         }
       };
 
