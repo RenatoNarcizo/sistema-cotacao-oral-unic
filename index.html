@@ -6820,8 +6820,11 @@
           console.log("✅ Cotação salva no Firestore");
 
           // 🔔 NOTIFICAÇÃO PARA FORNECEDORES
-          if (typeof dispararNotificacaoFornecedores === "function") {
-            dispararNotificacaoFornecedores(novaCotacao);
+          console.log("🔔 Chamando dispararNotificacaoFornecedores...");
+          if (typeof window.dispararNotificacaoFornecedores === "function") {
+            window.dispararNotificacaoFornecedores(novaCotacao);
+          } else {
+            console.error("❌ Erro: Função dispararNotificacaoFornecedores não encontrada!");
           }
 
           window.fornecedoresSelecionadosTemp = [];
@@ -11285,6 +11288,23 @@
         localStorage.setItem("pre_cadastros_fornecedores", JSON.stringify(preCadastros));
         alert("✅ Proposta enviada! Nossa equipe analisará seus dados em breve.");
         voltarParaLogin();
+      };
+
+      /* ======================================================
+         🚀 HELPER: FORMATAR DATA BR
+      ====================================================== */
+      window.formatarDataHoraBR = function (dataStr) {
+        if (!dataStr) return "-";
+        try {
+          // Se já estiver no formato BR (tem / e ,)
+          if (dataStr.includes('/') && dataStr.includes(',')) return dataStr;
+
+          const data = new Date(dataStr);
+          if (isNaN(data.getTime())) return dataStr;
+          return data.toLocaleString('pt-BR');
+        } catch (e) {
+          return dataStr;
+        }
       };
 
       /* ======================================================
