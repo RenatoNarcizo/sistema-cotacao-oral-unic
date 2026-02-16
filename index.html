@@ -7427,60 +7427,61 @@
           }
 
           infoDiv.innerHTML = `
-            <div style="font-weight:bold; font-size:16px; color:#fff;">${c.descricao || "Sem descrição"}</div>
-            <div style="margin-top:5px; font-size:12px; color:#aaa;">
-               <strong>Cotação #${c.numero}</strong> ${subStatus}
+            <div style="font-weight:bold; font-size:15px; color:#fff;">
+              ${c.numero} - ${c.descricao || "Sem descrição"}
             </div>
-            <div style="margin-top:5px; color:#ccc; font-size:13px;">
-              ${usuario.tipo === "fornecedor" ? "✅ Você respondeu" : `📩 Respostas: <b style="color:#0dcaf0;">${qtdRespostas}</b> / ${qtdConvidados}`}
+            <div style="font-size:13px; color:#ccc; margin-top:4px;">
+              Data: ${c.dataCriacao || c.data || "-"} ${subStatus}
+              ${usuario.tipo !== "fornecedor" ? `<br>📩 Respostas: <b style="color:#0dcaf0;">${qtdRespostas}</b> / ${qtdConvidados}` : ""}
               ${tempoHTML}
             </div>
           `;
 
-          // --- 🔘 BOTÕES DE AÇÃO ---
+          // --- 🔘 BOTÕES DE AÇÃO REFINADOS ---
           const acoesDiv = document.createElement("div");
           acoesDiv.className = "acoes";
           acoesDiv.style.cssText = "display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;";
 
           if (usuario.tipo !== "fornecedor") {
-            // 📊 ANALISAR
-            const btnAnalise = document.createElement("button");
-            btnAnalise.innerHTML = "📊 Analisar Respostas";
-            btnAnalise.style.cssText = "background:#661155; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer; font-weight:bold;";
-            btnAnalise.onclick = () => analisarCotacao(c.numero);
-            acoesDiv.appendChild(btnAnalise);
+            // 🏷️ Botão Principal (Visualizar ou Analisar)
+            const btnPrincipal = document.createElement("button");
+            btnPrincipal.innerText = (c.status === "aberta") ? "Visualizar" : "Analisar Respostas";
+            btnPrincipal.style.cssText = "background:#661155; color:white; border:none; padding:8px 16px; border-radius:5px; cursor:pointer; font-weight:bold;";
+            btnPrincipal.onclick = () => analisarCotacao(c.numero);
+            acoesDiv.appendChild(btnPrincipal);
 
-            // 🔒 ENCERRAR
+            // 🔒 ENCERRAR (Apenas se aberta ou respondida)
             if (c.status === "aberta" || c.status === "respondida" || c.status === "reanalise") {
               const btnEncerrar = document.createElement("button");
-              btnEncerrar.innerHTML = "🔒 Encerrar";
-              btnEncerrar.style.cssText = "background:#cc0000; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer;";
+              btnEncerrar.innerText = "Encerrar";
+              btnEncerrar.style.cssText = "background:#cc0000; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer; font-size:13px;";
               btnEncerrar.onclick = () => encerrarCotacaoManualmente(c.numero);
               acoesDiv.appendChild(btnEncerrar);
             }
 
-            // 🔄 REABRIR
+            // 🔄 REABRIR (Apenas se fechada ou em aprovação)
             if (c.status === "fechada" || c.status === "aprovacao") {
               const btnReabrir = document.createElement("button");
-              btnReabrir.innerHTML = "🔄 Reabrir";
-              btnReabrir.style.cssText = "background:#e0a800; color:#000; border:none; padding:8px 12px; border-radius:5px; cursor:pointer; font-weight:bold;";
+              btnReabrir.innerText = "Reabrir";
+              btnReabrir.style.cssText = "background:#e0a800; color:#000; border:none; padding:8px 12px; border-radius:5px; cursor:pointer; font-weight:bold; font-size:13px;";
               btnReabrir.onclick = () => reabrirCotacao(c.numero);
               acoesDiv.appendChild(btnReabrir);
             }
 
-            // 🗑️ EXCLUIR
+            // 🗑️ EXCLUIR (Lixeira)
             const btnExcluir = document.createElement("button");
             btnExcluir.innerHTML = '<i class="fa-solid fa-trash"></i>';
             btnExcluir.style.cssText = "background:transparent; border:1px solid #ff4444; color:#ff4444; padding:8px 12px; border-radius:5px; cursor:pointer;";
             btnExcluir.onclick = () => excluirCotacao(c.numero);
             acoesDiv.appendChild(btnExcluir);
           } else {
-            // Fornecedor vê botão Visualizar/Editar
-            const btnVer = document.createElement("button");
-            btnVer.innerHTML = "👁️ Ver Detalhes";
-            btnVer.style.cssText = "background:#3ab9b6; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer;";
-            btnVer.onclick = () => abrirDetalhesRespostaFornecedor(c.numero);
-            acoesDiv.appendChild(btnVer);
+            // FORNECEDOR: Responder ou Ver
+            const btnForn = document.createElement("button");
+            const jaRespondeu = fornecedorRespondeu(c, usuario.email);
+            btnForn.innerText = jaRespondeu ? "Editar Resposta" : "Responder";
+            btnForn.style.cssText = "background:#3ab9b6; color:white; border:none; padding:8px 16px; border-radius:5px; cursor:pointer; font-weight:bold;";
+            btnForn.onclick = () => abrirModalResponder(c.numero);
+            acoesDiv.appendChild(btnForn);
           }
 
           bloco.appendChild(infoDiv);
