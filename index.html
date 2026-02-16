@@ -4549,6 +4549,19 @@
         try {
           await db.collection("usuarios").doc(normalizedEmail).set(novoUsuario);
           console.log("✅ Usuário salvo no Firestore");
+
+          // 🔥 SINCRONIZAÇÃO: Se for fornecedor, cria entrada básica na coleção de fornecedores
+          if (tipo === "fornecedor") {
+            const stubFornecedor = {
+              nome: nome,
+              email: normalizedEmail,
+              status: "ativo",
+              dataCriacao: new Date().toLocaleString(),
+              tipo: "Serviços/Geral" // Padrão
+            };
+            await db.collection("fornecedores").doc(normalizedEmail).set(stubFornecedor);
+            console.log("✅ Stub de fornecedor sincronizado");
+          }
         } catch (e) {
           console.error("❌ Erro ao salvar usuário no Firestore:", e);
         }
@@ -4563,6 +4576,14 @@
 
         // 🔑 recarrega listas se abertas
         carregarUsuarios();
+        if (typeof mostrarListaFornecedores === "function" && tipo === "fornecedor") {
+          // Recarrega se a tela de gestão de fornecedores estiver aberta
+          const lista = document.getElementById("listaFornecedoresCadastrados");
+          if (lista && lista.style.display === "block") {
+            lista.style.display = "none"; // Toggle reset
+            mostrarListaFornecedores();
+          }
+        }
       }
 
 
@@ -5411,12 +5432,16 @@
       // carrega todos os fornecedores (FIREBASE)
       async function carregarFornecedoresModal() {
         try {
-          const snapshot = await db.collection("fornecedores").get();
-          // 🔥 MAPEIA COM O ID DO DOCUMENTO (DOCID)
-          let listaCrua = snapshot.docs.map(doc => ({
-            docId: doc.id,
-            ...doc.data()
-          }));
+          // 🔥 BUSCA DUPLA: Coleção comercial + Coleção de usuários (tipo fornecedor)
+          const [snapForn, snapUsers] = await Promise.all([
+            db.collection("fornecedores").get(),
+            db.collection("usuarios").where("tipo", "==", "fornecedor").get()
+          ]);
+
+          let listaCrua = [
+            ...snapForn.docs.map(doc => ({ docId: doc.id, ...doc.data() })),
+            ...snapUsers.docs.map(doc => ({ docId: doc.id, ...doc.data(), tipo: "Usuário/Geral" }))
+          ];
 
           // 🔥 DEDUPLICAÇÃO AGRESSIVA (NOME + EMAIL) - Case Insensitive
           const mapaDeduplicado = new Map();
@@ -5427,7 +5452,6 @@
             if (emailKey && !mapaDeduplicado.has(emailKey)) {
               mapaDeduplicado.set(emailKey, f);
             } else if (nomeKey && !mapaDeduplicado.has(nomeKey)) {
-              // Se já tem um pelo e-mail, não adiciona pelo nome se o nome for igual
               const jaExistePorNome = Array.from(mapaDeduplicado.values()).some(existing =>
                 (existing.nome || "").toLowerCase().trim() === nomeKey
               );
@@ -6079,6 +6103,19 @@
         try {
           await db.collection("fornecedores").doc(email.toLowerCase().trim()).set(novoFornecedor);
           console.log("✅ Fornecedor sincronizado com Firestore");
+
+          // 🔑 ADICIONA LOGIN AUTOMÁTICO (Caso não exista)
+          const userSnap = await db.collection("usuarios").doc(normalizedEmail).get();
+          if (!userSnap.exists) {
+            const novoLogin = {
+              nome: nome,
+              email: normalizedEmail,
+              senha: "123456", // Senha padrão
+              tipo: "fornecedor"
+            };
+            await db.collection("usuarios").doc(normalizedEmail).set(novoLogin);
+            console.log("✅ Login de fornecedor criado automaticamente");
+          }
         } catch (e) {
           console.warn("⚠️ Falha ao sincronizar com Firestore (Salvou Localmente):", e);
         }
@@ -7877,15 +7914,18 @@
           listaDiv.style.display = "block";
           tbody.innerHTML = "<tr><td colspan='5' style='text-align:center;'>⌛ Carregando fornecedores da nuvem...</td></tr>";
 
-          // 🔥 BUSCA NO FIRESTORE (TEMPO REAL)
+          // 🔥 BUSCA DUPLA: Coleção comercial + Coleção de usuários (tipo fornecedor)
           let fornecedores = [];
           try {
-            const snapshot = await db.collection("fornecedores").get();
-            // 🔥 MAPEIA COM O ID DO DOCUMENTO (DOCID)
-            const listaCrua = snapshot.docs.map(doc => ({
-              docId: doc.id,
-              ...doc.data()
-            }));
+            const [snapForn, snapUsers] = await Promise.all([
+              db.collection("fornecedores").get(),
+              db.collection("usuarios").where("tipo", "==", "fornecedor").get()
+            ]);
+
+            const listaCrua = [
+              ...snapForn.docs.map(doc => ({ docId: doc.id, ...doc.data() })),
+              ...snapUsers.docs.map(doc => ({ docId: doc.id, ...doc.data() }))
+            ];
 
             // 🔥 DEDUPLICAÇÃO AGRESSIVA (Sincronizada com Modal)
             const mapaDeduplicado = new Map();
