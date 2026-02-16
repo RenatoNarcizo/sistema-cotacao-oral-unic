@@ -5588,14 +5588,20 @@
 
       // filtro por nome (SEM alterar layout)
       function filtrarFornecedores() {
-        const termo = document.getElementById("buscaFornecedor").value.toLowerCase();
+        const termo = document.getElementById("buscaFornecedor").value.toLowerCase().trim();
+        const tipoFiltro = document.getElementById("filtroTipoFornecedor")?.value || "";
         const fornecedores = JSON.parse(localStorage.getItem("fornecedores_completos")) || [];
 
-        const filtrados = fornecedores.filter(f =>
-          f.empresaNome.toLowerCase().includes(termo) ||
-          f.empresaTipo.toLowerCase().includes(termo) ||
-          f.nomeUser.toLowerCase().includes(termo)
-        );
+        const filtrados = fornecedores.filter(f => {
+          const bateTexto = !termo ||
+            f.empresaNome.toLowerCase().includes(termo) ||
+            f.empresaTipo.toLowerCase().includes(termo) ||
+            f.nomeUser.toLowerCase().includes(termo);
+
+          const bateTipo = !tipoFiltro || f.empresaTipo === tipoFiltro;
+
+          return bateTexto && bateTipo;
+        });
 
         renderizarFornecedoresModal(filtrados);
       }
@@ -6153,10 +6159,13 @@
           cnpj,
           logradouro,
           numero,
+          bairro: document.getElementById("fornBairro")?.value.trim(),
+          cidade: document.getElementById("fornCidade")?.value.trim(),
+          cep: document.getElementById("fornCep")?.value.trim(),
           endereco,
           telefone,
           whats,
-          email: email.toLowerCase().trim(),
+          email: (email || "").toLowerCase().trim(),
           responsavel,
           tipo, // Este é o "Ramo de Atividade" ou "Categoria"
           status: "ativo",
@@ -6185,13 +6194,15 @@
         alert("✅ Empresa cadastrada com sucesso!");
 
         // Limpa campos
-        ["fornNome", "fornCnpj", "fornLogradouro", "fornNumero", "fornTelefone", "fornWhats", "fornEmails", "fornResponsavel", "fornTipo"].forEach(id => {
+        ["fornNome", "fornCnpj", "fornLogradouro", "fornNumero", "fornBairro", "fornCidade", "fornCep", "fornTelefone", "fornWhats", "fornEmails", "fornResponsavel", "fornTipo"].forEach(id => {
           const el = document.getElementById(id);
           if (el) el.value = "";
         });
 
-        if (document.getElementById("listaFornecedoresCadastrados")?.style.display === "block") {
-          mostrarListaFornecedores();
+        // Força a atualização da lista se o container estiver visível
+        const listaDiv = document.getElementById("listaFornecedoresCadastrados");
+        if (listaDiv && listaDiv.style.display === "block") {
+          mostrarListaFornecedores(true); // true = apenas recarregar, sem toggle
         }
       }
       /* ======================================================
@@ -7954,22 +7965,25 @@
       =============================== */
 
       if (typeof window.mostrarListaFornecedores !== "function") {
-        window.mostrarListaFornecedores = async function () {
+        window.mostrarListaFornecedores = async function (apenasRecarregar = false) {
           const listaDiv = document.getElementById("listaFornecedoresCadastrados");
           const tbody = document.getElementById("tabelaFornecedores");
           if (!listaDiv || !tbody) return;
 
-          if (listaDiv.style.display === "block") {
-            listaDiv.style.display = "none";
-            return;
+          // Se NÃO for apenas recarregar, faz o toggle normal
+          if (!apenasRecarregar) {
+            if (listaDiv.style.display === "block") {
+              listaDiv.style.display = "none";
+              return;
+            }
+            listaDiv.style.display = "block";
           }
 
-          listaDiv.style.display = "block";
           tbody.innerHTML = "<tr><td colspan='5' style='text-align:center;'>⌛ Carregando empresas...</td></tr>";
 
           try {
             const snap = await db.collection("fornecedores").get();
-            const empresas = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            const empresas = snap.docs.map(doc => ({ id: doc.id, docId: doc.id, ...doc.data() }));
 
             empresas.sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
             localStorage.setItem("fornecedores", JSON.stringify(empresas));
