@@ -5829,6 +5829,7 @@
           class="checkFornecedor"
           data-nome="${f.empresaNome} - ${f.nomeUser}"
           data-email="${f.emailUser}"
+          data-whatsapp="${f.empresaWhats}"
           style="transform: scale(1.3);"
         >
         <div style="flex:1;">
@@ -5916,7 +5917,8 @@
 
         const fornecedoresSelecionados = selecionados.map(el => ({
           nome: el.dataset.nome || "",
-          email: (el.dataset.email || "").trim().toLowerCase()
+          email: (el.dataset.email || "").trim().toLowerCase(),
+          whatsapp: el.dataset.whatsapp || ""
         }));
 
         // salva temporariamente no botão/origem
@@ -11330,7 +11332,7 @@
           fornecedores: cotacao.fornecedores.map(f => ({
             nome: f.nome || "Fornecedor",
             email: f.email || f,
-            whatsapp: f.whats || f.telefone || ""
+            whatsapp: f.whatsapp || f.whats || f.telefone || ""
           }))
         };
 
@@ -11352,13 +11354,15 @@
               mostrarNotificacaoToast("Notificações automáticas enviadas! ✉️📱");
             } else {
               const errorText = await response.text();
+              console.error("❌ Erro no Webhook:", errorText);
+              alert("⚠️ O Make.com recebeu os dados mas deu erro: " + errorText);
               throw new Error(`Status HTTP: ${response.status} - ${errorText}`);
             }
           } catch (error) {
             console.warn("⚠️ Falha no envio padrão (CORS/Bloqueio). Tentando modo resiliente (no-cors)...");
 
             try {
-              // Tentativa 2: no-cors (Bypassa AdBlocks e restrições de origem se o Webhook aceitar)
+              // Tentativa 2: no-cors
               await fetch(CONFIG_NOTIFICACOES.webhook_url, {
                 method: "POST",
                 mode: "no-cors",
@@ -11370,7 +11374,7 @@
               mostrarNotificacaoToast("Notificações enviadas (Modo de Compatibilidade)!");
             } catch (err2) {
               console.error("❌ Falha crítica no envio:", err2);
-              alert("⚠️ Falha total ao enviar notificações.\n\nPossível causa: Seu navegador ou uma extensão (ex: AdBlock/uBlock) está bloqueando o Make.com. Tente desativar bloqueadores de anúncios para este site.");
+              alert("🚨 ERRO CRÍTICO: O sistema não conseguiu falar com o Make.com.\n\nVerifique se o seu Cenário está ATILVADO (ON) no Make.");
             }
           }
         } else {
