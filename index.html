@@ -11347,10 +11347,12 @@
             });
 
             if (response.ok) {
-              console.log("✅ Webhook disparado com sucesso!");
+              const resData = await response.text();
+              console.log("✅ Webhook disparado com sucesso! Resposta do Make:", resData);
               mostrarNotificacaoToast("Notificações automáticas enviadas! ✉️📱");
             } else {
-              throw new Error(`Status HTTP: ${response.status}`);
+              const errorText = await response.text();
+              throw new Error(`Status HTTP: ${response.status} - ${errorText}`);
             }
           } catch (error) {
             console.warn("⚠️ Falha no envio padrão (CORS/Bloqueio). Tentando modo resiliente (no-cors)...");
