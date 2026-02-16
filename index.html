@@ -11301,12 +11301,6 @@
       window.dispararNotificacaoFornecedores = async function (cotacao) {
         console.log("🚀 [AUTOMAÇÃO] Preparando disparos para fornecedores...");
 
-        // Verificação de segurança: Protocolo Local
-        if (window.location.protocol === "file:") {
-          alert("⚠️ Atenção: O envio automático de notificações não funciona abrindo o arquivo diretamente pelo Windows (file://).\n\nPara funcionar, você deve:\n1. Abrir o projeto usando o 'Live Server' (no VS Code);\n2. Ou acessar o sistema pelo link do Vercel/Hospedagem.");
-          return;
-        }
-
         const payload = {
           evento: "nova_cotacao",
           numero: cotacao.numero,
@@ -11324,33 +11318,37 @@
 
         if (CONFIG_NOTIFICACOES.ativo && CONFIG_NOTIFICACOES.webhook_url.startsWith("http")) {
           try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000);
-
+            console.log("📡 Tentando envio (POST/CORS)...");
             const response = await fetch(CONFIG_NOTIFICACOES.webhook_url, {
               method: "POST",
-              mode: "cors", // Força o modo cors
+              mode: "cors",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(payload),
-              signal: controller.signal
+              body: JSON.stringify(payload)
             });
-
-            clearTimeout(timeoutId);
 
             if (response.ok) {
               console.log("✅ Webhook disparado com sucesso!");
               mostrarNotificacaoToast("Notificações automáticas enviadas! ✉️📱");
             } else {
-              const errorText = await response.text();
-              console.error("❌ Erro do Webhook:", response.status, errorText);
-              alert(`⚠️ O serviço de notificações (Make) retornou um erro (${response.status}). Verifique se o cenário está ligado.`);
+              throw new Error(`Status HTTP: ${response.status}`);
             }
           } catch (error) {
-            console.error("❌ Erro de Conexão:", error);
-            if (error.name === 'AbortError') {
-              alert("⚠️ Tempo esgotado ao tentar enviar notificações. Verifique sua internet.");
-            } else {
-              alert("⚠️ Falha na conexão de notificações.\n\nPossível causa: O navegador bloqueou a requisição por segurança (CORS). Tente publicar o sistema no Vercel ou abrir via Servidor Local para resolver.");
+            console.warn("⚠️ Falha no envio padrão (CORS/Bloqueio). Tentando modo resiliente (no-cors)...");
+
+            try {
+              // Tentativa 2: no-cors (Bypassa AdBlocks e restrições de origem se o Webhook aceitar)
+              await fetch(CONFIG_NOTIFICACOES.webhook_url, {
+                method: "POST",
+                mode: "no-cors",
+                headers: { "Content-Type": "text/plain" },
+                body: JSON.stringify(payload)
+              });
+
+              console.log("✅ Webhook enviado em Modo Resiliente.");
+              mostrarNotificacaoToast("Notificações enviadas (Modo de Compatibilidade)!");
+            } catch (err2) {
+              console.error("❌ Falha crítica no envio:", err2);
+              alert("⚠️ Falha total ao enviar notificações.\n\nPossível causa: Seu navegador ou uma extensão (ex: AdBlock/uBlock) está bloqueando o Make.com. Tente desativar bloqueadores de anúncios para este site.");
             }
           }
         } else {
