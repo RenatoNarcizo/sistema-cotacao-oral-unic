@@ -3545,38 +3545,18 @@
         </div>
       </div>
 
-      <!-- CAMPOS EXTRAS PARA FORNECEDOR -->
+      <!-- VÍNCULO COM EMPRESA (PARA FORNECEDOR) -->
       <div id="camposExtrasFornecedor"
         style="display:none; border-top:1px solid #333; margin-top:15px; padding-top:15px;">
-        <h3 style="color:#0dcaf0; font-size:16px; margin-bottom:15px;">🚚 Dados Comerciais (Fornecedor)</h3>
-        <div style="display:grid; grid-template-columns:1fr 1fr; column-gap:30px; row-gap:18px;">
-          <div class="input-group">
-            <label>CNPJ</label>
-            <input type="text" id="userCnpj" placeholder="00.000.000/0000-00">
-          </div>
-          <div class="input-group">
-            <label>WhatsApp / Contato</label>
-            <input type="text" id="userWhats" placeholder="(00) 00000-0000">
-          </div>
-          <div class="input-group" style="grid-column: span 2;">
-            <label>Endereço Completo</label>
-            <input type="text" id="userEndereco" placeholder="Rua, Número, Bairro, Cidade">
-          </div>
-          <div class="input-group">
-            <label>Responsável</label>
-            <input type="text" id="userResponsavel" placeholder="Nome do contato na empresa">
-          </div>
-          <div class="input-group">
-            <label>Especialidade</label>
-            <select id="userEspecialidade">
-              <option value="Serviços/Geral">Serviços/Geral</option>
-              <option>Materiais Elétricos</option>
-              <option>Construção Civil</option>
-              <option>Serviços Técnicos</option>
-              <option>Informática e TI</option>
-              <option>Outros</option>
-            </select>
-          </div>
+        <h3 style="color:#0dcaf0; font-size:16px; margin-bottom:15px;">🏢 Vincular a uma Empresa (Fornecedor)</h3>
+        <div class="input-group">
+          <label>Selecione a Empresa</label>
+          <select id="userEmpresaId">
+            <option value="">Carregando empresas...</option>
+          </select>
+          <small style="color:#aaa; display:block; margin-top:5px;">
+            A empresa deve ser cadastrada primeiro na aba "Cadastro de Fornecedor".
+          </small>
         </div>
       </div>
       <div style="text-align:center; margin-top:20px;">
@@ -4556,11 +4536,34 @@
         });
       }
 
-      function toggleCamposFornecedorUsuario() {
+      async function toggleCamposFornecedorUsuario() {
         const tipo = document.getElementById("userTipo").value;
         const divExtras = document.getElementById("camposExtrasFornecedor");
-        if (divExtras) {
-          divExtras.style.display = (tipo === "fornecedor") ? "block" : "none";
+        const selectEmpresa = document.getElementById("userEmpresaId");
+
+        if (tipo === "fornecedor") {
+          divExtras.style.display = "block";
+
+          // Carregar empresas do Firestore
+          selectEmpresa.innerHTML = '<option value="">Carregando...</option>';
+          try {
+            const snap = await db.collection("fornecedores").get();
+            if (snap.empty) {
+              selectEmpresa.innerHTML = '<option value="">Nenhuma empresa encontrada</option>';
+            } else {
+              let html = '<option value="">Selecione a empresa...</option>';
+              snap.forEach(doc => {
+                const f = doc.data();
+                html += `<option value="${doc.id}">${f.nome || doc.id}</option>`;
+              });
+              selectEmpresa.innerHTML = html;
+            }
+          } catch (e) {
+            console.error(e);
+            selectEmpresa.innerHTML = '<option value="">Erro ao carregar</option>';
+          }
+        } else {
+          divExtras.style.display = "none";
         }
       }
 
@@ -4569,16 +4572,15 @@
         const email = document.getElementById("userEmail").value.trim();
         const senha = document.getElementById("userSenha").value.trim();
         const tipo = document.getElementById("userTipo").value;
-
-        // Novos campos (Fornecedor)
-        const cnpj = document.getElementById("userCnpj").value.trim();
-        const whats = document.getElementById("userWhats").value.trim();
-        const endereco = document.getElementById("userEndereco").value.trim();
-        const responsavel = document.getElementById("userResponsavel").value.trim();
-        const especialidade = document.getElementById("userEspecialidade").value;
+        const empresaId = document.getElementById("userEmpresaId")?.value;
 
         if (!nome || !email || !senha || !tipo) {
-          alert("⚠️ Preencha todos os campos obrigatórios (Nome, E-mail, Senha e Perfil)");
+          alert("⚠️ Preencha Nome, E-mail, Senha e Perfil");
+          return;
+        }
+
+        if (tipo === "fornecedor" && !empresaId) {
+          alert("⚠️ Selecione a empresa vinculada");
           return;
         }
 
@@ -4588,11 +4590,7 @@
           email: normalizedEmail,
           senha,
           tipo,
-          // Dados extras se houver
-          cnpj,
-          whats,
-          endereco,
-          responsavel
+          empresaId: empresaId || null
         };
 
         // 1. Salva no LocalStorage (Legacy)
@@ -4605,21 +4603,9 @@
           await db.collection("usuarios").doc(normalizedEmail).set(novoUsuario);
           console.log("✅ Usuário salvo no Firestore");
 
-          // 🔥 SINCRONIZAÇÃO: Se for fornecedor, cria entrada básica na coleção de fornecedores
+          // 🔥 Se for fornecedor, não cria mais stub. O vínculo é feito pelo empresaId.
           if (tipo === "fornecedor") {
-            const stubFornecedor = {
-              nome: nome,
-              email: normalizedEmail,
-              status: "ativo",
-              dataCriacao: new Date().toLocaleString(),
-              tipo: especialidade || "Serviços/Geral",
-              cnpj: cnpj || "",
-              whats: whats || "",
-              endereco: endereco || "",
-              responsavel: responsavel || ""
-            };
-            await db.collection("fornecedores").doc(normalizedEmail).set(stubFornecedor);
-            console.log("✅ Cadastro de fornecedor sincronizado com dados completos");
+            console.log("✅ Usuário vinculado à empresa:", empresaId);
           }
         } catch (e) {
           console.error("❌ Erro ao salvar usuário no Firestore:", e);
@@ -4630,12 +4616,7 @@
         document.getElementById("userEmail").value = "";
         document.getElementById("userSenha").value = "";
         document.getElementById("userTipo").value = "";
-
-        // Limpa extras
-        document.getElementById("userCnpj").value = "";
-        document.getElementById("userWhats").value = "";
-        document.getElementById("userEndereco").value = "";
-        document.getElementById("userResponsavel").value = "";
+        if (document.getElementById("userEmpresaId")) document.getElementById("userEmpresaId").value = "";
         document.getElementById("camposExtrasFornecedor").style.display = "none";
 
         alert("✅ Usuário criado com sucesso!");
@@ -5476,86 +5457,91 @@
           return;
         }
 
-        lista.sort((a, b) => a.nome.localeCompare(b.nome));
+        // Ordenar por Empresa
+        lista.sort((a, b) => a.empresaNome.localeCompare(b.empresaNome));
 
         listaDiv.innerHTML = lista.map(f => {
-          const email = f.email || f.emails || "Sem e-mail";
-          const telefone = f.telefone || "";
-          const whats = f.whats || "";
-          const responsavel = f.responsavel || "";
-          const endereco = f.endereco || "";
-
-          // Formatação de Contato Prioritária para Identificação
-          const contatoTexto = (telefone || whats)
-            ? `${telefone ? `📞 ${telefone}` : ""} ${whats ? ` • 💬 ${whats}` : ""}`.trim()
-            : "Telefone não informado";
-
           return `
-            <label style="display:block; padding:12px; border-bottom:1px solid #333; cursor:pointer; background:rgba(255,255,255,0.02); margin-bottom:5px; border-radius:4px;">
-              <div style="display:flex; align-items:flex-start; gap:10px;">
-                <input
-                  type="checkbox"
-                  class="checkFornecedor"
-                  data-nome="${f.nome}"
-                  data-email="${email}"
-                  style="margin-top:4px;"
-                >
-                <div style="flex:1;">
-                  <strong style="color:#fff; font-size:15px; display:block;">${f.nome}</strong> 
-                  <div style="color:#0dcaf0; font-size:13px; margin: 2px 0;">📧 ${email}</div>
-                  <div style="color:#aaa; font-size:12px;">${contatoTexto}</div>
-                  <div style="margin-top:5px; border-top:1px solid rgba(255,255,255,0.05); padding-top:5px;">
-                    <span style="color:#888; font-size:11px;">Perfil: ${f.tipo || "Geral"}</span>
-                    ${responsavel ? `<span style="color:#888; font-size:11px; margin-left:10px;">👤 ${responsavel}</span>` : ""}
-                  </div>
-                </div>
-              </div>
-            </label>
-          `;
+    <label style="display:block; padding:12px; border-bottom:1px solid #333; cursor:pointer; background:#111; margin-bottom:5px; border-radius:4px;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <input
+          type="checkbox"
+          class="checkFornecedor"
+          data-nome="${f.empresaNome} - ${f.nomeUser}"
+          data-email="${f.emailUser}"
+          style="transform: scale(1.3);"
+        >
+        <div style="flex:1;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+            <strong style="color:#661155; font-size:16px;">${f.empresaNome}</strong>
+            <span style="font-size:11px; background:#333; padding:2px 8px; border-radius:10px; color:#aaa; border:1px solid #444;">
+              ${f.empresaTipo}
+            </span>
+          </div>
+          <div style="font-size:13px; color:#ddd; margin-bottom:3px;">
+            👤 <span style="font-weight:bold;">${f.nomeUser}</span>
+          </div>
+          <div style="display:flex; gap:15px; font-size:12px; color:#aaa;">
+            <span>📧 ${f.emailUser}</span>
+            <span>💬 ${f.empresaWhats}</span>
+          </div>
+          <div style="font-size:10px; color:#666; margin-top:4px;">
+            📍 ${f.empresaEndereco}
+          </div>
+        </div>
+      </div>
+    </label>
+  `;
         }).join("");
       }
 
       // carrega todos os fornecedores (FIREBASE)
       async function carregarFornecedoresModal() {
+        const listaDiv = document.getElementById("listaFornecedoresModal");
+        if (listaDiv) listaDiv.innerHTML = '<p style="text-align:center;">⌛ Carregando...</p>';
+
         try {
-          // 🔥 BUSCA DUPLA: Coleção comercial + Coleção de usuários (tipo fornecedor)
-          const [snapForn, snapUsers] = await Promise.all([
+          // 🔥 BUSCA CRUZADA: Empresas + Usuários
+          const [snapEmpresas, snapUsers] = await Promise.all([
             db.collection("fornecedores").get(),
             db.collection("usuarios").where("tipo", "==", "fornecedor").get()
           ]);
 
-          let listaCrua = [
-            ...snapForn.docs.map(doc => ({ docId: doc.id, ...doc.data() })),
-            ...snapUsers.docs.map(doc => ({ docId: doc.id, ...doc.data(), tipo: "Usuário/Geral" }))
-          ];
-
-          // 🔥 DEDUPLICAÇÃO AGRESSIVA (NOME + EMAIL) - Case Insensitive
-          const mapaDeduplicado = new Map();
-          listaCrua.forEach(f => {
-            const emailKey = (f.email || f.emails || "").toLowerCase().trim();
-            const nomeKey = (f.nome || "").toLowerCase().trim();
-
-            if (emailKey && !mapaDeduplicado.has(emailKey)) {
-              mapaDeduplicado.set(emailKey, f);
-            } else if (nomeKey && !mapaDeduplicado.has(nomeKey)) {
-              const jaExistePorNome = Array.from(mapaDeduplicado.values()).some(existing =>
-                (existing.nome || "").toLowerCase().trim() === nomeKey
-              );
-              if (!jaExistePorNome) {
-                mapaDeduplicado.set(nomeKey, f);
-              }
-            }
+          const empresasMap = new Map();
+          snapEmpresas.forEach(doc => {
+            empresasMap.set(doc.id, { id: doc.id, ...doc.data() });
           });
-          const listaForn = Array.from(mapaDeduplicado.values());
 
-          // Sincroniza LS
-          localStorage.setItem("fornecedores", JSON.stringify(listaForn));
+          const listaFinal = [];
+          snapUsers.forEach(doc => {
+            const userData = doc.data();
+            const empresa = empresasMap.get(userData.empresaId);
 
-          renderizarFornecedoresModal(listaForn);
+            listaFinal.push({
+              idUser: doc.id,
+              nomeUser: userData.nome || "-",
+              emailUser: doc.id,
+              empresaNome: empresa ? empresa.nome : "Empresa não vinculada",
+              empresaTipo: empresa ? empresa.tipo : "Geral",
+              empresaWhats: empresa ? empresa.whats || empresa.whatsapp : "-",
+              empresaEndereco: empresa ? empresa.endereco : "-",
+              // Campos para busca e compatibilidade
+              nome: empresa ? `${empresa.nome} (${userData.nome})` : userData.nome,
+              tipo: empresa ? empresa.tipo : "Fornecedor",
+              email: doc.id
+            });
+          });
+
+          // Caso existam empresas sem usuários ainda, podemos optar por mostrar ou não. 
+          // O usuário disse: "o Gerenciar Usuarios quando eu cadastro o perfil de forncedor é para alguem acessar o sistema"
+          // Então se não tem usuário, não tem como responder.
+
+          localStorage.setItem("fornecedores_completos", JSON.stringify(listaFinal));
+          renderizarFornecedoresModal(listaFinal);
         } catch (e) {
-          console.warn("Erro ao buscar fornecedores do Firebase, usando local:", e);
-          const fornecedores = JSON.parse(localStorage.getItem("fornecedores")) || [];
-          renderizarFornecedoresModal(fornecedores);
+          console.error("Erro ao carregar modal:", e);
+          const local = JSON.parse(localStorage.getItem("fornecedores_completos")) || [];
+          renderizarFornecedoresModal(local);
         }
       }
 
@@ -5603,10 +5589,12 @@
       // filtro por nome (SEM alterar layout)
       function filtrarFornecedores() {
         const termo = document.getElementById("buscaFornecedor").value.toLowerCase();
-        const fornecedores = JSON.parse(localStorage.getItem("fornecedores")) || [];
+        const fornecedores = JSON.parse(localStorage.getItem("fornecedores_completos")) || [];
 
         const filtrados = fornecedores.filter(f =>
-          f.nome.toLowerCase().includes(termo)
+          f.empresaNome.toLowerCase().includes(termo) ||
+          f.empresaTipo.toLowerCase().includes(termo) ||
+          f.nomeUser.toLowerCase().includes(termo)
         );
 
         renderizarFornecedoresModal(filtrados);
@@ -6146,83 +6134,63 @@
       async function salvarFornecedor() {
         const nome = document.getElementById("fornNome")?.value.trim();
         const cnpj = document.getElementById("fornCnpj")?.value.trim();
-        const endereco = `${document.getElementById("fornLogradouro")?.value || ""} ${document.getElementById("fornNumero")?.value || ""}`.trim();
+        const logradouro = document.getElementById("fornLogradouro")?.value.trim();
+        const numero = document.getElementById("fornNumero")?.value.trim();
+        const endereco = `${logradouro || ""} ${numero || ""}`.trim();
         const telefone = document.getElementById("fornTelefone")?.value.trim();
         const whats = document.getElementById("fornWhats")?.value.trim();
         const email = document.getElementById("fornEmails")?.value.trim();
         const responsavel = document.getElementById("fornResponsavel")?.value.trim();
         const tipo = document.getElementById("fornTipo")?.value;
 
-        // ✅ validação correta
-        if (!nome || !email) {
-          alert("⚠️ Preencha ao menos Nome e E-mail");
+        if (!nome) {
+          alert("⚠️ Preencha ao menos o Nome da Empresa");
           return;
         }
 
-        const normalizedEmail = email.toLowerCase().trim();
         const novoFornecedor = {
           nome,
           cnpj,
+          logradouro,
+          numero,
           endereco,
           telefone,
           whats,
-          email: normalizedEmail,
+          email: email.toLowerCase().trim(),
           responsavel,
-          tipo,
+          tipo, // Este é o "Ramo de Atividade" ou "Categoria"
           status: "ativo",
           dataCriacao: new Date().toLocaleString()
         };
 
-        const fornecedores = JSON.parse(localStorage.getItem("fornecedores")) || [];
+        const fornecedoresLocais = JSON.parse(localStorage.getItem("fornecedores")) || [];
 
-        // Se estiver editando, remove o antigo antes de inserir o novo (ou atualiza se for o mesmo email)
         if (fornecedorEditando !== null) {
-          fornecedores.splice(fornecedorEditando, 1);
+          fornecedoresLocais.splice(fornecedorEditando, 1);
           fornecedorEditando = null;
         }
 
-        fornecedores.push(novoFornecedor);
-        fornecedores.sort((a, b) => a.nome.localeCompare(b.nome));
-        localStorage.setItem("fornecedores", JSON.stringify(fornecedores));
+        fornecedoresLocais.push(novoFornecedor);
+        localStorage.setItem("fornecedores", JSON.stringify(fornecedoresLocais));
 
-        // 🔥 SINCRONIZA COM FIRESTORE
         try {
-          await db.collection("fornecedores").doc(email.toLowerCase().trim()).set(novoFornecedor);
-          console.log("✅ Fornecedor sincronizado com Firestore");
-
-          // 🔑 ADICIONA LOGIN AUTOMÁTICO (Caso não exista)
-          const userSnap = await db.collection("usuarios").doc(normalizedEmail).get();
-          if (!userSnap.exists) {
-            const novoLogin = {
-              nome: nome,
-              email: normalizedEmail,
-              senha: "123456", // Senha padrão
-              tipo: "fornecedor"
-            };
-            await db.collection("usuarios").doc(normalizedEmail).set(novoLogin);
-            console.log("✅ Login de fornecedor criado automaticamente");
-          }
+          // Usa o Nome ou CNPJ como ID se não houver email, mas email é preferível
+          const docId = (email || nome).toLowerCase().trim();
+          await db.collection("fornecedores").doc(docId).set(novoFornecedor);
+          console.log("✅ Empresa cadastrada com sucesso no Firestore");
         } catch (e) {
-          console.warn("⚠️ Falha ao sincronizar com Firestore (Salvou Localmente):", e);
+          console.warn("⚠️ Falha ao sincronizar com Firestore:", e);
         }
 
-        alert("✅ Fornecedor salvo com sucesso!");
+        alert("✅ Empresa cadastrada com sucesso!");
 
-        // limpa formulário
-        [
-          "fornNome", "fornCnpj", "fornLogradouro", "fornNumero",
-          "fornBairro", "fornCidade", "fornCep",
-          "fornTelefone", "fornWhats", "fornEmails",
-          "fornResponsavel", "fornTipo"
-        ].forEach(id => {
+        // Limpa campos
+        ["fornNome", "fornCnpj", "fornLogradouro", "fornNumero", "fornTelefone", "fornWhats", "fornEmails", "fornResponsavel", "fornTipo"].forEach(id => {
           const el = document.getElementById(id);
           if (el) el.value = "";
         });
 
-        // atualiza lista se estiver aberta
         if (document.getElementById("listaFornecedoresCadastrados")?.style.display === "block") {
-          mostrarListaFornecedores();
-          // Oculta e mostra novamente para forçar atualização completa se necessário
           mostrarListaFornecedores();
         }
       }
@@ -7991,92 +7959,50 @@
           const tbody = document.getElementById("tabelaFornecedores");
           if (!listaDiv || !tbody) return;
 
-          // 🔁 toggle
           if (listaDiv.style.display === "block") {
             listaDiv.style.display = "none";
             return;
           }
 
           listaDiv.style.display = "block";
-          tbody.innerHTML = "<tr><td colspan='5' style='text-align:center;'>⌛ Carregando fornecedores da nuvem...</td></tr>";
+          tbody.innerHTML = "<tr><td colspan='5' style='text-align:center;'>⌛ Carregando empresas...</td></tr>";
 
-          // 🔥 BUSCA DUPLA: Coleção comercial + Coleção de usuários (tipo fornecedor)
-          let fornecedores = [];
           try {
-            const [snapForn, snapUsers] = await Promise.all([
-              db.collection("fornecedores").get(),
-              db.collection("usuarios").where("tipo", "==", "fornecedor").get()
-            ]);
+            const snap = await db.collection("fornecedores").get();
+            const empresas = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-            const listaCrua = [
-              ...snapForn.docs.map(doc => ({ docId: doc.id, ...doc.data() })),
-              ...snapUsers.docs.map(doc => ({ docId: doc.id, ...doc.data() }))
-            ];
+            empresas.sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
+            localStorage.setItem("fornecedores", JSON.stringify(empresas));
 
-            // 🔥 DEDUPLICAÇÃO AGRESSIVA (Sincronizada com Modal)
-            const mapaDeduplicado = new Map();
-            listaCrua.forEach(f => {
-              const emailKey = (f.email || f.emails || "").toLowerCase().trim();
-              const nomeKey = (f.nome || "").toLowerCase().trim();
+            tbody.innerHTML = "";
+            if (empresas.length === 0) {
+              tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Nenhuma empresa cadastrada.</td></tr>';
+              return;
+            }
 
-              if (emailKey && !mapaDeduplicado.has(emailKey)) {
-                mapaDeduplicado.set(emailKey, f);
-              } else if (nomeKey && !mapaDeduplicado.has(nomeKey)) {
-                const jaExistePorNome = Array.from(mapaDeduplicado.values()).some(existing =>
-                  (existing.nome || "").toLowerCase().trim() === nomeKey
-                );
-                if (!jaExistePorNome) mapaDeduplicado.set(nomeKey, f);
-              }
+            empresas.forEach((f, index) => {
+              const tr = document.createElement("tr");
+              tr.innerHTML = `
+                <td>
+                  <strong>${f.nome || "-"}</strong><br>
+                  <small style="color:#0dcaf0;">${f.tipo || "Geral"}</small>
+                </td>
+                <td style="font-size:12px; color:#aaa;">${f.endereco || f.logradouro || "-"}</td>
+                <td>${f.whats || f.whatsapp || "-"}</td>
+                <td>${f.responsavel || "-"}</td>
+                <td style="text-align:center;">
+                  <div style="display:flex; justify-content:center; gap:8px;">
+                    <button onclick="editarFornecedor(${index})" title="Editar">✏️</button>
+                    <button onclick='window.excluirFornecedor(${index})' title="Excluir">🗑️</button>
+                  </div>
+                </td>
+              `;
+              tbody.appendChild(tr);
             });
-            fornecedores = Array.from(mapaDeduplicado.values());
-
-            localStorage.setItem("fornecedores", JSON.stringify(fornecedores));
-            console.log("✅ Fornecedores sincronizados para listagem (Deduplicados)");
           } catch (e) {
-            console.warn("Erro ao buscar fornecedores do Firebase, usando local:", e);
-            fornecedores = JSON.parse(localStorage.getItem("fornecedores")) || [];
+            console.error(e);
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:red;">Erro ao carregar dados.</td></tr>';
           }
-
-          tbody.innerHTML = "";
-          fornecedores.sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
-
-          if (fornecedores.length === 0) {
-            tbody.innerHTML = `
-        <tr>
-        <td colspan="5" style="text-align:center;padding:10px;">
-          Nenhum fornecedor cadastrado.
-        </td>
-        </tr>
-        `;
-            return;
-          }
-
-          fornecedores.forEach((f, index) => {
-            const tr = document.createElement("tr");
-
-            const email = f.email || f.emails || "-";
-            const contato = f.whats || f.whatsapp || f.telefone || "-";
-            const responsavel = f.responsavel || "-";
-
-            tr.innerHTML = `
-        <td>
-          <strong>${f.nome || "-"}</strong><br>
-          <small style="color:#0dcaf0;">${email}</small>
-        </td>
-        <td style="font-size:12px; color:#aaa;">${(f.endereco || f.logradouro || "") + (f.numero ? `, ${f.numero}` : "") || "-"}</td>
-        <td>${contato}</td>
-        <td>${responsavel}</td>
-        <td style="text-align:center;">
-          <div style="display:flex; justify-content:center; gap:8px;">
-            <button onclick="verFichaFornecedor(${index})" title="Ver ficha">👁️</button>
-            <button onclick="editarFornecedor(${index})" title="Editar">✏️</button>
-            <button onclick='window.excluirFornecedor(${index})' title="Excluir">🗑️</button>
-          </div>
-        </td>
-      `;
-
-            tbody.appendChild(tr);
-          });
         };
       }
 
