@@ -3534,7 +3534,7 @@
         </div>
         <div class="input-group">
           <label>Perfil</label>
-          <select id="userTipo">
+          <select id="userTipo" onchange="toggleCamposFornecedorUsuario()">
             <option value="">Selecione o perfil</option>
             <option value="administrador">Administrador</option>
             <option value="comprador">Comprador</option>
@@ -3542,6 +3542,41 @@
             <option value="fornecedor">Fornecedor</option>
             <option value="requisitante">Requisitante</option>
           </select>
+        </div>
+      </div>
+
+      <!-- CAMPOS EXTRAS PARA FORNECEDOR -->
+      <div id="camposExtrasFornecedor"
+        style="display:none; border-top:1px solid #333; margin-top:15px; padding-top:15px;">
+        <h3 style="color:#0dcaf0; font-size:16px; margin-bottom:15px;">🚚 Dados Comerciais (Fornecedor)</h3>
+        <div style="display:grid; grid-template-columns:1fr 1fr; column-gap:30px; row-gap:18px;">
+          <div class="input-group">
+            <label>CNPJ</label>
+            <input type="text" id="userCnpj" placeholder="00.000.000/0000-00">
+          </div>
+          <div class="input-group">
+            <label>WhatsApp / Contato</label>
+            <input type="text" id="userWhats" placeholder="(00) 00000-0000">
+          </div>
+          <div class="input-group" style="grid-column: span 2;">
+            <label>Endereço Completo</label>
+            <input type="text" id="userEndereco" placeholder="Rua, Número, Bairro, Cidade">
+          </div>
+          <div class="input-group">
+            <label>Responsável</label>
+            <input type="text" id="userResponsavel" placeholder="Nome do contato na empresa">
+          </div>
+          <div class="input-group">
+            <label>Especialidade</label>
+            <select id="userEspecialidade">
+              <option value="Serviços/Geral">Serviços/Geral</option>
+              <option>Materiais Elétricos</option>
+              <option>Construção Civil</option>
+              <option>Serviços Técnicos</option>
+              <option>Informática e TI</option>
+              <option>Outros</option>
+            </select>
+          </div>
         </div>
       </div>
       <div style="text-align:center; margin-top:20px;">
@@ -4521,14 +4556,29 @@
         });
       }
 
+      function toggleCamposFornecedorUsuario() {
+        const tipo = document.getElementById("userTipo").value;
+        const divExtras = document.getElementById("camposExtrasFornecedor");
+        if (divExtras) {
+          divExtras.style.display = (tipo === "fornecedor") ? "block" : "none";
+        }
+      }
+
       async function criarUsuario() {
         const nome = document.getElementById("userNome").value.trim();
         const email = document.getElementById("userEmail").value.trim();
         const senha = document.getElementById("userSenha").value.trim();
         const tipo = document.getElementById("userTipo").value;
 
+        // Novos campos (Fornecedor)
+        const cnpj = document.getElementById("userCnpj").value.trim();
+        const whats = document.getElementById("userWhats").value.trim();
+        const endereco = document.getElementById("userEndereco").value.trim();
+        const responsavel = document.getElementById("userResponsavel").value.trim();
+        const especialidade = document.getElementById("userEspecialidade").value;
+
         if (!nome || !email || !senha || !tipo) {
-          alert("⚠️ Preencha todos os campos");
+          alert("⚠️ Preencha todos os campos obrigatórios (Nome, E-mail, Senha e Perfil)");
           return;
         }
 
@@ -4537,7 +4587,12 @@
           nome,
           email: normalizedEmail,
           senha,
-          tipo
+          tipo,
+          // Dados extras se houver
+          cnpj,
+          whats,
+          endereco,
+          responsavel
         };
 
         // 1. Salva no LocalStorage (Legacy)
@@ -4557,10 +4612,14 @@
               email: normalizedEmail,
               status: "ativo",
               dataCriacao: new Date().toLocaleString(),
-              tipo: "Serviços/Geral" // Padrão
+              tipo: especialidade || "Serviços/Geral",
+              cnpj: cnpj || "",
+              whats: whats || "",
+              endereco: endereco || "",
+              responsavel: responsavel || ""
             };
             await db.collection("fornecedores").doc(normalizedEmail).set(stubFornecedor);
-            console.log("✅ Stub de fornecedor sincronizado");
+            console.log("✅ Cadastro de fornecedor sincronizado com dados completos");
           }
         } catch (e) {
           console.error("❌ Erro ao salvar usuário no Firestore:", e);
@@ -4571,6 +4630,13 @@
         document.getElementById("userEmail").value = "";
         document.getElementById("userSenha").value = "";
         document.getElementById("userTipo").value = "";
+
+        // Limpa extras
+        document.getElementById("userCnpj").value = "";
+        document.getElementById("userWhats").value = "";
+        document.getElementById("userEndereco").value = "";
+        document.getElementById("userResponsavel").value = "";
+        document.getElementById("camposExtrasFornecedor").style.display = "none";
 
         alert("✅ Usuário criado com sucesso!");
 
