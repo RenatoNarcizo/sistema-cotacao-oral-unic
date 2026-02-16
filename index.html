@@ -5075,85 +5075,17 @@
         }
       };
 
-      window.carregarRespondidas = async function (statusFiltro, container) {
-        if (!container) return;
-        container.innerHTML = "<p style='text-align:center;'>⌛ Carregando...</p>";
-        try {
-          const statusArray = Array.isArray(statusFiltro) ? statusFiltro : [statusFiltro];
-          const snap = await db.collection("cotacoes").where("status", "in", statusArray).get();
-          const lista = snap.docs.map(doc => doc.data());
-
-          if (lista.length === 0) {
-            container.innerHTML = "<p style='text-align:center; color:#aaa;'>Nenhuma cotação neste status.</p>";
-            return;
-          }
-
-          container.innerHTML = lista.map(c => `
-            <div class="linha-cotacao">
-              <div class="info">
-                <strong>${c.numero}</strong> - ${c.descricao || ""}<br>
-                <small>Data: ${c.dataCriacao || c.data}</small>
-              </div>
-              <div class="acoes">
-                <button onclick="analisarCotacao('${c.numero}')">Visualizar</button>
-              </div>
-            </div>
-          `).join("");
-        } catch (e) {
-          console.error(e);
-          container.innerHTML = "Erro.";
-        }
+      /* Omitted duplicate Firebase transition functions to resolve UI conflicts with verified versions below */
+      window.abrirAprovarCompras = function () {
+        abrirPagina('aprovarCompras');
+        carregarPendentesAprovacao();
       };
-
-      /* ======================================================
-         📊 ANÁLISE E APROVAÇÃO FINAL
-      ====================================================== */
-      window.analisarCotacao = function (idOuNumero) {
-        if (typeof renderizarTabelaAnalise === "function") {
-          document.getElementById("modalAnaliseCotacao").style.display = "flex";
-          document.body.style.overflow = "hidden";
-          renderizarTabelaAnalise(idOuNumero);
-        } else {
-          alert("Erro: Sistema de renderização premium não carregado.");
-        }
-      };
-
-      window.finalizarCotacao = async function () {
-        const modal = document.getElementById("modalAnaliseCotacao");
-        const numero = modal.getAttribute("data-cotacao");
-        if (!numero) return alert("Cotação não identificada.");
-
-        if (!confirm("Deseja realmente FINALIZAR esta cotação e gerar o pedido?")) return;
-
-        try {
-          const snap = await db.collection("cotacoes").doc(String(numero)).get();
-          const cotacao = snap.exists ? snap.data() : null;
-
-          // Atualiza Status para Fechada
-          await db.collection("cotacoes").doc(String(numero)).update({
-            status: "fechada",
-            dataFinalizacao: new Date().toLocaleString()
-          });
-
-          // Atualiza local
-          const cotacoesLocal = JSON.parse(localStorage.getItem("cotacoes")) || [];
-          const idx = cotacoesLocal.findIndex(c => c.numero === numero || c.id === numero);
-          if (idx !== -1) {
-            cotacoesLocal[idx].status = "fechada";
-            localStorage.setItem("cotacoes", JSON.stringify(cotacoesLocal));
-          }
-
-          alert("✅ Cotação FINALIZADA com sucesso! O pedido foi gerado.");
-          modal.style.display = "none";
-          document.body.style.overflow = "auto";
-
-          if (typeof carregarPendentesAprovacao === "function") carregarPendentesAprovacao();
-          if (typeof toggleListaRespondidas === "function") toggleListaRespondidas("fechada");
+      if (typeof toggleListaRespondidas === "function") toggleListaRespondidas("fechada");
 
         } catch (e) {
-          console.error(e);
-          alert("Erro ao finalizar cotação.");
-        }
+        console.error(e);
+        alert("Erro ao finalizar cotação.");
+      }
       };
 
       /* ======================================================
@@ -7555,6 +7487,52 @@
               ${tempoHTML}
             </div>
           `;
+
+          // --- 🔘 BOTÕES DE AÇÃO ---
+          const acoesDiv = document.createElement("div");
+          acoesDiv.className = "acoes";
+          acoesDiv.style.cssText = "display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;";
+
+          if (usuario.tipo !== "fornecedor") {
+            // 📊 ANALISAR
+            const btnAnalise = document.createElement("button");
+            btnAnalise.innerHTML = "📊 Analisar Respostas";
+            btnAnalise.style.cssText = "background:#661155; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer; font-weight:bold;";
+            btnAnalise.onclick = () => analisarCotacao(c.numero);
+            acoesDiv.appendChild(btnAnalise);
+
+            // 🔒 ENCERRAR
+            if (c.status === "aberta" || c.status === "respondida" || c.status === "reanalise") {
+              const btnEncerrar = document.createElement("button");
+              btnEncerrar.innerHTML = "🔒 Encerrar";
+              btnEncerrar.style.cssText = "background:#cc0000; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer;";
+              btnEncerrar.onclick = () => encerrarCotacaoManualmente(c.numero);
+              acoesDiv.appendChild(btnEncerrar);
+            }
+
+            // 🔄 REABRIR
+            if (c.status === "fechada" || c.status === "aprovacao") {
+              const btnReabrir = document.createElement("button");
+              btnReabrir.innerHTML = "🔄 Reabrir";
+              btnReabrir.style.cssText = "background:#e0a800; color:#000; border:none; padding:8px 12px; border-radius:5px; cursor:pointer; font-weight:bold;";
+              btnReabrir.onclick = () => reabrirCotacao(c.numero);
+              acoesDiv.appendChild(btnReabrir);
+            }
+
+            // 🗑️ EXCLUIR
+            const btnExcluir = document.createElement("button");
+            btnExcluir.innerHTML = '<i class="fa-solid fa-trash"></i>';
+            btnExcluir.style.cssText = "background:transparent; border:1px solid #ff4444; color:#ff4444; padding:8px 12px; border-radius:5px; cursor:pointer;";
+            btnExcluir.onclick = () => excluirCotacao(c.numero);
+            acoesDiv.appendChild(btnExcluir);
+          } else {
+            // Fornecedor vê botão Visualizar/Editar
+            const btnVer = document.createElement("button");
+            btnVer.innerHTML = "👁️ Ver Detalhes";
+            btnVer.style.cssText = "background:#3ab9b6; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer;";
+            btnVer.onclick = () => abrirDetalhesRespostaFornecedor(c.numero);
+            acoesDiv.appendChild(btnVer);
+          }
 
           bloco.appendChild(infoDiv);
           bloco.appendChild(acoesDiv);
