@@ -5412,21 +5412,39 @@
 
         lista.sort((a, b) => a.nome.localeCompare(b.nome));
 
-        listaDiv.innerHTML = lista.map(f => `
-    <label style="display:block; padding:8px; border-bottom:1px solid #333; cursor:pointer;">
-      <input
-        type="checkbox"
-        class="checkFornecedor"
-        data-nome="${f.nome}"
-        data-email="${f.email || f.emails || ""}"
-        style="margin-right:6px;"
-      >
-      <strong>${f.nome}</strong> — ${f.tipo || "Sem tipo"}<br>
-      <small>${f.endereco || "-"}</small><br>
-      <small>📞 ${f.telefone || "-"} • 💬 ${f.whats || "-"}</small><br>
-      <small>👤 ${f.responsavel || "-"}</small>
-    </label>
-  `).join("");
+        listaDiv.innerHTML = lista.map(f => {
+          const email = f.email || f.emails || "";
+          const telefone = f.telefone || "";
+          const whats = f.whats || "";
+          const responsavel = f.responsavel || "";
+          const endereco = f.endereco || "";
+
+          // Só monta a linha de contato se houver telefone ou whatsapp
+          const linhaContato = (telefone || whats)
+            ? `<small>${telefone ? `📞 ${telefone}` : ""} ${whats ? ` • 💬 ${whats}` : ""}</small><br>`
+            : "";
+
+          return `
+            <label style="display:block; padding:12px; border-bottom:1px solid #333; cursor:pointer; background:rgba(255,255,255,0.02); margin-bottom:5px; border-radius:4px;">
+              <div style="display:flex; align-items:flex-start; gap:10px;">
+                <input
+                  type="checkbox"
+                  class="checkFornecedor"
+                  data-nome="${f.nome}"
+                  data-email="${email}"
+                  style="margin-top:4px;"
+                >
+                <div style="flex:1;">
+                  <strong style="color:#fff; font-size:15px;">${f.nome}</strong> 
+                  <span style="color:#aaa; font-size:12px; margin-left:5px;">— ${f.tipo || "Geral"}</span><br>
+                  ${endereco ? `<small style="color:#888;">📍 ${endereco}</small><br>` : ""}
+                  ${linhaContato}
+                  ${responsavel ? `<small style="color:#0dcaf0;">👤 ${responsavel}</small>` : ""}
+                </div>
+              </div>
+            </label>
+          `;
+        }).join("");
       }
 
       // carrega todos os fornecedores (FIREBASE)
@@ -7968,11 +7986,15 @@
           fornecedores.forEach((f, index) => {
             const tr = document.createElement("tr");
 
+            const endereco = (f.endereco || f.logradouro || "") + (f.numero ? `, ${f.numero}` : "");
+            const contato = f.whats || f.whatsapp || f.telefone || "-";
+            const responsavel = f.responsavel || "-";
+
             tr.innerHTML = `
         <td>${f.nome || "-"}</td>
-        <td>${f.endereco || f.logradouro || ""} ${f.numero || ""}</td>
-        <td>${f.whats || f.whatsapp || "-"}</td>
-        <td>${f.responsavel || "-"}</td>
+        <td style="font-size:12px; color:#aaa;">${endereco || "-"}</td>
+        <td>${contato}</td>
+        <td>${responsavel}</td>
         <td style="text-align:center;">
           <div style="display:flex; justify-content:center; gap:8px;">
             <button onclick="verFichaFornecedor(${index})" title="Ver ficha">👁️</button>
