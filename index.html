@@ -5413,16 +5413,16 @@
         lista.sort((a, b) => a.nome.localeCompare(b.nome));
 
         listaDiv.innerHTML = lista.map(f => {
-          const email = f.email || f.emails || "";
+          const email = f.email || f.emails || "Sem e-mail";
           const telefone = f.telefone || "";
           const whats = f.whats || "";
           const responsavel = f.responsavel || "";
           const endereco = f.endereco || "";
 
-          // Só monta a linha de contato se houver telefone ou whatsapp
-          const linhaContato = (telefone || whats)
-            ? `<small>${telefone ? `📞 ${telefone}` : ""} ${whats ? ` • 💬 ${whats}` : ""}</small><br>`
-            : "";
+          // Formatação de Contato Prioritária para Identificação
+          const contatoTexto = (telefone || whats)
+            ? `${telefone ? `📞 ${telefone}` : ""} ${whats ? ` • 💬 ${whats}` : ""}`.trim()
+            : "Telefone não informado";
 
           return `
             <label style="display:block; padding:12px; border-bottom:1px solid #333; cursor:pointer; background:rgba(255,255,255,0.02); margin-bottom:5px; border-radius:4px;">
@@ -5435,11 +5435,13 @@
                   style="margin-top:4px;"
                 >
                 <div style="flex:1;">
-                  <strong style="color:#fff; font-size:15px;">${f.nome}</strong> 
-                  <span style="color:#aaa; font-size:12px; margin-left:5px;">— ${f.tipo || "Geral"}</span><br>
-                  ${endereco ? `<small style="color:#888;">📍 ${endereco}</small><br>` : ""}
-                  ${linhaContato}
-                  ${responsavel ? `<small style="color:#0dcaf0;">👤 ${responsavel}</small>` : ""}
+                  <strong style="color:#fff; font-size:15px; display:block;">${f.nome}</strong> 
+                  <div style="color:#0dcaf0; font-size:13px; margin: 2px 0;">📧 ${email}</div>
+                  <div style="color:#aaa; font-size:12px;">${contatoTexto}</div>
+                  <div style="margin-top:5px; border-top:1px solid rgba(255,255,255,0.05); padding-top:5px;">
+                    <span style="color:#888; font-size:11px;">Perfil: ${f.tipo || "Geral"}</span>
+                    ${responsavel ? `<span style="color:#888; font-size:11px; margin-left:10px;">👤 ${responsavel}</span>` : ""}
+                  </div>
                 </div>
               </div>
             </label>
@@ -7986,13 +7988,16 @@
           fornecedores.forEach((f, index) => {
             const tr = document.createElement("tr");
 
-            const endereco = (f.endereco || f.logradouro || "") + (f.numero ? `, ${f.numero}` : "");
+            const email = f.email || f.emails || "-";
             const contato = f.whats || f.whatsapp || f.telefone || "-";
             const responsavel = f.responsavel || "-";
 
             tr.innerHTML = `
-        <td>${f.nome || "-"}</td>
-        <td style="font-size:12px; color:#aaa;">${endereco || "-"}</td>
+        <td>
+          <strong>${f.nome || "-"}</strong><br>
+          <small style="color:#0dcaf0;">${email}</small>
+        </td>
+        <td style="font-size:12px; color:#aaa;">${(f.endereco || f.logradouro || "") + (f.numero ? `, ${f.numero}` : "") || "-"}</td>
         <td>${contato}</td>
         <td>${responsavel}</td>
         <td style="text-align:center;">
