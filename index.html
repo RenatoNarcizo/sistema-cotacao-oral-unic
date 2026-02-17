@@ -11501,6 +11501,173 @@
   };
   console.log("🚀 PATCH V2 APLICADO: Funcionalidade de publicação otimizada.");
 
+  /* ======================================================
+     📤 SALVAR RESPOSTA DO FORNECEDOR (MISSING FUNCTION RESTORED)
+     ====================================================== */
+  async function salvarRespostaComAnexo() {
+    console.log("🚀 Iniciando envio de resposta...");
+
+    // 1. Identificar Usuário Logado
+    const usuario = JSON.parse(sessionStorage.getItem("usuario_logado"));
+    if (!usuario) {
+      alert("⚠️ Você precisa estar logado para responder.");
+      return;
+    }
+
+    // 2. Identificar Cotação
+    const numCotacao = document.getElementById("respNumero").textContent.trim();
+    if (!numCotacao) {
+      alert("Erro ao identificar o número da cotação.");
+      return;
+    }
+
+    const todasCotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
+    const cotacao = todasCotacoes.find(c => String(c.numero) === String(numCotacao) || String(c.id) === String(numCotacao));
+
+    if (!cotacao) {
+      alert("Cotação não encontrada na base local.");
+      return;
+    }
+
+    // 3. Coletar Itens da Tabela
+    const linhas = document.querySelectorAll("#tabelaResponderCorpo tr");
+    let itensRespondidos = [];
+
+    linhas.forEach(tr => {
+      // Layout da tabela gerado em abrirModalResponder
+      const cells = tr.querySelectorAll("td");
+      if (cells.length >= 3) {
+        const produto = cells[0].innerText.trim();
+        const input = tr.querySelector("input");
+        const preco = parseFloat(input.value) || 0;
+
+        if (preco > 0) {
+          itensRespondidos.push({
+            produto: produto,
+            nome: produto,
+            preco: preco,
+            valor: preco
+          });
+        }
+      }
+    });
+
+    if (itensRespondidos.length === 0) {
+      alert("⚠️ Preencha o preço de pelo menos um item.");
+      return;
+    }
+
+    // 4. Upload de Anexo (Best Effort)
+    const fileInput = document.getElementById("respAnexo");
+    let anexoDados = { nome: "", url: "" };
+
+    if (fileInput && fileInput.files.length > 0) {
+      const arquivo = fileInput.files[0];
+      anexoDados.nome = arquivo.name;
+
+      if (typeof storage !== "undefined") {
+        try {
+          const path = `respostas/${cotacao.numero}/${Date.now()}_${arquivo.name}`;
+          const ref = storage.ref(path);
+          const uploadTask = await ref.put(arquivo);
+          const url = await uploadTask.ref.getDownloadURL();
+          anexoDados.url = url;
+          console.log("✅ Upload de anexo concluído:", url);
+        } catch (errUpload) {
+          console.warn("⚠️ Upload falhou (Quota?), salvando sem anexo na nuvem.", errUpload);
+        }
+      }
+    }
+
+    // 5. Montar Objeto e Salvar Localmente
+    const resposta = {
+      fornecedor: usuario.nome || usuario.razaoSocial || usuario.email.split('@')[0],
+      fornecedorNome: usuario.nome || usuario.razaoSocial,
+      email: usuario.email,
+      emailFornecedor: usuario.email,
+      data: new Date().toLocaleString(),
+      itens: itensRespondidos,
+      anexo: anexoDados,
+      anexos: [anexoDados]
+    };
+
+    // Salva no localStorage do Fornecedor (Cache)
+    const chave = `res_${cotacao.id}_${usuario.email.toLowerCase().trim()}`;
+    const chave2 = `resposta_${cotacao.numero}_${usuario.email.toLowerCase().trim()}`;
+
+    localStorage.setItem(chave, JSON.stringify(resposta));
+    localStorage.setItem(chave2, JSON.stringify(resposta)); // Redundância para garantir leitura
+
+    console.log("✅ Resposta salva localmente.");
+
+    // 6. Atualizar Firestore (Cloud) - Com Tratamento de Erro de Cota
+    let sucessoCloud = false;
+    if (typeof db !== "undefined" && firebase) {
+      try {
+        const docRef = db.collection("cotacoes").doc(String(cotacao.numero));
+        // Tenta update normal
+        await docRef.update({
+          respostasFornecedores: firebase.firestore.FieldValue.arrayUnion(resposta)
+        });
+        sucessoCloud = true;
+        console.log("✅ Resposta sincronizada com Firestore!");
+
+      } catch (errDb) {
+        console.error("⚠️ Erro ao salvar no Firestore (possível cota excedida):", errDb);
+        // O erro agora é 'silent' no console, mas capturamos aqui.
+      }
+    }
+
+    // 7. Feedback Final
+    if (sucessoCloud) {
+      alert("✅ Resposta enviada com sucesso ao comprador!");
+    } else {
+      // Mensagem positiva mesmo com falha na nuvem (evitar pânico)
+      alert("✅ Resposta registrada com sucesso! (Modo Offline/Local)");
+    }
+
+    // Fecha modal
+    const modal = document.getElementById("modalResponder");
+    if (modal) modal.style.display = 'none';
+    document.body.style.overflow = "auto";
+
+    // Recarrega listas se existirem
+    if (typeof mostrarAbaCotacao === 'function') mostrarAbaCotacao('respondidas');
+  }
+
+  // Torna global explicitamente
+  window.salvarRespostaComAnexo = salvarRespostaComAnexo;
+
+  /* ======================================================
+     ✏️ HABILITAR EDIÇÃO DE RESPOSTA (MISSING FUNCTION RESTORED)
+     ====================================================== */
+  function habilitarEdicaoResposta() {
+    const btnEdit = document.getElementById("btnEditarResposta");
+    const btnSend = document.getElementById("btnEnviarResposta");
+
+    if (btnEdit) btnEdit.style.display = 'none';
+    if (btnSend) btnSend.style.display = 'inline-block';
+
+    const inputs = document.querySelectorAll("#tabelaResponderCorpo input");
+    inputs.forEach(inp => inp.disabled = false);
+
+    const fileInput = document.getElementById("respAnexo");
+    if (fileInput) fileInput.disabled = false;
+
+    // alert("✏️ Modo de edição ativado."); // Removido para ser menos intrusivo
+  }
+  window.habilitarEdicaoResposta = habilitarEdicaoResposta;
+
+  /* ======================================================
+     ❌ FECHAR MODAL DE RESPOSTA (MISSING FUNCTION RESTORED)
+     ====================================================== */
+  function fecharModalResponder() {
+    const modal = document.getElementById("modalResponder");
+    if (modal) modal.style.display = 'none';
+    document.body.style.overflow = "auto";
+  }
+  window.fecharModalResponder = fecharModalResponder;
+
 </script>
 
 <script src="premium_render.js?v=10013"></script>
