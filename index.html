@@ -11857,7 +11857,10 @@
       } catch (err) {
         falha++;
         falhados.push(cot.numero || cot.id);
-        console.warn(`❌ Sync FAIL: ${cot.numero}`, err);
+        // 🚨 MOSTRA ERRO DETALHADO
+        console.error(`❌ ERRO DETALHADO em ${cot.numero}:`, err);
+        console.error("Código do erro:", err.code);
+        console.error("Mensagem completa:", err.message);
       }
 
       // Atualiza progresso
