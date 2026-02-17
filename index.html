@@ -11732,11 +11732,24 @@
       localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
       console.log("✅ V2: Backup local salvo.");
 
-      // ☁️ 2. CLOUD (OBRIGATÓRIO - AWAIT)
-      // Isso garante que o pacote chegue ao servidor antes de fechar a página
+      // ☁️ 2. CLOUD (RACE WITH TIMEOUT)
+      let nuvemOk = false;
       if (typeof db !== "undefined") {
-        await db.collection("cotacoes").doc(String(novaCotacao.numero)).set(novaCotacao);
-        console.log("✅ V2: Sincronização Nuvem CONFIRMADA.");
+        // Timeout de 5 segundos para não travar
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error("Timeout de Rede (5s)")), 5000);
+        });
+
+        const uploadPromise = db.collection("cotacoes").doc(String(novaCotacao.numero)).set(novaCotacao);
+
+        try {
+          await Promise.race([uploadPromise, timeoutPromise]);
+          console.log("✅ V2: Sincronização Nuvem CONFIRMADA.");
+          nuvemOk = true;
+        } catch (errSync) {
+          console.warn("⚠️ V2: Falha/Timeout no Sync Cloud:", errSync);
+          // Segue o fluxo para salvar localmente e avisar o usuário
+        }
       } else {
         console.warn("⚠️ V2: Firebase não definido. Operando offline.");
       }
@@ -11754,7 +11767,11 @@
       window.fornecedoresSelecionadosTemp = [];
       numeroCotacaoAtual = null;
 
-      alert("✅ Cotação publicada com sucesso!\n\nOs fornecedores devem receber a atualização em instantes.");
+      if (nuvemOk) {
+        alert("✅ Cotação publicada com sucesso!\n\nOs fornecedores devem receber a atualização em instantes.");
+      } else {
+        alert("⚠️ ATENÇÃO: Salvo APENAS LOCALMENTE.\n\nOcorreu uma falha de conexão com a nuvem (Timeout).\nSua cotação está salva EXCLUSIVAMENTE neste computador por enquanto.\nOs fornecedores NÃO receberão até que a conexão volte.");
+      }
 
       limparFormulariosCotacao();
       window.location.reload();
