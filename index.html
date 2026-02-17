@@ -406,16 +406,23 @@
     .btn-status {
       background: #333;
       color: white;
-      border: none;
-      padding: 10px 18px;
-      border-radius: 6px;
+      border: 1px solid #661155;
+      padding: 10px 25px;
+      border-radius: 25px;
+      /* Pill shape conforme Fotos 3 e 5 */
       cursor: pointer;
-      transition: background 0.2s;
+      transition: all 0.3s;
       width: auto;
+      font-weight: bold;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
 
     .btn-status.ativo {
-      background: #661155;
+      background: #661155 !important;
+      box-shadow: 0 0 10px rgba(102, 17, 85, 0.8);
     }
 
     .status-buttons {
@@ -423,20 +430,7 @@
       gap: 15px;
       justify-content: center;
       margin-bottom: 25px;
-    }
-
-    .status-buttons button {
-      background: #333;
-      color: white;
-      border: 1px solid #661155;
-      padding: 10px 20px;
-      border-radius: 6px;
-      cursor: pointer;
-      width: auto;
-    }
-
-    .status-buttons button.ativo {
-      background: #661155;
+      flex-wrap: wrap;
     }
 
     .lista-aprovacao {
@@ -3243,15 +3237,22 @@
         <!-- 📤 SALVAR / ENVIAR -->
         <button id="btnEnviarResposta" onclick="salvarRespostaComAnexo()" style="
           background:#661155;
-          border:none;
           color:white;
-          padding:10px 22px;
-          border-radius:6px;
+          padding:12px 30px;
+          border:none;
+          border-radius:25px; /* Pill */
+          font-weight:bold;
           cursor:pointer;
           display:none;
           margin-left:10px;
+          font-size:16px;
+          box-shadow: 0 4px 10px rgba(102, 17, 85, 0.4);
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          justify-content: center;
         ">
-          📤 Enviar Resposta
+          <i class="fa-solid fa-paper-plane"></i> Enviar Resposta
         </button>
 
       </div>
@@ -6982,35 +6983,67 @@
             }
           }
 
-
-          /* ======================================================
-             🔘 BOTÃO DE AÇÃO
-          ====================================================== */
+          // --- ℹ️ INFO SECTION (RESTAURADA CONFORME FOTO 1 - FORNECEDOR) ---
+          let infoHTML = "";
           let botao = "";
+          const numeroExibicao = c.numero.startsWith('COT-') ? c.numero : 'COT-' + c.numero;
 
           if (usuario.tipo === "fornecedor") {
-            if (encerrada) {
-              botao = `
-                <button onclick="abrirResponderCotacao('${c.numero}', 'visualizar')">
-                  🔍 Detalhes
-                </button>`;
-            } else if (respondeu) {
-              botao = `
-                <button onclick="abrirResponderCotacao('${c.numero}', 'respondida')">
-                  🔍 Detalhes
-                </button>`;
-            } else {
-              botao = `
-                <button onclick="abrirResponderCotacao('${c.numero}', 'novo')">
-                  Responder
-                </button>`;
-            }
+            // Imagem 1: Título é o Número (em negrito branco), subtítulo é o #ID + status (em cinza)
+            infoHTML = `
+              <div style="font-weight:bold; font-size:18px; color:#fff; margin-bottom:4px;">${numeroExibicao}</div>
+              <div style="font-size:13px; color:#ccc; display:flex; align-items:center;">
+                #${numeroExibicao} ${c.status === "aberta" ? "aberta" : c.status}
+              </div>
+            `;
+
+            // Imagem 1: Botão "Detalhes" Roxo Magenta com ícone de lupa
+            botao = `
+              <button onclick="abrirResponderCotacao('${c.numero}')" style="background:#661155; color:white; border:none; padding:10px 22px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:14px; display:flex; align-items:center; gap:8px;">
+                <i class="fa-solid fa-magnifying-glass" style="font-size:12px;"></i> Detalhes
+              </button>
+            `;
           } else {
-            // 🛒 COMPRADOR / ADMIN
+            // COMPRADOR / ADMIN (Imagem 3 e tabs de dashboard)
+            let statusBadge = "";
+            if (c.status === "aberta") {
+              statusBadge = '<span style="background:#555; padding:2px 8px; border-radius:10px; font-size:11px; margin-left:8px; color:white; border: 1px solid #777;"><i class="fa-solid fa-bullhorn" style="font-size:10px; color:#ff66cc;"></i> Publicada</span>';
+            }
+
+            let tempoRestanteHTML = "";
+            const agora = new Date();
+            const fim = new Date(c.dataFechamento);
+            const diffMs = fim - agora;
+            let tempoTexto = "Expirado";
+            if (diffMs > 0) {
+              const dias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+              const horas = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+              const minutos = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+              tempoTexto = `${dias}d ${horas}h ${minutos}m`;
+            }
+            tempoRestanteHTML = `<span style="color:#3ab9b6;">⏳ Tempo restante: <b>${tempoTexto}</b></span>`;
+
+            const qtdConvidados = Array.isArray(c.fornecedores) ? c.fornecedores.length : 0;
+            const qtdRespostas = Array.isArray(c.respostasFornecedores) ? c.respostasFornecedores.length : 0;
+
+            infoHTML = `
+              <div style="font-weight:bold; font-size:18px; color:#fff; margin-bottom:4px;">
+                ${c.descricao || "Sem descrição"}
+              </div>
+              <div style="font-size:13px; color:#ccc; margin-bottom:8px; display:flex; align-items:center;">
+                Cotação #${numeroExibicao} ${statusBadge}
+              </div>
+              <div style="font-size:13px; color:#ccc; line-height:1.6;">
+                <span style="color:#a855f7;">👤</span> Com fornecedores (${qtdConvidados} convidados)<br>
+                <span style="color:#ff66cc;">📊</span> Respostas atuais: <b>${qtdRespostas}</b><br>
+                ${tempoRestanteHTML}
+              </div>
+            `;
+
             if (c.status === "respondida" || c.status === "analise" || c.status === "reanalise" || c.status === "aberta") {
               botao = `
-                <button onclick="analisarCotacao('${c.numero}')" style="background:#ffcc00; color:#000; border:none; padding:12px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:14px; width:100%; margin-bottom:4px;">
-                   Analisar Resposta
+                <button onclick="analisarCotacao('${c.numero}')" style="background:#661155; color:white; border:none; padding:12px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:14px; width:100%; margin-bottom:4px; display:flex; align-items:center; justify-content:center; gap:8px;">
+                   <i class="fa-solid fa-chart-bar"></i> Analisar Respostas
                 </button>
               `;
             }
@@ -7023,51 +7056,15 @@
             }
           }
 
-          // --- ℹ️ INFO SECTION (RESTAURADA) ---
-          let statusBadge = "";
-          if (c.status === "aberta") {
-            statusBadge = '<span style="background:#555; padding:2px 8px; border-radius:10px; font-size:11px; margin-left:8px; color:white; border: 1px solid #777;"><i class="fa-solid fa-bullhorn" style="font-size:10px; color:#ff66cc;"></i> Publicada</span>';
-          }
-
-          let tempoRestanteHTML = "";
-          const agora = new Date();
-          const fim = new Date(c.dataFechamento);
-          const diffMs = fim - agora;
-          let tempoTexto = "Expirado";
-          if (diffMs > 0) {
-            const dias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-            const horas = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            const minutos = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-            tempoTexto = `${dias}d ${horas}h ${minutos}m`;
-          }
-          tempoRestanteHTML = `<span style="color:#3ab9b6;">⏳ Tempo restante: <b>${tempoTexto}</b></span>`;
-
-          const qtdConvidados = Array.isArray(c.fornecedores) ? c.fornecedores.length : 0;
-          const qtdRespostas = Array.isArray(c.respostasFornecedores) ? c.respostasFornecedores.length : 0;
-
-          const infoHTML = `
-            <div style="font-weight:bold; font-size:18px; color:#fff; margin-bottom:4px;">
-              ${c.descricao || "Sem descrição"}
-            </div>
-            <div style="font-size:13px; color:#ccc; margin-bottom:8px; display:flex; align-items:center;">
-              Cotação #${c.numero.startsWith('COT-') ? c.numero : 'COT-' + c.numero} ${statusBadge}
-            </div>
-            <div style="font-size:13px; color:#ccc; line-height:1.6;">
-              <span style="color:#a855f7;">👤</span> Com fornecedores (${qtdConvidados} convidados)<br>
-              <span style="color:#ff66cc;">📊</span> Respostas atuais: <b>${qtdRespostas}</b><br>
-              ${tempoRestanteHTML}
-            </div>
-          `;
-
           /* ======================================================
-             🧱 RENDER FINAL (RESTAURADO)
+             🧱 RENDER FINAL (RESTAURADO CONFORME FOTOS 1 E 3)
           ====================================================== */
           div.innerHTML += `
-      <div class="linha-cotacao" style="display:flex; justify-content:space-between; align-items:flex-start; background: #110811; border: 1px solid #4a0c3e; padding: 15px; border-radius: 8px; margin-bottom: 12px;">
+      <div class="linha-cotacao" style="display:flex; justify-content:space-between; align-items:center; background: #110811; border: 1px solid #4a0c3e; padding: 15px; border-radius: 8px; margin-bottom: 12px;">
         <div class="info" style="flex:1;">
           ${infoHTML}
         </div>
-        <div class="acoes" style="display:flex; flex-direction:column; gap:8px; min-width:250px;">
+        <div class="acoes" style="display:flex; flex-direction:column; gap:8px; min-width:${usuario.tipo === "fornecedor" ? "auto" : "250px"};">
           ${botao}
           ${usuario.tipo !== "fornecedor" ? `
             <button onclick="reabrirCotacao('${c.numero}')" 
@@ -7446,12 +7443,19 @@
               <div style="font-size:13px; color:#ccc;">#${numeroExibicao} aberta</div>
             `;
           } else if (status === "analise" || Array.isArray(status)) {
-            // Imagem 3: Análise de Respostas
+            // Imagem 3: Análise de Respostas (Comprador)
             const resps = Array.isArray(c.respostasFornecedores) ? c.respostasFornecedores.length : 0;
             htmlInfo = `
               <div style="font-weight:bold; font-size:16px; color:#fff; margin-bottom:4px;">${c.descricao || "Sem descrição"}</div>
               <div style="font-size:13px; color:#ccc;">Cotação #${numeroExibicao}</div>
               <div style="font-size:13px; color:#ccc; margin-top:4px;">Respostas recebidas: <b>${resps}</b></div>
+            `;
+
+            // Imagem 3 traz o botão com ícone de gráfico
+            htmlBotao = `
+              <button onclick="analisarCotacao('${c.numero}')" style="background:#661155; color:white; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; font-weight:bold; display:flex; align-items:center; gap:8px;">
+                <i class="fa-solid fa-chart-column"></i> Analisar Respostas
+              </button>
             `;
           } else if (status === "aprovacao") {
             // Imagem 4: Aprovação
