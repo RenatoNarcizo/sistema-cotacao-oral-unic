@@ -11367,6 +11367,18 @@
   };
 
   /* ======================================================
+     🔇 SILENCIAR ERROS DE COTA (UX MELHORADA)
+  ====================================================== */
+  try {
+    if (typeof firebase !== 'undefined' && firebase.firestore) {
+      firebase.firestore.setLogLevel('silent');
+      console.log("🔕 Logs do Firestore silenciados com sucesso.");
+    }
+  } catch (e) {
+    console.log("ℹ️ Info: Não foi possível configurar log level.");
+  }
+
+  /* ======================================================
      🚀 FIX DEFINITIVO (V2) - NON-BLOCKING PUBLISH
   ====================================================== */
   async function publicarCotacaoV2(tipo = "manual") {
