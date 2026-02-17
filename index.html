@@ -3549,6 +3549,24 @@
   </div>
 
 
+  <!-- 💼 APROVAR COMPRAS -->
+  <section id="aprovarCompras" style="display:none;">
+    <header>
+      <button class="btn-sair" onclick="voltarMenu()">🏠 Menu Principal</button>
+      <h1>Aprovar Compras</h1>
+    </header>
+
+    <div
+      style="background:#111; border:1px solid #661155; border-radius:10px; padding:25px; margin:30px auto; width:90%; max-width:1200px; color:white; box-shadow:0 0 15px rgba(102,17,85,0.6);">
+      <h2 style="color:#661155;">✅ Cotações Aguardando Aprovação</h2>
+      <p style="color:#ccc; margin-bottom:20px;">Revise e aprove as cotações enviadas pelos compradores.</p>
+
+      <div id="listaAprovarCompras" style="margin-top:20px;">
+        <!-- Lista será preenchida dinamicamente -->
+      </div>
+    </div>
+  </section>
+
 
   <!-- 👥 GERENCIAR USUÁRIOS -->
   <section id="usuarios" style="display:none;">
@@ -11525,6 +11543,171 @@
       toggleListaRespondidas('aprovacao');
     }
   };
+
+  // 💼 ABRIR SEÇÃO APROVAR COMPRAS
+  window.abrirAprovarCompras = function () {
+    abrirTela('aprovarCompras');
+    carregarCotacoesAprovacao();
+  };
+
+  // 📋 CARREGAR COTAÇÕES EM APROVAÇÃO
+  function carregarCotacoesAprovacao() {
+    const cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
+    const cotacoesAprovacao = cotacoes.filter(c => c.status === "aprovacao");
+
+    const container = document.getElementById("listaAprovarCompras");
+
+    if (cotacoesAprovacao.length === 0) {
+      container.innerHTML = `
+        <div style="text-align:center; padding:40px; color:#ccc;">
+          <i class="fa-solid fa-inbox" style="font-size:48px; margin-bottom:15px; opacity:0.5;"></i>
+          <p style="font-size:18px;">Nenhuma cotação aguardando aprovação no momento.</p>
+        </div>
+      `;
+      return;
+    }
+
+    let html = '';
+    cotacoesAprovacao.forEach(cot => {
+      const totalGeral = (cot.adjudicacao || []).reduce((sum, item) => sum + (item.total || 0), 0);
+
+      html += `
+        <div style="background:#1a1a1a; border:1px solid #661155; border-radius:8px; padding:20px; margin-bottom:15px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <div>
+              <h3 style="color:#661155; margin:0;">Cotação ${cot.numero || cot.id}</h3>
+              <p style="margin:5px 0; color:#ccc;">${cot.descricao || 'Sem descrição'}</p>
+              <p style="margin:5px 0; font-size:14px; color:#999;">
+                Criada em: ${cot.dataCriacao || 'N/A'} | 
+                Comprador: ${cot.comprador || 'N/A'}
+              </p>
+            </div>
+            <div style="text-align:right;">
+              <div style="background:#661155; color:white; padding:8px 15px; border-radius:5px; font-weight:bold; margin-bottom:10px;">
+                Total: R$ ${totalGeral.toFixed(2)}
+              </div>
+              <div style="font-size:14px; color:#ccc;">
+                ${(cot.adjudicacao || []).length} item(ns) adjudicado(s)
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex; gap:10px; justify-content:flex-end;">
+            <button onclick="visualizarCotacaoAprovacao('${cot.numero || cot.id}')" style="background:#3ab9b6; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">
+              👁️ Visualizar Detalhes
+            </button>
+            <button onclick="aprovarCotacaoFinal('${cot.numero || cot.id}')" style="background:#198754; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">
+              ✅ Aprovar
+            </button>
+            <button onclick="rejeitarCotacaoFinal('${cot.numero || cot.id}')" style="background:#842029; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer;">
+              ❌ Rejeitar
+            </button>
+          </div>
+        </div>
+      `;
+    });
+
+    container.innerHTML = html;
+  }
+
+  // 👁️ VISUALIZAR DETALHES DA COTAÇÃO EM APROVAÇÃO
+  window.visualizarCotacaoAprovacao = function (id) {
+    const cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
+    const cotacao = cotacoes.find(c => String(c.numero) === String(id) || String(c.id) === String(id));
+
+    if (!cotacao) {
+      alert("Cotação não encontrada.");
+      return;
+    }
+
+    let detalhes = `📋 COTAÇÃO ${cotacao.numero || cotacao.id}\n\n`;
+    detalhes += `Descrição: ${cotacao.descricao || 'N/A'}\n`;
+    detalhes += `Comprador: ${cotacao.comprador || 'N/A'}\n`;
+    detalhes += `Data de Criação: ${cotacao.dataCriacao || 'N/A'}\n\n`;
+    detalhes += `✅ ITENS ADJUDICADOS:\n\n`;
+
+    (cotacao.adjudicacao || []).forEach((item, idx) => {
+      detalhes += `${idx + 1}. ${item.produto}\n`;
+      detalhes += `   Fornecedor: ${item.fornecedor}\n`;
+      detalhes += `   Quantidade: ${item.quantidade}\n`;
+      detalhes += `   Preço Unit.: R$ ${item.preco.toFixed(2)}\n`;
+      detalhes += `   Total: R$ ${item.total.toFixed(2)}\n\n`;
+    });
+
+    const totalGeral = (cotacao.adjudicacao || []).reduce((sum, item) => sum + (item.total || 0), 0);
+    detalhes += `💰 TOTAL GERAL: R$ ${totalGeral.toFixed(2)}`;
+
+    alert(detalhes);
+  };
+
+  // ✅ APROVAR COTAÇÃO FINAL
+  window.aprovarCotacaoFinal = function (id) {
+    if (!confirm("✅ Confirma a APROVAÇÃO desta cotação?")) return;
+
+    let cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
+    const index = cotacoes.findIndex(c => String(c.numero) === String(id) || String(c.id) === String(id));
+
+    if (index === -1) {
+      alert("Cotação não encontrada.");
+      return;
+    }
+
+    cotacoes[index].status = "aprovada";
+    cotacoes[index].dataAprovacao = new Date().toLocaleString();
+    cotacoes[index].aprovadoPor = getUsuarioLogado();
+
+    localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
+
+    alert("✅ Cotação aprovada com sucesso!");
+    carregarCotacoesAprovacao(); // Atualiza a lista
+  };
+
+  // ❌ REJEITAR COTAÇÃO FINAL
+  window.rejeitarCotacaoFinal = function (id) {
+    const motivo = prompt("❌ Digite o motivo da rejeição:");
+    if (!motivo || motivo.trim() === "") {
+      alert("Rejeição cancelada. É necessário informar um motivo.");
+      return;
+    }
+
+    let cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
+    const index = cotacoes.findIndex(c => String(c.numero) === String(id) || String(c.id) === String(id));
+
+    if (index === -1) {
+      alert("Cotação não encontrada.");
+      return;
+    }
+
+    cotacoes[index].status = "rejeitada";
+    cotacoes[index].motivoRejeicao = motivo;
+    cotacoes[index].dataRejeicao = new Date().toLocaleString();
+    cotacoes[index].rejeitadoPor = getUsuarioLogado();
+
+    localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
+
+    alert("❌ Cotação rejeitada. O comprador será notificado.");
+    carregarCotacoesAprovacao(); // Atualiza a lista
+  };
+
+  // 🔄 TOGGLE LISTA RESPONDIDAS (Placeholder para compatibilidade)
+  window.toggleListaRespondidas = function (aba, forceRefresh) {
+    console.log(`📌 toggleListaRespondidas chamado: aba="${aba}", forceRefresh=${forceRefresh}`);
+
+    // Se for para ir para aprovação, abre a tela de aprovar compras
+    if (aba === 'aprovacao') {
+      abrirAprovarCompras();
+    } else {
+      // Para outras abas, apenas loga (pode ser expandido no futuro)
+      console.log(`ℹ️ Aba "${aba}" não implementada ainda.`);
+    }
+  };
+
+  // 📋 CARREGAR COTAÇÕES (Placeholder para compatibilidade)
+  window.carregarCotacoes = function (tipo) {
+    console.log(`📌 carregarCotacoes chamado: tipo="${tipo}"`);
+    // Placeholder - pode ser expandido conforme necessário
+  };
+
 
 </script>
 
