@@ -6701,20 +6701,39 @@
     const usuario = getUsuarioLogado();
     if (!usuario) return;
 
-    // 🔍 BUSCA NO FIRESTORE (TEMPO REAL)
+    // 🔍 BUSCA NO FIRESTORE (COM MERGE INTELIGENTE PARA EVITAR PERDA)
     let cotacoes = [];
     try {
+      // 1. Busca Local (Sempre existe)
+      const localCotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
+
+      // 2. Busca Nuvem
       const snapshot = await db.collection("cotacoes").get();
-      cotacoes = snapshot.docs.map(doc => doc.data());
-      // Mantém LS atualizado para compatibilidade
+      const cloudCotacoes = snapshot.docs.map(doc => doc.data());
+
+      // 3. MERGE: Prioriza Nuvem, mas mantêm locais que não estão na nuvem (Recentes/Erro Quota)
+      const mapCotacoes = new Map();
+
+      // Adiciona Cloud primeiro (Fonte da Verdade)
+      cloudCotacoes.forEach(c => mapCotacoes.set(c.id, c));
+
+      // Adiciona Local se não existir ou se for mais recente (Ex: acabou de criar e falhou upload)
+      localCotacoes.forEach(c => {
+        if (!mapCotacoes.has(c.id)) {
+          console.warn(`⚠️ Mantendo cotação local (não sincronizada): ${c.numero}`);
+          mapCotacoes.set(c.id, c);
+        }
+      });
+
+      // Converte volta para array
+      cotacoes = Array.from(mapCotacoes.values());
+
+      // 4. Salva o Merge no LocalStorage (Agora seguro)
       localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
+
     } catch (e) {
-      console.warn("⚠️ Erro Firebase (Cota/Rede). Usando LocalStorage:", e);
-      try {
-        cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
-      } catch (errLocal) {
-        cotacoes = [];
-      }
+      console.warn("⚠️ Erro Firebase/Rede. Usando versão Local:", e);
+      cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
     }
 
     const div = document.getElementById(
