@@ -5056,6 +5056,13 @@
     document.getElementById('respDataFechamento').innerText = cotacao.dataFechamento;
     document.getElementById('respDescricao').innerText = cotacao.descricao;
 
+    // 🕒 INICIA O TIMER
+    if (dataFechamento) {
+      if (typeof iniciarTimerCotacao === "function") {
+        iniciarTimerCotacao(dataFechamento);
+      }
+    }
+
     // Limpa e monta a tabela de produtos
     const corpoTabela = document.getElementById('tabelaResponderCorpo');
     corpoTabela.innerHTML = "";
@@ -5064,7 +5071,8 @@
       const tr = document.createElement('tr');
       tr.innerHTML = `
             <td>${prod.nome}</td>
-            <td style="padding-left: 15px;">${prod.quantidade}</td>
+            <td style="text-align: center;">${prod.marca || '-'}</td>
+            <td style="text-align: center;">${prod.quantidade}</td>
             <td style="padding-left: 15px;"><input type="number" step="0.01" class="preco-input" data-produto="${prod.nome}"></td>
         `;
       corpoTabela.appendChild(tr);
@@ -5119,6 +5127,38 @@
   window.abrirResponderCotacao = function (id, modo) {
     abrirModalResponder(id, modo);
   };
+
+  // FUNÇÃO DO TIMER (SIMPLES E DIRETA)
+  function iniciarTimerCotacao(dataFechamento) {
+    const display = document.getElementById("timerDisplay");
+    if (!display) return;
+
+    // Limpa timer anterior se houver
+    if (window.timerInterval) clearInterval(window.timerInterval);
+
+    function atualizar() {
+      const agora = new Date();
+      const diff = dataFechamento - agora;
+
+      if (diff <= 0) {
+        display.innerText = "EXPIRADO";
+        display.style.color = "red";
+        if (window.timerInterval) clearInterval(window.timerInterval);
+        return;
+      }
+
+      const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const s = Math.floor((diff % (1000 * 60)) / 1000);
+
+      display.innerText = `${d}d ${h}h ${m}m ${s}s`;
+      display.style.color = "#00ff99";
+    }
+
+    atualizar(); // Roda imediatamente
+    window.timerInterval = setInterval(atualizar, 1000); // Repete a cada segundo
+  }
 
   /* ======================================================
      ✅ APROVAÇÃO DE COMPRAS (CORRIGIDO)
