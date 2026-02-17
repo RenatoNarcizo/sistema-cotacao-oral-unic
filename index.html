@@ -6344,8 +6344,7 @@
         await db.collection("cotacoes").doc(String(novaCotacao.numero)).set(novaCotacao);
         console.log("✅ Cotação salva no Firestore");
       } catch (errQuota) {
-        console.warn("⚠️ Cota do Firestore excedida ou erro de rede. Cotação salva apenas LOCALMENTE.", errQuota);
-        // Não interrompe o fluxo, pois já salvou no LocalStorage
+        console.warn("⚠️ Cota do Firestore excedida HOJE. Salvo localmente. Amanhã sincroniza.", errQuota);
       }
 
       // 🔔 NOTIFICAÇÃO: NOVA FUNÇÃO (WEBHOOK)
