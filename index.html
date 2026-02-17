@@ -4027,22 +4027,38 @@
     const collections = {
       "fornecedores": "fornecedores",
       "materiais": "materiais",
-      "cotacoes": "cotacoes",
-      "servicos": "servicos",
-      "pre_cadastros_fornecedores": "pre_cadastros"
-    };
+      // Verificação de segurança para não estourar cota do Firestore
+      if(localStorage.getItem("migration_complete") === "true") {
+        console.log("✅ Migração já realizada anteriormente. Pulando para economizar cota.");
+    return;
+  }
 
+  const collections = {
+    "cotacoes": "cotacoes",
+    "servicos": "servicos",
+    "pre_cadastros_fornecedores": "pre_cadastros"
+  };
+
+  try {
     for (const [key, collection] of Object.entries(collections)) {
       const data = JSON.parse(localStorage.getItem(key)) || [];
       if (data.length > 0) {
         console.log(`📦 Migrando ${data.length} itens de ${key} para coleção ${collection}...`);
-        for (const item of data) {
+        // Limita a 50 itens por vez para evitar bloqueio
+        const batch = data.slice(0, 50);
+        for (const item of batch) {
           const id = String(item.id || item.numero || item.email || Date.now());
-          await db.collection(collection).doc(id).set(item);
+          // Usa merge para não sobrescrever dados existentes e economizar se não mudou
+          await db.collection(collection).doc(id).set(item, { merge: true });
         }
       }
     }
-    console.log("✅ Migração finalizada.");
+    localStorage.setItem("migration_complete", "true");
+    console.log("✅ Migração finalizada e marcada como completa.");
+  } catch (error) {
+    console.error("⚠️ Erro parcial na migração (quota ou rede):", error);
+    // Não marca como completa para tentar novamente depois, mas o erro não deve travar o login
+  }
   }
 
   function getUsuarioLogado() {
@@ -11264,6 +11280,68 @@
     }
   }, 5000);
   */
+  /* ======================================================
+     📧 NOTIFICAÇÕES VIA WEBHOOK (MAKE.COM)
+  ====================================================== */
+
+  // URL do webhook Make.com
+  const WEBHOOK_URL_NOTIFICACAO = "https://hook.us2.make.com/88kkwk8fhnwxq8hxpjl1uda6ikqqv6xk";
+
+  /**
+   * Envia notificação via webhook quando cotação é publicada
+   * @param {Object} cotacao - Objeto da cotação publicada
+   */
+  window.enviarNotificacaoCotacao = async function (cotacao) {
+    try {
+      console.log("📧 Enviando notificações para cotação:", cotacao.numero);
+
+      const fornecedores = (cotacao.fornecedores || []).map(f => ({
+        nome: f.nome || f.fornecedor || "Fornecedor",
+        email: f.email || "",
+        whatsapp: f.whatsapp || f.telefone || ""
+      }));
+
+      const fornecedoresValidos = fornecedores.filter(f => f.email && f.email.includes('@'));
+
+      if (fornecedoresValidos.length === 0) {
+        console.warn("⚠️ Nenhum fornecedor com e-mail válido encontrado para notificar.");
+        return false;
+      }
+
+      const payload = {
+        tipo: "nova_cotacao",
+        numero: cotacao.numero || cotacao.id,
+        descricao: cotacao.descricao || "Cotação sem descrição",
+        dataFechamento: cotacao.dataFechamento || "Não definido",
+        fornecedores: fornecedoresValidos,
+        link: window.location.origin,
+        mensagem: `Nova cotação ${cotacao.numero || cotacao.id} disponível. Prazo: ${cotacao.dataFechamento || 'Não definido'}`
+      };
+
+      console.log("📤 Payload Notificação:", payload);
+
+      // Usando no-cors ou cors dependendo da config do Make, mas POST simples costuma funcionar
+      const response = await fetch(WEBHOOK_URL_NOTIFICACAO, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (response.ok) {
+        console.log("✅ Notificações enviadas com sucesso!");
+        return true;
+      } else {
+        console.warn("⚠️ Erro ao enviar notificações (status):", response.statusText);
+        return false;
+      }
+    } catch (erro) {
+      console.error("❌ Erro ao enviar notificações:", erro);
+      return false;
+    }
+  };
+
 </script>
 
 <script src="premium_render.js?v=10013"></script>
