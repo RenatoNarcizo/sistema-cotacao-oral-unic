@@ -5620,19 +5620,38 @@
     const listaDiv = document.getElementById("listaPendentesAprovacao");
     const cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
 
+    console.log("🔍 Carregando pendentes. Total cotações:", cotacoes.length);
+
     listaDiv.innerHTML = "";
 
     // Filtra apenas fechadas (prontas para aprovação final)
-    const pendentes = cotacoes.filter(c => c.status === "aprovacao" || (c.status === "respondida" && c.statusAprovacao === "pendente")); // Ajuste conforme sua lógica de status
+    const pendentes = cotacoes.filter(c => c.status === "aprovacao" || (c.status === "respondida" && c.statusAprovacao === "pendente"));
+
+    console.log("🔍 Pendentes encontradas:", pendentes.length);
 
     if (pendentes.length === 0) {
-      listaDiv.innerHTML = "<p style='text-align:center;color:#ccc;'>Nenhuma cotação pendente de aprovação.</p>";
+      // DIAGNÓSTICO PARA O USUÁRIO VER
+      const statusContagem = cotacoes.reduce((acc, c) => {
+        acc[c.status] = (acc[c.status] || 0) + 1;
+        return acc;
+      }, {});
+
+      listaDiv.innerHTML = `
+        <div style="text-align:center; color:#ccc; padding:20px;">
+          <i class="fa-solid fa-folder-open" style="font-size:30px; margin-bottom:10px; color:#555;"></i>
+          <p>Nenhuma cotação aguardando aprovação.</p>
+          <div style="font-size:12px; color:#555; margin-top:10px; border:1px solid #333; padding:10px; display:inline-block; text-align:left;">
+             <strong>Diagnóstico (Status encontrados):</strong><br>
+             ${Object.entries(statusContagem).map(([k, v]) => `${k}: ${v}`).join('<br>')}
+          </div>
+        </div>
+      `;
       return;
     }
 
     pendentes.forEach(cot => {
       const card = document.createElement("div");
-      card.className = "card-cotacao"; // reutiliza estilo se houver
+      card.className = "card-cotacao";
       card.style.background = "#1a1a1a";
       card.style.border = "1px solid #661155";
       card.style.padding = "15px";
@@ -5643,7 +5662,10 @@
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <div>
                    <strong style="color:white; font-size:16px;">${cot.descricao}</strong>
-                   <span style="display:block; font-size:12px; color:#aaa;">#${cot.numero} - ${new Date(cot.dataFechamento).toLocaleDateString()}</span>
+                   <span style="display:block; font-size:12px; color:#aaa;">
+                     #${cot.numero} - ${new Date(cot.dataFechamento).toLocaleDateString()}
+                     <span style="color:#f39c12; margin-left:8px;">(${cot.status})</span>
+                   </span>
                 </div>
                 <button onclick="analisarCotacao('${cot.numero}')" style="background:#661155; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer;">
                    🔍 Analisar
