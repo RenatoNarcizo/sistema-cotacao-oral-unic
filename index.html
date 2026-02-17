@@ -7462,8 +7462,8 @@
 
           const numeroExibicao = c.numero.startsWith('COT-') ? c.numero : 'COT-' + c.numero;
 
+          // 1️⃣ ABA "PUBLICADAS" (aberta)
           if (c.status === "aberta") {
-            // --- ℹ️ INFO SECTION (RESTAURADA - PUBLICADAS) ---
             const infoDiv = document.createElement("div");
             infoDiv.className = "info";
             infoDiv.style.flex = "1";
@@ -7497,7 +7497,6 @@
               </div>
             `;
 
-            // --- 🔘 BOTÕES DE AÇÃO (PUBLICADAS) ---
             const acoesDiv = document.createElement("div");
             acoesDiv.className = "acoes";
             acoesDiv.style.cssText = "display:flex; flex-direction:column; gap:8px; min-width:250px;";
@@ -7532,12 +7531,11 @@
             bloco.style.cssText = "display:flex; justify-content:space-between; align-items:flex-start; background: #110811; border: 1px solid #4a0c3e; padding: 15px; border-radius: 8px; margin-bottom: 12px;";
             bloco.appendChild(infoDiv);
             bloco.appendChild(acoesDiv);
-          } else {
-            // ======================================================
-            // 📊 LAYOUT ABA "ANÁLISE DE RESPOSTAS" (Fiel à foto)
-            // ======================================================
-            bloco.style.cssText = "display:flex; justify-content:space-between; align-items:center; background: #110811; border: 1px solid #4a0c3e; padding: 15px; border-radius: 8px; margin-bottom: 12px;";
 
+          }
+          // 2️⃣ ABA "ANÁLISE DE RESPOSTAS" (respondida, reanalise, analise)
+          else if (c.status === "respondida" || c.status === "reanalise" || c.status === "analise") {
+            bloco.style.cssText = "display:flex; justify-content:space-between; align-items:center; background: #110811; border: 1px solid #4a0c3e; padding: 15px; border-radius: 8px; margin-bottom: 12px;";
             bloco.innerHTML = `
               <div class="info">
                 <div style="font-weight:bold; font-size:16px; color:#fff; margin-bottom:4px;">${c.descricao || "Sem descrição"}</div>
@@ -7547,6 +7545,38 @@
               <div class="acoes">
                 <button onclick="analisarCotacao('${c.numero}')" style="background:#661155; color:white; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; font-weight:bold; display:flex; align-items:center; gap:8px;">
                   <i class="fa-solid fa-chart-column"></i> Analisar Respostas
+                </button>
+              </div>
+            `;
+          }
+          // 3️⃣ ABA "AGUARDANDO APROVAÇÃO" (aprovacao)
+          else if (c.status === "aprovacao") {
+            bloco.style.cssText = "display:flex; justify-content:space-between; align-items:center; background: #110811; border: 1px solid #4a0c3e; padding: 15px; border-radius: 8px; margin-bottom: 12px;";
+            bloco.innerHTML = `
+              <div class="info">
+                <div style="font-weight:bold; font-size:16px; color:#fff; margin-bottom:4px;">${c.descricao || "Sem descrição"}</div>
+                <div style="font-size:13px; color:#ccc; margin-bottom:8px;">Cotação #${numeroExibicao}</div>
+                <span style="background:rgba(255,204,0,0.1); color:#ffcc00; padding:4px 10px; border-radius:15px; font-size:12px; font-weight:bold; border:1px solid #ffcc00;">⏳ Aguardando Aprovação</span>
+              </div>
+              <div class="acoes">
+                <button onclick="analisarCotacao('${c.numero}')" style="background:#ffcc00; color:#000; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; font-weight:bold; display:flex; align-items:center; gap:8px;">
+                  <i class="fa-solid fa-eye"></i> Ver Aprovação
+                </button>
+              </div>
+            `;
+          }
+          // 4️⃣ ABA "FECHADAS" (fechada)
+          else {
+            bloco.style.cssText = "display:flex; justify-content:space-between; align-items:center; background: #110811; border: 1px solid #4a0c3e; padding: 15px; border-radius: 8px; margin-bottom: 12px;";
+            bloco.innerHTML = `
+              <div class="info">
+                <div style="font-weight:bold; font-size:16px; color:#fff; margin-bottom:4px;">${c.descricao || "Sem descrição"}</div>
+                <div style="font-size:13px; color:#ccc; margin-bottom:8px;">Cotação #${numeroExibicao}</div>
+                <span style="background:rgba(0,255,153,0.1); color:#00ff99; padding:4px 10px; border-radius:15px; font-size:12px; font-weight:bold; border:1px solid #00ff99;">🔒 Fechada</span>
+              </div>
+              <div class="acoes">
+                <button onclick="analisarCotacao('${c.numero}')" style="background:#198754; color:white; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; font-weight:bold; display:flex; align-items:center; gap:8px;">
+                  <i class="fa-solid fa-file-invoice"></i> Gerar Pedido
                 </button>
               </div>
             `;
