@@ -6349,7 +6349,12 @@
 
       // 🔔 NOTIFICAÇÃO: NOVA FUNÇÃO (WEBHOOK)
       if (typeof enviarNotificacaoCotacao === "function") {
-        enviarNotificacaoCotacao(novaCotacao);
+        try {
+          // Aguarda envio para garantir que não seja cancelado pelo reload
+          await enviarNotificacaoCotacao(novaCotacao);
+        } catch (errNotif) {
+          console.error("Erro ao notificar (não bloqueante):", errNotif);
+        }
       }
 
       // 🔔 NOTIFICAÇÃO PARA FORNECEDORES (LEGADO)
@@ -6360,15 +6365,15 @@
       window.fornecedoresSelecionadosTemp = [];
       numeroCotacaoAtual = null;
 
-      alert("✅ Cotação publicada com sucesso!");
+      alert("✅ Cotação publicada com sucesso! A página será recarregada.");
 
-      // 🛡️ PROTEÇÃO: Só chama carregarCotacoes se ela existir e sem quebrar o fluxo
-      voltarMenu();
-      limparFormulariosCotacao(); // 🧹 Limpa tudo para a próxima
+      // 🔄 RECARREGA PARA GARANTIR VISUALIZAÇÃO CORRETA E LIMPEZA
+      window.location.reload();
 
-      setTimeout(() => {
-        if (typeof carregarCotacoes === 'function') carregarCotacoes();
-      }, 100);
+      // Código antigo removido pois o reload resolve tudo
+      // voltarMenu();
+      // limparFormulariosCotacao();
+      // setTimeout...
 
     } catch (e) {
       console.error("Erro ao salvar:", e);
