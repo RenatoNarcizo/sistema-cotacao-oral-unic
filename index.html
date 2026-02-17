@@ -5642,6 +5642,7 @@
         // Se achou na nuvem, usa ela. Se não, fallback pro local (caso offline)
         if (cotacoesCloud.length > 0 || snapshot.size === 0) { // snapshot.size === 0 significa que conectou mas não tem nada
           cotacoes = cotacoesCloud;
+          cotacoes = cotacoesCloud;
           // Atualiza local apenas para manter sync
           // (Opcional, mas bom para evitar cache stale misturado)
         }
