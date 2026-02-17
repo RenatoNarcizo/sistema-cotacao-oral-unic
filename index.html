@@ -7021,24 +7021,34 @@
             // 🛒 COMPRADOR / ADMIN
             if (c.status === "analise" || c.status === "reanalise") {
               botao = `
-        <button onclick="abrirAnalise('${c.numero}')" style="background:#661155; color:white; border:none; padding:8px 16px; border-radius:4px; cursor:pointer;">
-          Analisar Resposta
-        </button>`;
+              <button onclick="abrirAnalise('${c.numero}')" style="background:#ffcc00; color:#000; border:none; padding:8px 16px; border-radius:5px; cursor:pointer; font-weight:bold; box-shadow:0 2px 4px rgba(0,0,0,0.2); transition: 0.2s;">
+                Analisar Resposta
+              </button>`;
             } else if (c.status === "aprovacao") {
               botao = `
-        <span style="color:#f39c12; font-weight:bold; display:flex; align-items:center; gap:5px;">
-          <i class="fa-solid fa-clock"></i> Aguardando Aprovação
-        </span>`;
+              <div style="display:flex; flex-direction:column; gap:8px;">
+                <span style="color:#f39c12; font-weight:bold; font-size:12px; display:flex; align-items:center; gap:5px;">
+                  <i class="fa-solid fa-clock"></i> Aguardando Aprovação
+                </span>
+                <button onclick="verDetalhesCotacao('${c.numero}')" style="background:#ffcc00; color:#000; border:none; padding:6px 12px; border-radius:5px; cursor:pointer; font-weight:bold; font-size:11px;">
+                  Visualizar
+                </button>
+              </div>`;
             } else if (c.status === "fechada") {
               botao = `
-        <button onclick="abrirAnalise('${c.numero}')" style="background:#28a745; color:white; border:none; padding:8px 16px; border-radius:4px; cursor:pointer;">
-          Ver Pedido
-        </button>`;
+              <div style="display:flex; flex-direction:column; gap:8px;">
+                <button onclick="abrirAnalise('${c.numero}')" style="background:#28a745; color:white; border:none; padding:8px 16px; border-radius:5px; cursor:pointer; font-weight:bold;">
+                  Ver Pedido
+                </button>
+                <button onclick="reabrirCotacao('${c.numero}')" style="background:#ffcc00; color:#000; border:none; padding:6px 12px; border-radius:5px; cursor:pointer; font-weight:bold; font-size:11px;">
+                  Reabrir
+                </button>
+              </div>`;
             } else {
               botao = `
-        <button onclick="verDetalhesCotacao('${c.numero}')" style="background:#333; color:white; border:none; padding:8px 16px; border-radius:4px; cursor:pointer;">
-          Gerenciar
-        </button>`;
+              <button onclick="verDetalhesCotacao('${c.numero}')" style="background:#ffcc00; color:#000; border:none; padding:8px 16px; border-radius:5px; cursor:pointer; font-weight:bold; box-shadow:0 2px 4px rgba(0,0,0,0.2); transition: 0.2s;">
+                Visualizar
+              </button>`;
             }
           }
 
@@ -7050,7 +7060,7 @@
         <div class="info">
           <div style="font-weight:bold; font-size:15px; color:#fff;">${c.descricao || "Sem descrição"}</div>
           <div style="font-size:12px; color:#aaa; margin-top:4px;">
-            <strong>#${c.numero}</strong> ${window.obterBadgeWorkflow(c.status)}
+            <strong>COT-${c.numero}</strong> ${window.obterBadgeWorkflow(c.status)}
           </div>
         </div>
         <div class="acoes">
@@ -7444,7 +7454,7 @@
 
           infoDiv.innerHTML = `
             <div style="font-weight:bold; font-size:15px; color:#fff;">
-              ${c.numero} - ${c.descricao || "Sem descrição"}
+              COT-${c.numero} - ${c.descricao || "Sem descrição"}
             </div>
             <div style="font-size:13px; color:#ccc; margin-top:4px;">
               Data: ${c.dataCriacao || c.data || "-"} ${subStatus}
@@ -9858,11 +9868,11 @@
       </div>
 
         <div class="acoes" style="display:flex; gap:8px; align-items:center;">
-          <button class="btn-detalhes" data-numero="${c.numero}" style="background:#661155; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer;">
+          <button class="btn-detalhes" data-numero="${c.numero}" style="background:#ffcc00; color:#000; border:none; padding:8px 12px; border-radius:5px; cursor:pointer; font-weight:bold;">
             🔎 Detalhes
           </button>
           
-          <button onclick="analisarCotacao('${c.numero}')" style="background:#661155; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer;">
+          <button onclick="analisarCotacao('${c.numero}')" style="background:#ffcc00; color:#000; border:none; padding:8px 12px; border-radius:5px; cursor:pointer; font-weight:bold;">
             📊 Analisar Respostas
           </button>
 
@@ -9873,7 +9883,7 @@
       `;
 
           const detalhes = document.createElement("div");
-          detalhes.id = `detalhes - ${c.numero} `;
+          detalhes.id = `detalhes-${c.numero}`;
           detalhes.style.display = "none";
           detalhes.innerHTML = gerarHTMLDetalhesAprovacao(c);
 
@@ -9896,7 +9906,7 @@
 
 
       function toggleDetalhesAprovacao(numero) {
-        const el = document.getElementById(`detalhes - ${numero} `);
+        const el = document.getElementById(`detalhes-${numero}`);
         if (!el) return;
 
         el.style.display = el.style.display === "none" ? "block" : "none";
