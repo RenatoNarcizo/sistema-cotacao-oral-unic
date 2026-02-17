@@ -3998,6 +3998,14 @@
 
 
       /* ======================================================
+         🔑 AUXILIARES GLOBAIS
+      ====================================================== */
+      function normalizarEmail(e) {
+        return (e || "").toLowerCase().trim();
+      }
+      window.normalizarEmail = normalizarEmail;
+
+      /* ======================================================
          🔑 STORAGE HELPERS
       ====================================================== */
       function getCotacoes() {
@@ -4185,6 +4193,49 @@
           console.warn("⚠️ Usuários de teste recriados automaticamente");
         }
       })();
+
+      /* ======================================================
+          🚀 NAVEGAÇÃO E UTILITÁRIOS
+      ====================================================== */
+      function abrirTela(id) {
+        // Esconde todas as seções e o dashboard
+        document.querySelectorAll('section').forEach(s => (s.style.display = "none"));
+        const dash = document.getElementById("dashboard");
+        if (dash) dash.style.display = "none";
+
+        // Mostra a tela alvo
+        const target = document.getElementById(id);
+        if (target) {
+          target.style.display = "block";
+          window.scrollTo(0, 0);
+        } else {
+          console.error("Tela não encontrada:", id);
+        }
+      }
+      window.abrirTela = abrirTela;
+
+      function voltarMenu() {
+        document.querySelectorAll('section').forEach(s => (s.style.display = "none"));
+        const dash = document.getElementById("dashboard");
+        if (dash) {
+          dash.style.display = "block";
+          window.scrollTo(0, 0);
+        }
+      }
+      window.voltarMenu = voltarMenu;
+
+      function formatarDataHoraBR(data) {
+        if (!data) return "-";
+        try {
+          const d = new Date(data);
+          if (isNaN(d.getTime())) return String(data);
+          return d.toLocaleString("pt-BR");
+        } catch (e) {
+          return String(data);
+        }
+      }
+      window.formatarDataHoraBR = formatarDataHoraBR;
+
 
       /* ======================================================
           🚀 AUTOCADASTRO E NAVEGAÇÃO DE LOGIN
@@ -6611,6 +6662,27 @@
          STATUS / LISTAGEM / RESPOSTA — DEFINITIVO (CORRIGIDO)
       ====================================================== */
 
+      function validarPrazo(cotacao) {
+        if (!cotacao || !cotacao.dataFechamento) return true;
+        try {
+          const agora = new Date();
+          let dataFim;
+          const valor = String(cotacao.dataFechamento).trim();
+          if (valor.includes('/')) {
+            const [data, hora] = valor.split(',');
+            const [dia, mes, ano] = data.trim().split('/');
+            const h = (hora || "00:00:00").trim();
+            dataFim = new Date(`${ano}-${mes}-${dia}T${h}`);
+          } else {
+            dataFim = new Date(valor);
+          }
+          if (isNaN(dataFim.getTime())) return true;
+          return agora <= dataFim;
+        } catch (e) {
+          return true;
+        }
+      }
+
       function verificarEncerradas() {
         const agora = new Date();
         const cotacoes = getCotacoes();
@@ -6640,6 +6712,37 @@
         if (alterou) salvarCotacoes(cotacoes);
       }
 
+
+
+      function getCotacoesVisiveisUsuario(apenasRespondidas = false) {
+        const usuario = getUsuarioLogado();
+        let cotacoes = getCotacoes();
+
+        if (!usuario || !usuario.tipo) return [];
+
+        // Se for admin/comprador, vê tudo normalmente
+        if (usuario.tipo !== "fornecedor") return [...cotacoes];
+
+        const emailLogado = normalizarEmail(usuario.email);
+
+        return cotacoes.filter(c => {
+          // 1. Verifica se o fornecedor está convidado
+          const convidado = Array.isArray(c.fornecedores) && c.fornecedores.some(f => {
+            if (typeof f === 'string') return normalizarEmail(f).includes(emailLogado);
+            if (typeof f === 'object' && f !== null) return normalizarEmail(f.email || f.emails).includes(emailLogado);
+            return false;
+          });
+
+          if (!convidado) return false;
+
+          // 2. Verifica se existe uma resposta INDIVIDUAL
+          const chaveResposta = `resposta_${c.numero}_${emailLogado}`;
+          const jaRespondeu = localStorage.getItem(chaveResposta) !== null;
+
+          // 3. Lógica de Filtro por Aba:
+          return apenasRespondidas ? jaRespondeu : !jaRespondeu;
+        });
+      }
 
 
       function mostrarAbaCotacao(tipo) {
@@ -6836,7 +6939,7 @@
              🧱 RENDER FINAL (RESTAURADO CONFORME FOTOS 1 E 3)
           ====================================================== */
           div.innerHTML += `
-      <div class="linha-cotacao" style="display:flex; justify-content:space-between; align-items:center; background: #110811; border: 1px solid #4a0c3e; padding: 15px; border-radius: 8px; margin-bottom: 12px;">
+      <div class="linha-cotacao" style="display:flex; justify-content:space-between; align-items:center; background: #1a1a1a; border: 1px solid #661155; padding: 15px; border-radius: 8px; margin-bottom: 12px;">
         <div class="info" style="flex:1;">
           ${infoHTML}
         </div>
@@ -7096,6 +7199,55 @@
          - Aceita string ou array de status
          - Suporta: respondida / reanalise / aprovacao / fechada
       ====================================================== */
+      function toggleListaRespondidas(status) {
+        // Reset botões
+        document.querySelectorAll('.btn-status').forEach(btn => {
+          btn.classList.remove('ativo');
+          btn.style.background = "transparent";
+          btn.style.borderColor = "#661155";
+          btn.style.color = "#661155";
+        });
+
+        // Ativa o correto
+        const idMap = {
+          'publicadas': 'btnPublicadas',
+          'analise': 'btnAnalise',
+          'aprovacao': 'btnAprovacao',
+          'fechada': 'btnFechadas'
+        };
+
+        const btn = document.getElementById(idMap[status]);
+        if (btn) {
+          btn.classList.add('ativo');
+          btn.style.background = "#661155";
+          btn.style.color = "white";
+        }
+
+        // Esconde todas as listas
+        ["listaPublicadas", "listaAnalise", "listaAprovacao", "listaFechadas"].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.style.display = "none";
+        });
+
+        // Mostra a correta e carrega
+        const targetMap = {
+          'publicadas': { listId: 'listaPublicadas', status: 'aberta' },
+          'analise': { listId: 'listaAnalise', status: ["respondida", "reanalise", "analise"] },
+          'aprovacao': { listId: 'listaAprovacao', status: 'aprovacao' },
+          'fechada': { listId: 'listaFechadas', status: 'fechada' }
+        };
+
+        const target = targetMap[status];
+        if (target) {
+          const listEl = document.getElementById(target.listId);
+          if (listEl) {
+            listEl.style.display = "block";
+            carregarRespondidas(target.status, listEl);
+          }
+        }
+      }
+      window.toggleListaRespondidas = toggleListaRespondidas;
+
       window.encerrarCotacaoManualmente = function (numero) {
         if (!confirm(`Deseja realmente encerrar a COT-${numero} agora? Ela será movida para Análise.`)) return;
 
@@ -7276,7 +7428,7 @@
           }
 
           div.innerHTML = `
-            <div class="linha-cotacao" style="display:flex; justify-content:space-between; align-items:center; background: #110811; border: 1px solid #4a0c3e; padding: 15px; border-radius: 8px; margin-bottom: 12px;">
+            <div class="linha-cotacao" style="display:flex; justify-content:space-between; align-items:center; background: #1a1a1a; border: 1px solid #661155; padding: 15px; border-radius: 8px; margin-bottom: 12px;">
               <div class="info" style="flex:1;">
                 ${infoHTML}
               </div>
@@ -7502,888 +7654,460 @@
 
 
       /* ======================================================
-         💾 SALVA RESPOSTA (SUBSTITUI NO ARRAY)
+         🏁 FIM DO MOTOR DE COTAÇÃO
       ====================================================== */
-      function salvarRespostaCorreta() {
-        let idCotacao = document.getElementById('numCotacao').innerText;
-
-        // 1. Pega o ID do fornecedor que está logado no momento
-        let usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
-        let idFornecedor = usuarioLogado.id;
-
-        let dadosDaResposta = {
-          fornecedorNome: usuarioLogado.nome,
-          data: new Date().toLocaleDateString(),
-          precos: []
-        };
-
-        // 2. Captura os preços
-        document.querySelectorAll('.input-preco').forEach(input => {
-          dadosDaResposta.precos.push({
-            produto: input.dataset.nome,
-            valor: input.value
-          });
-        });
-
-        // 3. O SEGREDO: A chave agora leva o ID da cotação E o ID do fornecedor
-        // Exemplo de chave: "resposta_105_forn_7"
-        let chaveUnica = "res_" + idCotacao + "_forn_" + idFornecedor;
-
-        localStorage.setItem(chaveUnica, JSON.stringify(dadosDaResposta));
-
-        alert("Sua resposta foi enviada com sucesso e não aparecerá para outros!");
-      }
-
-
-      function atualizarStatusCotacao({ cotacao, acao, usuario }) {
-
-        // status atual
-        const statusAtual = cotacao.status || "aberta";
-
-        // ⛔ nunca muda se já estiver fechada
-        if (statusAtual === "fechada") {
-          return statusAtual;
-        }
-
-        // ✅ 1. Fornecedor enviou resposta
-        if (acao === "enviar_resposta" && usuario.tipo === "fornecedor") {
-          // NÃO muda status global
-          // resposta é individual
-          return statusAtual; // continua aberta
-        }
-
-        // ✅ 2. Comprador fechou manualmente
-        if (acao === "fechar_manual" && usuario.tipo === "comprador") {
-          cotacao.status = "fechada";
-          return "fechada";
-        }
-
-        // ✅ 3. Prazo acabou
-        if (acao === "prazo_expirado") {
-          cotacao.status = "fechada";
-          return "fechada";
-        }
-
-        // 🔒 QUALQUER OUTRA COISA → BLOQUEIA
-        return statusAtual;
-      }
-
-      /* ======================================================
-         STEPPER VISUAL WORKFLOW HELPER
-      ====================================================== */
-      function gerarStepperHTML(status) {
-        const steps = [
-          { id: 'pendente', label: 'Requisição' },
-          { id: 'em_cotacao', label: 'Cotação' },
-          { id: 'respondida', label: 'Análise' },
-          { id: 'aprovacao', label: 'Aprovação' },
-          { id: 'fechada', label: 'Pedido' },
-          { id: 'finalizada', label: 'Finalizado' }
-        ];
-
-        // Mapeamento de progresso
-        let activeIndex = 0;
-        if (status === 'em_cotacao') activeIndex = 1;
-        if (status === 'respondida' || status === 'reanalise') activeIndex = 2;
-        if (status === 'aprovacao') activeIndex = 3;
-        if (status === 'fechada') activeIndex = 4;
-        if (status === 'finalizada') activeIndex = 5;
-
-        let html = `
-        <div class="stepper-container" style="margin-bottom:30px;">
-          <div class="progress-bar-stepper" style="width: ${(activeIndex / (steps.length - 1)) * 100}%"></div>
-      `;
-
-        steps.forEach((step, index) => {
-          let cssClass = '';
-          if (index < activeIndex) cssClass = 'completed';
-          if (index === activeIndex) cssClass = 'active';
-
-          html += `
-        <div class="step-item ${cssClass}">
-          <div class="step-circle">${index + 1}</div>
-          <div class="step-label">${step.label}</div>
-        </div>
-        `;
-        });
-
-        html += `</div>`;
-        return html;
-      }
-
-      /* ======================================================
-         📊 MATRIZ DE ADJUDICAÇÃO — ANÁLISE DE COTAÇÃO (COMPRADOR)
-      ====================================================== */
-      /* ======================================================
-         📊 ANÁLISE DE COTAÇÃO (COMPRADOR) - UNIFICADO
-         Redireciona para renderizarTabelaAnalise para garantir
-         lógica única e correção de bugs visuais.
-      ====================================================== */
-      window.analisarCotacao = function (numero) {
-        const modal = document.getElementById("modalAnaliseCotacao");
-        if (modal) {
-          // Garante estado inicial
-          modal.style.display = "flex";
-          document.body.style.overflow = "hidden"; // 🔒 Lock background scroll
-
-          // Renderiza usando a função principal mais completa
-          renderizarTabelaAnalise(numero);
-        }
-      };
-
-      window.fecharModalAnalise = function () {
-        document.getElementById("modalAnaliseCotacao").style.display = "none";
-        document.body.style.overflow = "auto"; // 🔓 Unlock background scroll
-      };
-
-
-
-
-      /* ======================================================
-         🧾 GERAR PEDIDO DE COMPRA (PDF) — DEFINITIVO
-      ====================================================== */
-      function gerarPedidoCompraPDF() {
-        const { jsPDF } = window.jspdf;
-
-        const c = window.cotacaoAtualPDF;
-        if (!c) {
-          alert("Nenhuma cotação selecionada.");
-          return;
-        }
-
-        if (!Array.isArray(c.adjudicacao) || c.adjudicacao.length === 0) {
-          alert("⚠️ Esta cotação não possui itens adjudicados.");
-          return;
-        }
-
-        // 🔄 Agrupa itens por fornecedor
-        const itensPorFornecedor = {};
-        c.adjudicacao.forEach(item => {
-          const forn = item.fornecedor || "Fornecedor não identificado";
-          if (!itensPorFornecedor[forn]) itensPorFornecedor[forn] = [];
-          itensPorFornecedor[forn].push(item);
-        });
-
-        // 🚀 Gera um PDF para cada fornecedor
-        Object.entries(itensPorFornecedor).forEach(([fornecedorNome, itens]) => {
-          const doc = new jsPDF("p", "mm", "a4");
-          const pageWidth = doc.internal.pageSize.getWidth();
-          let y = 15;
-
-          /* ================= LOGO ================= */
-          const customLogo = localStorage.getItem("logoBase64");
-          if (customLogo) {
-            try {
-              doc.addImage(customLogo, "PNG", pageWidth - 45, 10, 30, 30);
-            } catch (e) {
-              desenharLogoPadrao(doc, pageWidth);
-            }
-          } else {
-            desenharLogoPadrao(doc, pageWidth);
-          }
-
-          function desenharLogoPadrao(doc, pageWidth) {
-            let logoX = pageWidth - 45;
-            let logoY = 10;
-            const corTurquesa = [58, 185, 182];
-            const corRoxo = [102, 17, 85];
-            doc.setFillColor(corTurquesa[0], corTurquesa[1], corTurquesa[2]);
-            doc.ellipse(logoX + 7, logoY + 12, 7, 7, "F");
-            doc.setFillColor(corRoxo[0], corRoxo[1], corRoxo[2]);
-            doc.roundedRect(logoX + 11, logoY + 4, 11, 12, 2, 2, "F");
-            doc.setTextColor(corRoxo[0], corRoxo[1], corRoxo[2]);
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(14);
-            doc.text("ORAL UNIC", logoX - 35, logoY + 10, { align: "right" });
-            doc.setFontSize(7);
-            doc.setFont("helvetica", "normal");
-            doc.text("IMPLANTES PREMIUM", logoX - 35, logoY + 14, { align: "right" });
-          }
-
-          /* ================= CABEÇALHO ================= */
-          doc.setFontSize(12);
-          doc.setFont("helvetica", "bold");
-          doc.text("O.U. CAMPO GRANDE CLÍNICA ODONTOLÓGICA LTDA", pageWidth / 2, y, { align: "center" });
-          y += 6;
-          doc.setFontSize(11);
-          doc.text("Nome Fantasia: ORAL UNIC", pageWidth / 2, y, { align: "center" });
-          y += 6;
-          doc.setFontSize(10);
-          doc.setFont("helvetica", "normal");
-          doc.text("CNPJ: 30.882.538/0001-38", pageWidth / 2, y, { align: "center" });
-          y += 5;
-          doc.text("Telefone: (67) 3304-9400", pageWidth / 2, y, { align: "center" });
-          y += 5;
-          doc.text("Av. Afonso Pena, 2728 - Centro", pageWidth / 2, y, { align: "center" });
-          y += 5;
-          doc.text("CEP 79.002-075 - Campo Grande - MS", pageWidth / 2, y, { align: "center" });
-          y += 8;
-          doc.line(10, y, pageWidth - 10, y);
-          y += 10;
-
-          /* ================= DADOS DO PEDIDO ================= */
-          doc.setFont("helvetica", "bold");
-          doc.setFontSize(12);
-          doc.text(`Pedido de Compra - ${c.numero} `, 10, y);
-          y += 6;
-          doc.setFontSize(10);
-          doc.setFont("helvetica", "normal");
-          doc.text(`Data: ${new Date().toLocaleDateString()} `, 10, y);
-          y += 8;
-          doc.setFont("helvetica", "bold");
-          doc.text(`Fornecedor: ${fornecedorNome} `, 10, y);
-          y += 8;
-
-          /* ================= TABELA ================= */
-          const colX = { item: 10, qtd: 110, preco: 135, total: 165 };
-          doc.setFont("helvetica", "bold");
-          doc.rect(10, y, pageWidth - 20, 8);
-          doc.text("Descrição", colX.item, y + 5);
-          doc.text("Qtd", colX.qtd, y + 5);
-          doc.text("Preço Unit.", colX.preco, y + 5);
-          doc.text("Total", colX.total, y + 5);
-          y += 8;
-
-          doc.setFont("helvetica", "normal");
-          let totalPedido = 0;
-          itens.forEach(item => {
-            const totalItem = Number(item.preco) * Number(item.quantidade);
-            totalPedido += totalItem;
-            doc.rect(10, y, pageWidth - 20, 8);
-            doc.text(item.produto, colX.item, y + 5);
-            doc.text(String(item.quantidade), colX.qtd, y + 5);
-            doc.text(`R$ ${Number(item.preco).toFixed(2)} `, colX.preco, y + 5);
-            doc.text(`R$ ${totalItem.toFixed(2)} `, colX.total, y + 5);
-            y += 8;
-          });
-
-          /* ================= TOTAL ================= */
-          y += 6;
-          doc.setFont("helvetica", "bold");
-          doc.text(`Total do Pedido: R$ ${totalPedido.toFixed(2)} `, pageWidth - 10, y, { align: "right" });
-
-          /* ================= SALVAR ================= */
-          doc.save(`Pedido_Compra_${c.numero}_${fornecedorNome.replace(/\s+/g, '_')}.pdf`);
-        });
-      }
-
-
-
-      /* ======================================================
-         TOGGLE LISTA RESPONDIDAS (FILTRO)
-      ====================================================== */
-      /* Omitted duplicate toggleListaRespondidas to avoid conflicts with verified version at end of file */
-
-      function renderizarListaParaFornecedor(filtroStatus) {
-        const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
-        const todasCotacoes = JSON.parse(localStorage.getItem('cotacoes')) || [];
-        const container = document.getElementById('listaCotacoesParaResponder');
-        container.innerHTML = "";
-
-        todasCotacoes.forEach(cot => {
-          // Verifica se este fornecedor está convidado para esta cotação
-          if (cot.fornecedores.includes(usuario.nome) || cot.fornecedores.includes(usuario.email)) {
-
-            const chaveRes = `res_${cot.id}_${usuario.email.toLowerCase()} `;
-            const jaRespondeu = localStorage.getItem(chaveRes) !== null;
-
-            // Lógica de Separação:
-            if (filtroStatus === 'abertas' && !jaRespondeu) {
-              container.innerHTML += criarCardCotacao(cot, false);
-            } else if (filtroStatus === 'respondidas' && jaRespondeu) {
-              container.innerHTML += criarCardCotacao(cot, true);
-            }
-          }
-        });
-      }
-
-      function renderizarListaFornecedor(aba = 'abertas') {
-        const usuario = JSON.parse(sessionStorage.getItem("usuario_logado"));
-        const cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
-        const listaDiv = document.getElementById("listaCotacoesParaResponder");
-        listaDiv.innerHTML = "";
-
-        cotacoes.forEach(cot => {
-          // Verifica se o fornecedor está na lista desta cotação
-          const convidado = cot.fornecedores.includes(usuario.nome) || cot.fornecedores.includes(usuario.email);
-          if (!convidado) return;
-
-          // 🔑 Busca se já existe resposta para esta cotação + este usuário
-          const chaveRes = `res_${cot.id}_${usuario.email.toLowerCase().trim()} `;
-          const jaRespondeu = localStorage.getItem(chaveRes) !== null;
-
-          // Lógica das abas
-          if (aba === 'abertas' && jaRespondeu) return; // Se já respondeu, não mostra em abertas
-          if (aba === 'respondidas' && !jaRespondeu) return; // Se não respondeu, não mostra em respondidas
-
-          const card = document.createElement("div");
-          card.className = "linha-cotacao";
-
-          // Verifica se expirou para mudar o botão
-          const expirada = new Date() > new Date(cot.dataFechamento);
-          const statusTexto = expirada ? "<span style='color:red'>(Expirada)</span>" : "";
-
-          card.innerHTML = `
-        <div class="info">
-          <strong>${cot.descricao}</strong> ${statusTexto}<br>
-                <small>Prazo: ${new Date(cot.dataFechamento).toLocaleString()}</small>
-            </div>
-            <div class="acoes">
-                <button onclick="abrirModalResponder('${cot.id}')">
-                    ${jaRespondeu ? (expirada ? "👁️ Ver" : "✏️ Editar") : "📄 Responder"}
-                </button>
-            </div>
-      `;
-          listaDiv.appendChild(card);
-        });
-      }
-
-      /* ======================================================
-         🚀 FUNÇÃO: ENVIAR RESPOSTA (INDIVIDUAL POR FORNECEDOR)
-         ====================================================== */
-      function enviarRespostaCotacao(numeroCotacao) {
-        try {
-          // 🔑 Recupera usuário logado (sessionStorage)
-          const usuarioRaw = sessionStorage.getItem("usuario_logado");
-          if (!usuarioRaw) {
-            alert("Sessão expirada. Por favor, faça login novamente.");
-            return;
-          }
-
-          const usuario = JSON.parse(usuarioRaw);
-
-          // 🔎 Busca cotação correta
-          const todasCotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
-          const cotacao = todasCotacoes.find(c => c.numero === numeroCotacao);
-
-          if (!cotacao) {
-            alert("❌ Cotação não encontrada. Recarregue a página.");
-            return;
-          }
-
-          // 🚫 Verificação de status
-          if (cotacao.status === "fechada") {
-            alert("🚫 Esta cotação já foi encerrada.");
-            return;
-          }
-
-          // ⏰ Verificação de prazo (FUNÇÃO CENTRAL)
-          if (!validarPrazo(cotacao)) {
-            alert("🚫 O prazo desta cotação expirou.");
-            return;
-          }
-
-          // 📦 Coleta dos itens respondidos
-          const linhas = document.querySelectorAll("#tabelaResponderCorpo tr");
-          const itensRespondidos = [];
-
-          linhas.forEach(linha => {
-            const produto = linha.cells[0]?.innerText?.trim();
-            const inputPreco = linha.querySelector('input[type="number"]');
-
-            if (produto && inputPreco) {
-              const valor = parseFloat(inputPreco.value);
-              itensRespondidos.push({
-                produto: produto,
-                preco: isNaN(valor) ? 0 : valor
-              });
-            }
-          });
-
-          if (itensRespondidos.length === 0) {
-            alert("⚠️ Informe pelo menos um valor antes de enviar.");
-            return;
-          }
-
-          // 🔐 Chave única por cotação + fornecedor
-          const chaveUnica = `res_${numeroCotacao}_${usuario.email.toLowerCase().trim()} `;
-
-          const dadosResposta = {
-            numeroCotacao: numeroCotacao,
-            fornecedor: usuario.nome,
-            email: usuario.email,
-            itens: itensRespondidos,
-            dataEnvio: new Date().toISOString()
-          };
-
-          // 💾 Salva resposta
-          localStorage.setItem(chaveUnica, JSON.stringify(dadosResposta));
-
-          alert("✅ Resposta enviada e salva com sucesso!");
-
-          // 🔙 Volta para o menu
-          if (typeof voltarMenu === "function") {
-            voltarMenu();
-          }
-
-        } catch (erro) {
-          console.error("Erro ao enviar resposta da cotação:", erro);
-          alert("❌ Ocorreu um erro ao salvar sua resposta.");
-        }
-      }
-
-
-
-      function validarPrazo(cotacao) {
-        if (!cotacao || !cotacao.dataFechamento) return true;
-
-        const agora = new Date();
-        let dataFim;
-
-        const valor = String(cotacao.dataFechamento).trim();
-
-        // formato BR: DD/MM/YYYY, HH:mm:ss
-        if (valor.includes('/')) {
-          const [data, hora] = valor.split(',');
-          const [dia, mes, ano] = data.trim().split('/');
-          const horaLimpa = (hora || "00:00:00").trim();
-
-          dataFim = new Date(`${ano} -${mes} -${dia}T${horaLimpa} `);
-        } else {
-          dataFim = new Date(valor);
-        }
-
-        // se a data for inválida, NÃO bloqueia
-        if (isNaN(dataFim.getTime())) return true;
-
-        return agora <= dataFim;
-      }
-
-      /* ======================================================
-         🔍 ABRIR DETALHES DA RESPOSTA
-         - Usa a tela de Responder Cotação
-         - Permite editar se prazo válido
-         - Bloqueia se fechada
-      ====================================================== */
-      window.abrirDetalhesRespostaFornecedor = function (numeroCotacao) {
-        const usuario = getUsuarioLogado();
-        if (!usuario || !usuario.email) {
-          alert("Usuário não identificado.");
-          return;
-        }
-
-        if (!numeroCotacao) {
-          alert("Erro interno: número da cotação inválido.");
-          return;
-        }
-
-        const email = usuario.email.toLowerCase().trim();
-
-        // 🔍 compatibilidade total de chaves
-        const chavesPossiveis = [
-          `resposta_${numeroCotacao}_${email} `,
-          `RESPOSTA_${numeroCotacao}_${email} `,
-          `res_${numeroCotacao}_${email} `
-        ];
-
-        let resposta = null;
-
-        for (const chave of chavesPossiveis) {
-          const raw = localStorage.getItem(chave);
-          if (raw) {
-            resposta = JSON.parse(raw);
-            break;
-          }
-        }
-
-        if (!resposta) {
-          alert("Resposta do fornecedor não encontrada.");
-          return;
-        }
-
-        const cotacoes = getCotacoes();
-        const cotacao = cotacoes.find(c => c.numero === numeroCotacao);
-        if (!cotacao) {
-          alert("Cotação não encontrada.");
-          return;
-        }
-
-        // 🔑 guarda escopo global
-        window.cotacaoEmEdicao = cotacao;
-        window.respostaEmEdicao = resposta;
-        cotacaoRespostaAtual = numeroCotacao;
-
-        // 🔄 abre a tela padrão de responder
-        abrirResponderCotacao(numeroCotacao);
-
-        // ⏳ preenche valores após render
-        setTimeout(() => {
-          (resposta.itens || []).forEach((item, i) => {
-            const input = document.getElementById("preco_" + i);
-            if (input) input.value = item.preco ?? 0;
-          });
-
-          // 🔒 controle de edição
-          const podeEditar =
-            validarPrazo(cotacao) &&
-            cotacao.status !== "fechada" &&
-            cotacao.status !== "aprovacao";
-
-          document
-            .querySelectorAll("#tabelaResponderCorpo input")
-            .forEach(inp => inp.disabled = !podeEditar);
-
-          const btnEnviar = document.getElementById("btnEnviarResposta");
-          if (btnEnviar) {
-            btnEnviar.style.display = podeEditar ? "inline-block" : "none";
-          }
-
-        }, 300);
-      };
-
-
-      /* ======================================================
-         ⚙️ FUNÇÕES AUXILIARES
-      ====================================================== */
-      window.fecharDetalhesRespostaFornecedor = function () {
-        const modal = document.getElementById("modalDetalhesRespostaFornecedor");
-        if (modal) modal.style.display = "none";
-        document.body.style.overflow = "auto";
-      };
-
-      function editarMinhaResposta() {
-        if (!window.cotacaoEmEdicao || !window.respostaEmEdicao) {
-          alert("Dados para edição não encontrados.");
-          return;
-        }
-        fecharDetalhesRespostaFornecedor();
-
-        if (typeof abrirResponderCotacao === "function") {
-          abrirResponderCotacao(window.cotacaoEmEdicao.numero);
-          setTimeout(() => {
-            window.respostaEmEdicao.itens.forEach((item, i) => {
-              const input = document.getElementById("preco_" + i);
-              if (input) input.value = item.preco || 0;
-            });
-          }, 300);
-        }
-      }
-
-      /* ======================================================
-         🔒 VALIDA SE O FORNECEDOR FOI CONVIDADO (CORRETO)
-      ====================================================== */
-      function fornecedorFoiConvidado(cotacao, emailFornecedor) {
-        if (
-          !cotacao ||
-          !Array.isArray(cotacao.fornecedores) ||
-          !emailFornecedor
-        ) {
-          return false;
-        }
-
-        return cotacao.fornecedores.some(f =>
-          normalizarEmail(f.email) === normalizarEmail(emailFornecedor)
-        );
-      }
-
-      /* ======================================================
-          💾 SALVAR RESPOSTA (VERSÃO FINAL COMPLETA)
-      ====================================================== */
-      function salvarRespostaFornecedor(idCotacao) {
-        // 1. Verifica se o usuário está logado
-        const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
-        if (!usuarioLogado) {
-          return alert("Erro: Faça login novamente.");
-        }
-
-        // 2. Coleta os itens da tabela de resposta
-        const itens = [];
-        const linhas = document.querySelectorAll('#tabelaResponderCorpo tr');
-
-        if (linhas.length === 0) {
-          return alert("Erro: Nenhum item encontrado para salvar.");
-        }
-
-        linhas.forEach(linha => {
-          const inputPreco = linha.querySelector('input');
-          itens.push({
-            descricao: linha.cells[0].innerText,
-            quantidade: linha.cells[1].innerText,
-            precoUnitario: inputPreco ? (parseFloat(inputPreco.value) || 0) : 0
-          });
-        });
-
-        // 3. Gerencia o Banco de Dados no LocalStorage
-        let db = JSON.parse(localStorage.getItem('bancoDados')) || { respostas: [] };
-
-        // Garante que a estrutura de respostas existe
-        if (!db.respostas) {
-          db.respostas = [];
-        }
-
-        // 4. Monta o objeto da nova resposta
-        const novaResposta = {
-          numeroCotacao: idCotacao,
-          fornecedorNome: usuarioLogado.nome,
-          emailFornecedor: usuarioLogado.email,
-          itens: itens,
-          dataResposta: new Date().toISOString()
-        };
-
-        // 5. Remove resposta antiga desta mesma cotação para este fornecedor (evita duplicados)
-        db.respostas = db.respostas.filter(r =>
-          !(r.numeroCotacao === idCotacao && r.emailFornecedor === usuarioLogado.email)
-        );
-
-        // 6. Adiciona a nova resposta e salva o "pacotão"
-        db.respostas.push(novaResposta);
-        localStorage.setItem('bancoDados', JSON.stringify(db));
-
-        // 7. Backup Individual (para garantir que nada se perca)
-        const chaveIndividual = `RESPOSTA_${idCotacao}_${usuarioLogado.email} `;
-        localStorage.setItem(chaveIndividual, JSON.stringify(novaResposta));
-
-        alert("Orçamento salvo com sucesso!");
-
-        // 8. Fecha o modal de resposta
-        if (typeof fecharModalResponder === "function") {
-          fecharModalResponder();
-        } else {
-          const modal = document.getElementById("modalResponder");
-          if (modal) modal.style.display = "none";
-        }
-
-        // Opcional: Atualiza a lista na tela se houver uma função de renderização
-        if (typeof carregarCotacoesFornecedor === "function") carregarCotacoesFornecedor();
-      }
-
-      function carregarAnaliseComprador(idCotacao) {
-        const tabela = document.getElementById('corpoMatrizAnalise');
-        tabela.innerHTML = "";
-
-        // Busca todas as respostas de todos os fornecedores para esta cotação
-        const respostasEncontradas = [];
-        for (let i = 0; i < localStorage.length; i++) {
-          const chave = localStorage.key(i);
-          if (chave.startsWith(`resposta_${idCotacao} _`)) {
-            respostasEncontradas.push(JSON.parse(localStorage.getItem(chave)));
-          }
-        }
-
-        // Agora monte a sua tabela usando o array 'respostasEncontradas'
-        // Cada item do array é um fornecedor diferente com seus respectivos preços.
-      }
-
-      /* --- FUNÇÕES ESSENCIAIS DE FORMATAÇÃO --- */
-
-      function formatarDataHoraBR(dataISO) {
-        if (!dataISO) return "-";
-        const d = new Date(dataISO);
-        // Verifica se a data é válida
-        if (isNaN(d.getTime())) return dataISO;
-
-        return d.toLocaleString("pt-BR", {
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-          hour: "2-digit",
-          minute: "2-digit"
-        });
-      }
-
-      function formatarParaReal(valor) {
-        const v = parseFloat(valor) || 0;
-        return v.toLocaleString("pt-BR", {
-          style: "currency",
-          currency: "BRL"
-        });
-      }
-
-      function preencherDadosParaEdicao(idCotacao) {
-        const usuario = getUsuarioLogado();
-        const chave = `resposta_${idCotacao}_${usuario.email.toLowerCase().trim()} `;
-        const respostaExistente = JSON.parse(localStorage.getItem(chave));
-
-        if (respostaExistente) {
-          // Se já existe, percorre a tabela e preenche os inputs
-          const linhas = document.querySelectorAll('#tabelaResponderCorpo tr');
-          linhas.forEach(linha => {
-            const nomeProduto = linha.cells[0].innerText;
-            const itemSalvo = respostaExistente.itens.find(i => i.produto === nomeProduto);
-            if (itemSalvo) {
-              linha.querySelector('input').value = itemSalvo.preco;
-            }
-          });
-        }
-      }
-
-      /* ===============================
-         🔒 FUNÇÕES AUXILIARES GERAIS
-      =============================== */
-
-      if (typeof fecharTodasAsSecoes !== "function") {
-        function fecharTodasAsSecoes() {
-          document.querySelectorAll("section").forEach(e => e.style.display = "none");
-        }
-      }
-
-      if (typeof voltarMenu !== "function") {
-        function voltarMenu() {
-          fecharTodasAsSecoes();
-          document.getElementById("dashboard").style.display = "block";
-        }
-      }
-
-      /* ===============================
-         👥 FORNECEDORES – LISTAGEM
-      =============================== */
-
-      if (typeof window.mostrarListaFornecedores !== "function") {
-        window.mostrarListaFornecedores = async function (apenasRecarregar = false) {
-          const listaDiv = document.getElementById("listaFornecedoresCadastrados");
-          const tbody = document.getElementById("tabelaFornecedores");
-          if (!listaDiv || !tbody) return;
-
-          // Se NÃO for apenas recarregar, faz o toggle normal
-          if (!apenasRecarregar) {
-            if (listaDiv.style.display === "block") {
-              listaDiv.style.display = "none";
-              return;
-            }
-            listaDiv.style.display = "block";
-          }
-
-          tbody.innerHTML = "<tr><td colspan='5' style='text-align:center;'>⌛ Carregando empresas...</td></tr>";
-
-          try {
-            const snap = await db.collection("fornecedores").get();
-            const empresas = snap.docs.map(doc => ({ id: doc.id, docId: doc.id, ...doc.data() }));
-
-            empresas.sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
-            localStorage.setItem("fornecedores", JSON.stringify(empresas));
-
-            tbody.innerHTML = "";
-            if (empresas.length === 0) {
-              tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Nenhuma empresa cadastrada.</td></tr>';
-              return;
-            }
-
-            empresas.forEach((f, index) => {
-              const tr = document.createElement("tr");
-              tr.innerHTML = `
-                <td>
-                  <strong>${f.nome || "-"}</strong><br>
-                  <small style="color:#0dcaf0;">${f.tipo || "Geral"}</small>
-                </td>
-                <td style="font-size:12px; color:#aaa;">${f.endereco || f.logradouro || "-"}</td>
-                <td>${f.whats || f.whatsapp || "-"}</td>
-                <td>${f.responsavel || "-"}</td>
-                <td style="text-align:center;">
-                  <div style="display:flex; justify-content:center; gap:8px;">
-                    <button onclick="editarFornecedor(${index})" title="Editar">✏️</button>
-                    <button onclick='window.excluirFornecedor(${index})' title="Excluir">🗑️</button>
-                  </div>
-                </td>
-              `;
-              tbody.appendChild(tr);
-            });
-          } catch (e) {
-            console.error(e);
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:red;">Erro ao carregar dados.</td></tr>';
-          }
-        };
-      }
-
-      /* ===============================
-         ✏️ EDITAR FORNECEDOR
-      =============================== */
-
-      if (typeof window.editarFornecedor !== "function") {
-        window.editarFornecedor = function (index) {
-          const fornecedores = JSON.parse(localStorage.getItem("fornecedores")) || [];
-          const f = fornecedores[index];
-          if (!f) return;
-
-          fornecedorEditando = index;
-
-          document.getElementById("fornNome").value = f.nome || "";
-          document.getElementById("fornCnpj").value = f.cnpj || "";
-          document.getElementById("fornLogradouro").value = f.logradouro || "";
-          document.getElementById("fornNumero").value = f.numero || "";
-          document.getElementById("fornBairro").value = f.bairro || "";
-          document.getElementById("fornCidade").value = f.cidade || "";
-          document.getElementById("fornCep").value = f.cep || "";
-          document.getElementById("fornTelefone").value = f.telefone || "";
-          document.getElementById("fornWhats").value = f.whats || "";
-          document.getElementById("fornEmails").value = f.emails || "";
-          document.getElementById("fornResponsavel").value = f.responsavel || "";
-          document.getElementById("fornTipo").value = f.tipo || "";
-
-          window.scrollTo({ top: 0, behavior: "smooth" });
-        };
-      }
-
-      /* ===============================
-         🗑️ EXCLUIR FORNECEDOR
-      =============================== */
-
-      if (typeof window.excluirFornecedor !== "function") {
-        window.excluirFornecedor = async function (index) {
-          const fornecedores = JSON.parse(localStorage.getItem("fornecedores")) || [];
-          const fornecedor = fornecedores[index];
-
-          if (!fornecedor) return;
-
-          const docIdForn = fornecedor.docId;
-          const emailForn = (fornecedor.email || fornecedor.emails || "").toLowerCase().trim();
-          if (!confirm(`Deseja realmente excluir o fornecedor ${fornecedor.nome}?`)) return;
-
-          // 🔥 1. REMOVE NO FIRESTORE (ID DIRETO + QUERY P/ DUPLICADOS)
-          try {
-            const batch = db.batch();
-
-            // A. Remove pelo ID Único do Documento (MAIS SEGURO)
-            if (docIdForn) {
-              batch.delete(db.collection("fornecedores").doc(docIdForn));
-            }
-
-            // B. Remove duplicatas pelo e-mail
-            if (emailForn) {
-              const snap1 = await db.collection("fornecedores").where("email", "==", emailForn).get();
-              const snap2 = await db.collection("fornecedores").where("emails", "==", emailForn).get();
-              snap1.docs.forEach(doc => batch.delete(doc.ref));
-              snap2.docs.forEach(doc => batch.delete(doc.ref));
-
-              // Tenta também pelo e-mail como ID caso tenha sido criado assim
-              batch.delete(db.collection("fornecedores").doc(emailForn));
-            }
-
-            await batch.commit();
-            console.log("✅ Fornecedor eliminado totalmente do Firestore.");
-          } catch (e) {
-            console.error("❌ Erro ao excluir do Firestore:", e);
-          }
-
-          // 2. Local Cleanup
-          const novaLista = fornecedores.filter(f =>
-            (f.email || "").toLowerCase().trim() !== emailForn &&
-            (f.emails || "").toLowerCase().trim() !== emailForn
-          );
-          localStorage.setItem("fornecedores", JSON.stringify(novaLista));
-
-          alert("✅ Fornecedor removido com sucesso!");
-
-          // 🔁 reabre lista atualizada
-          mostrarListaFornecedores();
-          if (document.getElementById("listaFornecedoresCadastrados")?.style.display === "block") {
-            mostrarListaFornecedores(); // Toggle Off/On
-          }
-        };
-      }
-
-      /* ===============================
-         👁️ VER FICHA DO FORNECEDOR
-      =============================== */
-
-      window.verFichaFornecedor = function (index) {
-        const fornecedores = JSON.parse(localStorage.getItem("fornecedores")) || [];
-        const f = fornecedores[index];
-        if (!f) return;
-
-        const div = document.getElementById("conteudoVerFornecedor");
-
-        div.innerHTML = `
-        <div style="background:#111;border:1px solid #661155;border-radius:10px;padding:20px;color:white;">
+    </script>
+
+    <script src="premium_render.js?v=10014"></script>
+</body>
+
+</html>
+const itensRespondidos = [];
+
+linhas.forEach(linha => {
+const produto = linha.cells[0]?.innerText?.trim();
+const inputPreco = linha.querySelector('input[type="number"]');
+
+if (produto && inputPreco) {
+const valor = parseFloat(inputPreco.value);
+itensRespondidos.push({
+produto: produto,
+preco: isNaN(valor) ? 0 : valor
+});
+}
+});
+
+if (itensRespondidos.length === 0) {
+alert("⚠️ Informe pelo menos um valor antes de enviar.");
+return;
+}
+
+// 🔐 Chave única por cotação + fornecedor
+const chaveUnica = `res_${numeroCotacao}_${usuario.email.toLowerCase().trim()} `;
+
+const dadosResposta = {
+numeroCotacao: numeroCotacao,
+fornecedor: usuario.nome,
+email: usuario.email,
+itens: itensRespondidos,
+dataEnvio: new Date().toISOString()
+};
+
+// 💾 Salva resposta
+localStorage.setItem(chaveUnica, JSON.stringify(dadosResposta));
+
+alert("✅ Resposta enviada e salva com sucesso!");
+
+// 🔙 Volta para o menu
+if (typeof voltarMenu === "function") {
+voltarMenu();
+}
+
+} catch (erro) {
+console.error("Erro ao enviar resposta da cotação:", erro);
+alert("❌ Ocorreu um erro ao salvar sua resposta.");
+}
+}
+
+
+
+function validarPrazo(cotacao) {
+if (!cotacao || !cotacao.dataFechamento) return true;
+
+const agora = new Date();
+let dataFim;
+
+const valor = String(cotacao.dataFechamento).trim();
+
+// formato BR: DD/MM/YYYY, HH:mm:ss
+if (valor.includes('/')) {
+const [data, hora] = valor.split(',');
+const [dia, mes, ano] = data.trim().split('/');
+const horaLimpa = (hora || "00:00:00").trim();
+
+dataFim = new Date(`${ano} -${mes} -${dia}T${horaLimpa} `);
+} else {
+dataFim = new Date(valor);
+}
+
+// se a data for inválida, NÃO bloqueia
+if (isNaN(dataFim.getTime())) return true;
+
+return agora <= dataFim; } /*======================================================🔍 ABRIR DETALHES DA RESPOSTA - Usa a
+  tela de Responder Cotação - Permite editar se prazo válido - Bloqueia se
+  fechada======================================================*/ window.abrirDetalhesRespostaFornecedor=function
+  (numeroCotacao) { const usuario=getUsuarioLogado(); if (!usuario || !usuario.email) { alert("Usuário não
+  identificado."); return; } if (!numeroCotacao) { alert("Erro interno: número da cotação inválido."); return; } const
+  email=usuario.email.toLowerCase().trim(); // 🔍 compatibilidade total de chaves const chavesPossiveis=[
+  `resposta_${numeroCotacao}_${email} `, `RESPOSTA_${numeroCotacao}_${email} `, `res_${numeroCotacao}_${email} ` ]; let
+  resposta=null; for (const chave of chavesPossiveis) { const raw=localStorage.getItem(chave); if (raw) {
+  resposta=JSON.parse(raw); break; } } if (!resposta) { alert("Resposta do fornecedor não encontrada."); return; } const
+  cotacoes=getCotacoes(); const cotacao=cotacoes.find(c=> c.numero === numeroCotacao);
+  if (!cotacao) {
+  alert("Cotação não encontrada.");
+  return;
+  }
+
+  // 🔑 guarda escopo global
+  window.cotacaoEmEdicao = cotacao;
+  window.respostaEmEdicao = resposta;
+  cotacaoRespostaAtual = numeroCotacao;
+
+  // 🔄 abre a tela padrão de responder
+  abrirResponderCotacao(numeroCotacao);
+
+  // ⏳ preenche valores após render
+  setTimeout(() => {
+  (resposta.itens || []).forEach((item, i) => {
+  const input = document.getElementById("preco_" + i);
+  if (input) input.value = item.preco ?? 0;
+  });
+
+  // 🔒 controle de edição
+  const podeEditar =
+  validarPrazo(cotacao) &&
+  cotacao.status !== "fechada" &&
+  cotacao.status !== "aprovacao";
+
+  document
+  .querySelectorAll("#tabelaResponderCorpo input")
+  .forEach(inp => inp.disabled = !podeEditar);
+
+  const btnEnviar = document.getElementById("btnEnviarResposta");
+  if (btnEnviar) {
+  btnEnviar.style.display = podeEditar ? "inline-block" : "none";
+  }
+
+  }, 300);
+  };
+
+
+  /* ======================================================
+  ⚙️ FUNÇÕES AUXILIARES
+  ====================================================== */
+  window.fecharDetalhesRespostaFornecedor = function () {
+  const modal = document.getElementById("modalDetalhesRespostaFornecedor");
+  if (modal) modal.style.display = "none";
+  document.body.style.overflow = "auto";
+  };
+
+  function editarMinhaResposta() {
+  if (!window.cotacaoEmEdicao || !window.respostaEmEdicao) {
+  alert("Dados para edição não encontrados.");
+  return;
+  }
+  fecharDetalhesRespostaFornecedor();
+
+  if (typeof abrirResponderCotacao === "function") {
+  abrirResponderCotacao(window.cotacaoEmEdicao.numero);
+  setTimeout(() => {
+  window.respostaEmEdicao.itens.forEach((item, i) => {
+  const input = document.getElementById("preco_" + i);
+  if (input) input.value = item.preco || 0;
+  });
+  }, 300);
+  }
+  }
+
+  /* ======================================================
+  🔒 VALIDA SE O FORNECEDOR FOI CONVIDADO (CORRETO)
+  ====================================================== */
+  function fornecedorFoiConvidado(cotacao, emailFornecedor) {
+  if (
+  !cotacao ||
+  !Array.isArray(cotacao.fornecedores) ||
+  !emailFornecedor
+  ) {
+  return false;
+  }
+
+  return cotacao.fornecedores.some(f =>
+  normalizarEmail(f.email) === normalizarEmail(emailFornecedor)
+  );
+  }
+
+  /* ======================================================
+  💾 SALVAR RESPOSTA (VERSÃO FINAL COMPLETA)
+  ====================================================== */
+  function salvarRespostaFornecedor(idCotacao) {
+  // 1. Verifica se o usuário está logado
+  const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
+  if (!usuarioLogado) {
+  return alert("Erro: Faça login novamente.");
+  }
+
+  // 2. Coleta os itens da tabela de resposta
+  const itens = [];
+  const linhas = document.querySelectorAll('#tabelaResponderCorpo tr');
+
+  if (linhas.length === 0) {
+  return alert("Erro: Nenhum item encontrado para salvar.");
+  }
+
+  linhas.forEach(linha => {
+  const inputPreco = linha.querySelector('input');
+  itens.push({
+  descricao: linha.cells[0].innerText,
+  quantidade: linha.cells[1].innerText,
+  precoUnitario: inputPreco ? (parseFloat(inputPreco.value) || 0) : 0
+  });
+  });
+
+  // 3. Gerencia o Banco de Dados no LocalStorage
+  let db = JSON.parse(localStorage.getItem('bancoDados')) || { respostas: [] };
+
+  // Garante que a estrutura de respostas existe
+  if (!db.respostas) {
+  db.respostas = [];
+  }
+
+  // 4. Monta o objeto da nova resposta
+  const novaResposta = {
+  numeroCotacao: idCotacao,
+  fornecedorNome: usuarioLogado.nome,
+  emailFornecedor: usuarioLogado.email,
+  itens: itens,
+  dataResposta: new Date().toISOString()
+  };
+
+  // 5. Remove resposta antiga desta mesma cotação para este fornecedor (evita duplicados)
+  db.respostas = db.respostas.filter(r =>
+  !(r.numeroCotacao === idCotacao && r.emailFornecedor === usuarioLogado.email)
+  );
+
+  // 6. Adiciona a nova resposta e salva o "pacotão"
+  db.respostas.push(novaResposta);
+  localStorage.setItem('bancoDados', JSON.stringify(db));
+
+  // 7. Backup Individual (para garantir que nada se perca)
+  const chaveIndividual = `RESPOSTA_${idCotacao}_${usuarioLogado.email} `;
+  localStorage.setItem(chaveIndividual, JSON.stringify(novaResposta));
+
+  alert("Orçamento salvo com sucesso!");
+
+  // 8. Fecha o modal de resposta
+  if (typeof fecharModalResponder === "function") {
+  fecharModalResponder();
+  } else {
+  const modal = document.getElementById("modalResponder");
+  if (modal) modal.style.display = "none";
+  }
+
+  // Opcional: Atualiza a lista na tela se houver uma função de renderização
+  if (typeof carregarCotacoesFornecedor === "function") carregarCotacoesFornecedor();
+  }
+
+  function carregarAnaliseComprador(idCotacao) {
+  const tabela = document.getElementById('corpoMatrizAnalise');
+  tabela.innerHTML = "";
+
+  // Busca todas as respostas de todos os fornecedores para esta cotação
+  const respostasEncontradas = [];
+  for (let i = 0; i < localStorage.length; i++) { const chave=localStorage.key(i); if
+    (chave.startsWith(`resposta_${idCotacao} _`)) { respostasEncontradas.push(JSON.parse(localStorage.getItem(chave)));
+    } } // Agora monte a sua tabela usando o array 'respostasEncontradas' // Cada item do array é um fornecedor
+    diferente com seus respectivos preços. } /* --- FUNÇÕES ESSENCIAIS DE FORMATAÇÃO --- */ function
+    formatarDataHoraBR(dataISO) { if (!dataISO) return "-" ; const d=new Date(dataISO); // Verifica se a data é válida
+    if (isNaN(d.getTime())) return dataISO; return d.toLocaleString("pt-BR", { day: "2-digit" , month: "2-digit" ,
+    year: "numeric" , hour: "2-digit" , minute: "2-digit" }); } function formatarParaReal(valor) { const
+    v=parseFloat(valor) || 0; return v.toLocaleString("pt-BR", { style: "currency" , currency: "BRL" }); } function
+    preencherDadosParaEdicao(idCotacao) { const usuario=getUsuarioLogado(); const
+    chave=`resposta_${idCotacao}_${usuario.email.toLowerCase().trim()} `; const
+    respostaExistente=JSON.parse(localStorage.getItem(chave)); if (respostaExistente) { // Se já existe, percorre a
+    tabela e preenche os inputs const linhas=document.querySelectorAll('#tabelaResponderCorpo tr');
+    linhas.forEach(linha=> {
+    const nomeProduto = linha.cells[0].innerText;
+    const itemSalvo = respostaExistente.itens.find(i => i.produto === nomeProduto);
+    if (itemSalvo) {
+    linha.querySelector('input').value = itemSalvo.preco;
+    }
+    });
+    }
+    }
+
+    /* ===============================
+    🔒 FUNÇÕES AUXILIARES GERAIS
+    =============================== */
+
+    if (typeof fecharTodasAsSecoes !== "function") {
+    function fecharTodasAsSecoes() {
+    document.querySelectorAll("section").forEach(e => e.style.display = "none");
+    }
+    }
+
+    if (typeof voltarMenu !== "function") {
+    function voltarMenu() {
+    fecharTodasAsSecoes();
+    document.getElementById("dashboard").style.display = "block";
+    }
+    }
+
+    /* ===============================
+    👥 FORNECEDORES – LISTAGEM
+    =============================== */
+
+    if (typeof window.mostrarListaFornecedores !== "function") {
+    window.mostrarListaFornecedores = async function (apenasRecarregar = false) {
+    const listaDiv = document.getElementById("listaFornecedoresCadastrados");
+    const tbody = document.getElementById("tabelaFornecedores");
+    if (!listaDiv || !tbody) return;
+
+    // Se NÃO for apenas recarregar, faz o toggle normal
+    if (!apenasRecarregar) {
+    if (listaDiv.style.display === "block") {
+    listaDiv.style.display = "none";
+    return;
+    }
+    listaDiv.style.display = "block";
+    }
+
+    tbody.innerHTML = "<tr>
+      <td colspan='5' style='text-align:center;'>⌛ Carregando empresas...</td>
+    </tr>";
+
+    try {
+    const snap = await db.collection("fornecedores").get();
+    const empresas = snap.docs.map(doc => ({ id: doc.id, docId: doc.id, ...doc.data() }));
+
+    empresas.sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
+    localStorage.setItem("fornecedores", JSON.stringify(empresas));
+
+    tbody.innerHTML = "";
+    if (empresas.length === 0) {
+    tbody.innerHTML = '<tr>
+      <td colspan="5" style="text-align:center;">Nenhuma empresa cadastrada.</td>
+    </tr>';
+    return;
+    }
+
+    empresas.forEach((f, index) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+    <td>
+      <strong>${f.nome || "-"}</strong><br>
+      <small style="color:#0dcaf0;">${f.tipo || "Geral"}</small>
+    </td>
+    <td style="font-size:12px; color:#aaa;">${f.endereco || f.logradouro || "-"}</td>
+    <td>${f.whats || f.whatsapp || "-"}</td>
+    <td>${f.responsavel || "-"}</td>
+    <td style="text-align:center;">
+      <div style="display:flex; justify-content:center; gap:8px;">
+        <button onclick="editarFornecedor(${index})" title="Editar">✏️</button>
+        <button onclick='window.excluirFornecedor(${index})' title="Excluir">🗑️</button>
+      </div>
+    </td>
+    `;
+    tbody.appendChild(tr);
+    });
+    } catch (e) {
+    console.error(e);
+    tbody.innerHTML = '<tr>
+      <td colspan="5" style="text-align:center; color:red;">Erro ao carregar dados.</td>
+    </tr>';
+    }
+    };
+    }
+
+    /* ===============================
+    ✏️ EDITAR FORNECEDOR
+    =============================== */
+
+    if (typeof window.editarFornecedor !== "function") {
+    window.editarFornecedor = function (index) {
+    const fornecedores = JSON.parse(localStorage.getItem("fornecedores")) || [];
+    const f = fornecedores[index];
+    if (!f) return;
+
+    fornecedorEditando = index;
+
+    document.getElementById("fornNome").value = f.nome || "";
+    document.getElementById("fornCnpj").value = f.cnpj || "";
+    document.getElementById("fornLogradouro").value = f.logradouro || "";
+    document.getElementById("fornNumero").value = f.numero || "";
+    document.getElementById("fornBairro").value = f.bairro || "";
+    document.getElementById("fornCidade").value = f.cidade || "";
+    document.getElementById("fornCep").value = f.cep || "";
+    document.getElementById("fornTelefone").value = f.telefone || "";
+    document.getElementById("fornWhats").value = f.whats || "";
+    document.getElementById("fornEmails").value = f.emails || "";
+    document.getElementById("fornResponsavel").value = f.responsavel || "";
+    document.getElementById("fornTipo").value = f.tipo || "";
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+    }
+
+    /* ===============================
+    🗑️ EXCLUIR FORNECEDOR
+    =============================== */
+
+    if (typeof window.excluirFornecedor !== "function") {
+    window.excluirFornecedor = async function (index) {
+    const fornecedores = JSON.parse(localStorage.getItem("fornecedores")) || [];
+    const fornecedor = fornecedores[index];
+
+    if (!fornecedor) return;
+
+    const docIdForn = fornecedor.docId;
+    const emailForn = (fornecedor.email || fornecedor.emails || "").toLowerCase().trim();
+    if (!confirm(`Deseja realmente excluir o fornecedor ${fornecedor.nome}?`)) return;
+
+    // 🔥 1. REMOVE NO FIRESTORE (ID DIRETO + QUERY P/ DUPLICADOS)
+    try {
+    const batch = db.batch();
+
+    // A. Remove pelo ID Único do Documento (MAIS SEGURO)
+    if (docIdForn) {
+    batch.delete(db.collection("fornecedores").doc(docIdForn));
+    }
+
+    // B. Remove duplicatas pelo e-mail
+    if (emailForn) {
+    const snap1 = await db.collection("fornecedores").where("email", "==", emailForn).get();
+    const snap2 = await db.collection("fornecedores").where("emails", "==", emailForn).get();
+    snap1.docs.forEach(doc => batch.delete(doc.ref));
+    snap2.docs.forEach(doc => batch.delete(doc.ref));
+
+    // Tenta também pelo e-mail como ID caso tenha sido criado assim
+    batch.delete(db.collection("fornecedores").doc(emailForn));
+    }
+
+    await batch.commit();
+    console.log("✅ Fornecedor eliminado totalmente do Firestore.");
+    } catch (e) {
+    console.error("❌ Erro ao excluir do Firestore:", e);
+    }
+
+    // 2. Local Cleanup
+    const novaLista = fornecedores.filter(f =>
+    (f.email || "").toLowerCase().trim() !== emailForn &&
+    (f.emails || "").toLowerCase().trim() !== emailForn
+    );
+    localStorage.setItem("fornecedores", JSON.stringify(novaLista));
+
+    alert("✅ Fornecedor removido com sucesso!");
+
+    // 🔁 reabre lista atualizada
+    mostrarListaFornecedores();
+    if (document.getElementById("listaFornecedoresCadastrados")?.style.display === "block") {
+    mostrarListaFornecedores(); // Toggle Off/On
+    }
+    };
+    }
+
+    /* ===============================
+    👁️ VER FICHA DO FORNECEDOR
+    =============================== */
+
+    window.verFichaFornecedor = function (index) {
+    const fornecedores = JSON.parse(localStorage.getItem("fornecedores")) || [];
+    const f = fornecedores[index];
+    if (!f) return;
+
+    const div = document.getElementById("conteudoVerFornecedor");
+
+    div.innerHTML = `
+    <div style="background:#111;border:1px solid #661155;border-radius:10px;padding:20px;color:white;">
       <p><strong>Nome da Empresa:</strong> ${f.nome || "-"}</p>
       <p><strong>CNPJ:</strong> ${f.cnpj || "-"}</p>
       <p><strong>Endereço:</strong>
@@ -8396,493 +8120,497 @@
       <p><strong>Responsável:</strong> ${f.responsavel || "-"}</p>
       <p><strong>Tipo:</strong> ${f.tipo || "-"}</p>
     </div>
-        `;
-
-        document.getElementById("modalVerFornecedor").style.display = "flex";
-      };
-
-      window.fecharModalVerFornecedor = function () {
-        document.getElementById("modalVerFornecedor").style.display = "none";
-      };
-
-      /* ===============================
-         📦 MATERIAIS – ABERTURA
-      =============================== */
-
-      // Abre o cadastro de material (NÃO abre a lista)
-      if (typeof abrirCadastroMaterial !== "function") {
-        function abrirCadastroMaterial() {
-          // esconde todas as seções
-          document.querySelectorAll("section").forEach(sec => sec.style.display = "none");
-
-          // mostra apenas o cadastro
-          document.getElementById("cadastroMaterial").style.display = "block";
-
-          // garante que a lista fique fechada
-          const lista = document.getElementById("listaMateriais");
-          if (lista) lista.style.display = "none";
-        }
-      }
-
-      // Monta a lista de materiais (NÃO controla visibilidade)
-      async function mostrarListaMateriais() {
-        const listaDiv = document.getElementById("listaMateriais");
-        const tabela = document.getElementById("materiaisTabela");
-
-        if (!listaDiv || !tabela) return;
-
-        tabela.innerHTML = "<tr><td colspan='5' style='text-align:center;'>⌛ Carregando materiais da nuvem...</td></tr>";
-
-        let materiais = [];
-        try {
-          if (typeof db !== "undefined") {
-            const snapshot = await db.collection("materiais").get();
-            materiais = snapshot.docs.map(doc => ({
-              docId: doc.id,
-              ...doc.data()
-            }));
-            localStorage.setItem("materiais", JSON.stringify(materiais));
-            console.log("✅ Materiais sincronizados com Firestore");
-          } else {
-            throw new Error("Firestore não disponível");
-          }
-        } catch (e) {
-          console.warn("Erro ao buscar materiais do Firebase, usando local:", e);
-          materiais = JSON.parse(localStorage.getItem("materiais")) || [];
-        }
-
-        tabela.innerHTML = "";
-
-        if (materiais.length === 0) {
-          tabela.innerHTML = `
-        <tr>
-        <td colspan="5" style="text-align:center;padding:10px;">
-          Nenhum material cadastrado.
-        </td>
-        </tr>
-      `;
-          return;
-        }
-
-        materiais.sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
-
-        materiais.forEach((m, i) => {
-          const tr = document.createElement("tr");
-          tr.innerHTML = `
-        <td>${m.nome}</td>
-      <td>${m.codigo || "-"}</td>
-      <td>${m.embalagem || "-"}</td>
-      <td>${m.qtdEmb || "-"}</td>
-      <td style="text-align:center;">
-        <div style="display:flex; justify-content:center; gap:8px;">
-          <button onclick="editarMaterial(${i})" title="Editar">✏️</button>
-          <button onclick="excluirMaterial(${i})" title="Excluir">🗑️</button>
-        </div>
-      </td>
-      `;
-          tabela.appendChild(tr);
-        });
-      }
-
-
-      // Abre a lista SOMENTE quando clicar em "Lista de Materiais"
-      function abrirListaMateriais() {
-        const listaDiv = document.getElementById("listaMateriais");
-        if (!listaDiv) return;
-
-        // se estiver aberta, fecha
-        if (listaDiv.style.display === "block") {
-          listaDiv.style.display = "none";
-          return;
-        }
-
-        // se estiver fechada, monta e abre
-        mostrarListaMateriais();
-        listaDiv.style.display = "block";
-      }
-
-      async function salvarMaterial() {
-        const nome = document.getElementById("matNome")?.value.trim();
-        const codigo = document.getElementById("matCodigo")?.value.trim();
-        const embalagem = document.getElementById("matEmbalagem")?.value.trim();
-        const qtdEmb = document.getElementById("matQtdEmb")?.value.trim();
-
-        // 🔴 SOMENTE O NOME É OBRIGATÓRIO
-        if (!nome) {
-          alert("⚠️ Informe o nome do material.");
-          return;
-        }
-
-        const novoMaterial = {
-          nome,
-          codigo: codigo || "",       // opcional
-          embalagem: embalagem || "", // opcional
-          qtdEmb: qtdEmb || "",        // opcional
-          dataCriacao: new Date().toISOString()
-        };
-
-        try {
-          if (typeof db !== "undefined") {
-            let materiais = JSON.parse(localStorage.getItem("materiais")) || [];
-
-            if (window.materialEditandoDocId) {
-              // 🔥 MODO EDIÇÃO (UPDATE)
-              await db.collection("materiais").doc(window.materialEditandoDocId).update(novoMaterial);
-              console.log("✅ Material atualizado no Firestore:", window.materialEditandoDocId);
-
-              if (window.materialEditandoIndex !== undefined && window.materialEditandoIndex !== null) {
-                materiais[window.materialEditandoIndex] = { docId: window.materialEditandoDocId, ...novoMaterial };
-              }
-            } else {
-              // ✨ MODO CRIAÇÃO (ADD)
-              const docRef = await db.collection("materiais").add(novoMaterial);
-              console.log("✅ Material salvo no Firestore com ID:", docRef.id);
-              materiais.push({ docId: docRef.id, ...novoMaterial });
-            }
-
-            materiais.sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
-            localStorage.setItem("materiais", JSON.stringify(materiais));
-          } else {
-            throw new Error("Firestore não disponível");
-          }
-        } catch (e) {
-          console.error("❌ Erro ao salvar/atualizar no Firestore:", e);
-          // Fallback local simples
-          const materiais = JSON.parse(localStorage.getItem("materiais")) || [];
-          materiais.push(novoMaterial);
-          localStorage.setItem("materiais", JSON.stringify(materiais));
-        }
-
-        // Reset variáveis de edição
-        window.materialEditandoDocId = null;
-        window.materialEditandoIndex = null;
-
-        alert("✅ Material salvo com sucesso!");
-
-        // 🔹 limpa formulário
-        document.getElementById("matNome").value = "";
-        document.getElementById("matCodigo").value = "";
-        document.getElementById("matEmbalagem").value = "";
-        document.getElementById("matQtdEmb").value = "";
-
-        // 🔁 atualiza lista SOMENTE se estiver aberta
-        const lista = document.getElementById("listaMateriais");
-        if (lista && lista.style.display === "block") {
-          mostrarListaMateriais();
-        }
-      }
-
-      /* ===============================
-         📦 MATERIAIS – EDITAR / EXCLUIR
-      =============================== */
-
-      function editarMaterial(index) {
-        const materiais = JSON.parse(localStorage.getItem("materiais")) || [];
-        const m = materiais[index];
-        if (!m) return;
-
-        // Preenche formulário
-        document.getElementById("matNome").value = m.nome || "";
-        document.getElementById("matCodigo").value = m.codigo || "";
-        document.getElementById("matEmbalagem").value = m.embalagem || "";
-        document.getElementById("matQtdEmb").value = m.qtdEmb || "";
-
-        // Guarda referência do material sendo editado para salvarMaterial saber o que fazer
-        // Como a lógica atual de salvarMaterial deleta e cria de novo (splices), 
-        // vamos manter o docId globalmente para atualizar caso queira fazer um UPDATE real,
-        // ou manter o comportamento atual de splice se for o desejado pelo sistema.
-        // Para simplificar e manter compatibilidade com o fluxo atual:
-        window.materialEditandoIndex = index;
-        window.materialEditandoDocId = m.docId;
-
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      }
-
-      async function excluirMaterial(index) {
-        const materiais = JSON.parse(localStorage.getItem("materiais")) || [];
-        const m = materiais[index];
-        if (!m) return;
-
-        if (!confirm(`❌ Deseja realmente excluir o material "${m.nome}"?`)) return;
-
-        try {
-          if (typeof db !== "undefined" && m.docId) {
-            await db.collection("materiais").doc(m.docId).delete();
-            console.log("✅ Material removido do Firestore");
-          }
-        } catch (e) {
-          console.error("❌ Erro ao excluir do Firestore:", e);
-        }
-
-        materiais.splice(index, 1);
-        localStorage.setItem("materiais", JSON.stringify(materiais));
-
-        // Atualiza lista se aberta
-        const lista = document.getElementById("listaMateriais");
-        if (lista && lista.style.display === "block") {
-          mostrarListaMateriais();
-        }
-      }
-
-      /* ===============================
-         🛠️ SERVIÇOS – ABERTURA
-      =============================== */
-
-      if (typeof abrirCadastroServico !== "function") {
-        function abrirCadastroServico() {
-          fecharTodasAsSecoes();
-
-          const tela = document.getElementById("cadastroServico");
-          const lista = document.getElementById("listaServicos");
-
-          if (!tela || !lista) return;
-
-          tela.style.display = "block";
-          lista.style.display = "none"; // 🔑 começa sempre fechada
-        }
-      }
-      /* ===============================
-         🛠️ SERVIÇOS – TOGGLE LISTA (CORRETO)
-      =============================== */
-
-      function abrirListaServicos() {
-        const lista = document.getElementById("listaServicos");
-        if (!lista) return;
-
-        const visivel = window.getComputedStyle(lista).display !== "none";
-
-        if (visivel) {
-          lista.style.display = "none";
-        } else {
-          mostrarListaServicos();
-          lista.style.display = "block";
-        }
-      }
-
-
-      async function mostrarListaServicos() {
-        const tabela = document.getElementById("servicosTabela");
-        const lista = document.getElementById("listaServicos");
-
-        if (!tabela || !lista) return;
-
-        tabela.innerHTML = "<tr><td colspan='5' style='text-align:center;'>⌛ Carregando serviços da nuvem...</td></tr>";
-
-        let servicos = [];
-        try {
-          if (typeof db !== "undefined") {
-            const snapshot = await db.collection("servicos").get();
-            servicos = snapshot.docs.map(doc => ({
-              docId: doc.id,
-              ...doc.data()
-            }));
-            localStorage.setItem("servicos", JSON.stringify(servicos));
-            console.log("✅ Serviços sincronizados com Firestore");
-          } else {
-            throw new Error("Firestore não disponível");
-          }
-        } catch (e) {
-          console.warn("Erro ao buscar serviços do Firebase, usando local:", e);
-          servicos = JSON.parse(localStorage.getItem("servicos")) || [];
-        }
-
-        tabela.innerHTML = "";
-
-        if (servicos.length === 0) {
-          tabela.innerHTML = `
-        <tr>
-        <td colspan="5" style="text-align:center; padding:10px;">
-          Nenhum serviço cadastrado ainda.
-        </td>
-        </tr>
-        `;
-          return;
-        }
-
-        // 🔥 DEDUPLICAÇÃO SILENCIOSA NA INTERFACE
-        const nomesVistos = new Set();
-        const servicosUnicos = servicos.filter(s => {
-          const nomeNormal = (s.nome || "").toLowerCase().trim();
-          if (nomesVistos.has(nomeNormal)) return false;
-          nomesVistos.add(nomeNormal);
-          return true;
-        });
-
-        servicosUnicos.sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
-
-        servicosUnicos.forEach((s, i) => {
-          const tr = document.createElement("tr");
-          tr.innerHTML = `
-        <td>${s.nome}</td>
-      <td>${s.codigo || "-"}</td>
-      <td>${s.categoria}</td>
-      <td>${s.preco || "-"}</td>
-      <td style="text-align:center;">
-        <div style="display:flex; justify-content:center; gap:8px;">
-          <button onclick="editarServico('${s.docId}')" title="Editar">✏️</button>
-          <button onclick="excluirServico('${s.docId}')" title="Excluir">🗑️</button>
-        </div>
-      </td>
     `;
-          tabela.appendChild(tr);
-        });
-      }
 
-      /* ===============================
-         🛠️ SERVIÇOS – SALVAR
-      =============================== */
-      async function salvarServico() {
-        const nome = document.getElementById("servNome")?.value.trim();
-        const codigo = document.getElementById("servCodigo")?.value.trim();
-        const categoria = document.getElementById("servCategoria")?.value;
-        const descricao = document.getElementById("servDescricao")?.value.trim();
-        const preco = document.getElementById("servPreco")?.value.trim();
+    document.getElementById("modalVerFornecedor").style.display = "flex";
+    };
 
-        // ✅ SOMENTE NOME E CATEGORIA SÃO OBRIGATÓRIOS
-        if (!nome || !categoria) {
-          alert("⚠️ Preencha ao menos o Nome do Serviço e a Categoria.");
-          return;
-        }
+    window.fecharModalVerFornecedor = function () {
+    document.getElementById("modalVerFornecedor").style.display = "none";
+    };
 
-        const novoServico = {
-          nome,
-          codigo: codigo || "",        // opcional
-          categoria,
-          descricao: descricao || "",  // opcional
-          preco: preco || "",           // opcional
-          dataCriacao: new Date().toISOString()
-        };
+    /* ===============================
+    📦 MATERIAIS – ABERTURA
+    =============================== */
 
-        try {
-          if (typeof db !== "undefined") {
-            let servicos = JSON.parse(localStorage.getItem("servicos")) || [];
+    // Abre o cadastro de material (NÃO abre a lista)
+    if (typeof abrirCadastroMaterial !== "function") {
+    function abrirCadastroMaterial() {
+    // esconde todas as seções
+    document.querySelectorAll("section").forEach(sec => sec.style.display = "none");
 
-            if (window.servicoEditandoDocId) {
-              // 🔥 MODO EDIÇÃO (UPDATE)
-              await db.collection("servicos").doc(window.servicoEditandoDocId).update(novoServico);
-              console.log("✅ Serviço atualizado no Firestore:", window.servicoEditandoDocId);
+    // mostra apenas o cadastro
+    document.getElementById("cadastroMaterial").style.display = "block";
 
-              if (window.servicoEditandoIndex !== undefined && window.servicoEditandoIndex !== null) {
-                servicos[window.servicoEditandoIndex] = { docId: window.servicoEditandoDocId, ...novoServico };
-              }
-            } else {
-              // ✨ MODO CRIAÇÃO (ADD)
-              const docRef = await db.collection("servicos").add(novoServico);
-              console.log("✅ Serviço salvo no Firestore com ID:", docRef.id);
-              servicos.push({ docId: docRef.id, ...novoServico });
-            }
+    // garante que a lista fique fechada
+    const lista = document.getElementById("listaMateriais");
+    if (lista) lista.style.display = "none";
+    }
+    }
 
-            servicos.sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
-            localStorage.setItem("servicos", JSON.stringify(servicos));
-          } else {
-            throw new Error("Firestore não disponível");
-          }
-        } catch (e) {
-          console.error("❌ Erro ao salvar/atualizar no Firestore:", e);
-          // Fallback local simples
-          const servicos = JSON.parse(localStorage.getItem("servicos")) || [];
-          servicos.push(novoServico);
-          localStorage.setItem("servicos", JSON.stringify(servicos));
-        }
+    // Monta a lista de materiais (NÃO controla visibilidade)
+    async function mostrarListaMateriais() {
+    const listaDiv = document.getElementById("listaMateriais");
+    const tabela = document.getElementById("materiaisTabela");
 
-        // Reset variáveis de edição
-        window.servicoEditandoDocId = null;
-        window.servicoEditandoIndex = null;
+    if (!listaDiv || !tabela) return;
 
-        // 🔹 limpa formulário
-        document.getElementById("servNome").value = "";
-        document.getElementById("servCodigo").value = "";
-        document.getElementById("servCategoria").value = "";
-        document.getElementById("servDescricao").value = "";
-        document.getElementById("servPreco").value = "";
+    tabela.innerHTML = "<tr>
+      <td colspan='5' style='text-align:center;'>⌛ Carregando materiais da nuvem...</td>
+    </tr>";
 
-        // 🔁 atualiza lista SOMENTE se estiver aberta
-        const lista = document.getElementById("listaServicos");
-        if (lista && lista.style.display === "block") {
-          mostrarListaServicos();
-        }
+    let materiais = [];
+    try {
+    if (typeof db !== "undefined") {
+    const snapshot = await db.collection("materiais").get();
+    materiais = snapshot.docs.map(doc => ({
+    docId: doc.id,
+    ...doc.data()
+    }));
+    localStorage.setItem("materiais", JSON.stringify(materiais));
+    console.log("✅ Materiais sincronizados com Firestore");
+    } else {
+    throw new Error("Firestore não disponível");
+    }
+    } catch (e) {
+    console.warn("Erro ao buscar materiais do Firebase, usando local:", e);
+    materiais = JSON.parse(localStorage.getItem("materiais")) || [];
+    }
 
-        alert("✅ Serviço salvo com sucesso!");
-      }
+    tabela.innerHTML = "";
+
+    if (materiais.length === 0) {
+    tabela.innerHTML = `
+    <tr>
+      <td colspan="5" style="text-align:center;padding:10px;">
+        Nenhum material cadastrado.
+      </td>
+    </tr>
+    `;
+    return;
+    }
+
+    materiais.sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
+
+    materiais.forEach((m, i) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+    <td>${m.nome}</td>
+    <td>${m.codigo || "-"}</td>
+    <td>${m.embalagem || "-"}</td>
+    <td>${m.qtdEmb || "-"}</td>
+    <td style="text-align:center;">
+      <div style="display:flex; justify-content:center; gap:8px;">
+        <button onclick="editarMaterial(${i})" title="Editar">✏️</button>
+        <button onclick="excluirMaterial(${i})" title="Excluir">🗑️</button>
+      </div>
+    </td>
+    `;
+    tabela.appendChild(tr);
+    });
+    }
 
 
-      window.editarServico = function (docId) {
-        const servicos = JSON.parse(localStorage.getItem("servicos")) || [];
-        const index = servicos.findIndex(item => item.docId === docId);
-        const s = servicos[index];
-        if (!s) return;
+    // Abre a lista SOMENTE quando clicar em "Lista de Materiais"
+    function abrirListaMateriais() {
+    const listaDiv = document.getElementById("listaMateriais");
+    if (!listaDiv) return;
 
-        // Preenche formulário
-        document.getElementById("servNome").value = s.nome || "";
-        document.getElementById("servCodigo").value = s.codigo || "";
-        document.getElementById("servCategoria").value = s.categoria || "";
-        document.getElementById("servDescricao").value = s.descricao || "";
-        document.getElementById("servPreco").value = s.preco || "";
+    // se estiver aberta, fecha
+    if (listaDiv.style.display === "block") {
+    listaDiv.style.display = "none";
+    return;
+    }
 
-        // Guarda referência para salvarServico saber quem atualizar
-        window.servicoEditandoIndex = index;
-        window.servicoEditandoDocId = s.docId;
+    // se estiver fechada, monta e abre
+    mostrarListaMateriais();
+    listaDiv.style.display = "block";
+    }
 
-        // Garante que o usuário veja o formulário
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      };
+    async function salvarMaterial() {
+    const nome = document.getElementById("matNome")?.value.trim();
+    const codigo = document.getElementById("matCodigo")?.value.trim();
+    const embalagem = document.getElementById("matEmbalagem")?.value.trim();
+    const qtdEmb = document.getElementById("matQtdEmb")?.value.trim();
 
-      window.excluirServico = async function (docId) {
-        const servicos = JSON.parse(localStorage.getItem("servicos")) || [];
-        const indexAlvo = servicos.findIndex(item => item.docId === docId);
-        const alvo = servicos[indexAlvo];
-        if (!alvo) return;
+    // 🔴 SOMENTE O NOME É OBRIGATÓRIO
+    if (!nome) {
+    alert("⚠️ Informe o nome do material.");
+    return;
+    }
 
-        if (!confirm(`❌ Deseja realmente excluir o serviço "${alvo.nome}" e todas as suas duplicatas?`)) return;
+    const novoMaterial = {
+    nome,
+    codigo: codigo || "", // opcional
+    embalagem: embalagem || "", // opcional
+    qtdEmb: qtdEmb || "", // opcional
+    dataCriacao: new Date().toISOString()
+    };
 
-        try {
-          if (typeof db !== "undefined") {
-            const nomeAlvo = (alvo.nome || "").toLowerCase().trim();
+    try {
+    if (typeof db !== "undefined") {
+    let materiais = JSON.parse(localStorage.getItem("materiais")) || [];
 
-            // Busca todos os serviços para encontrar duplicatas por nome
-            const snapshot = await db.collection("servicos").get();
-            const docsParaDeletar = snapshot.docs.filter(doc => {
-              const nomeDoc = (doc.data().nome || "").toLowerCase().trim();
-              return nomeDoc === nomeAlvo;
-            });
+    if (window.materialEditandoDocId) {
+    // 🔥 MODO EDIÇÃO (UPDATE)
+    await db.collection("materiais").doc(window.materialEditandoDocId).update(novoMaterial);
+    console.log("✅ Material atualizado no Firestore:", window.materialEditandoDocId);
 
-            if (docsParaDeletar.length > 0) {
-              const batch = db.batch();
-              docsParaDeletar.forEach(doc => {
-                batch.delete(db.collection("servicos").doc(doc.id));
-              });
-              await batch.commit();
-              console.log(`✅ ${docsParaDeletar.length} registros de "${alvo.nome}" removidos do Firestore`);
-            }
-          }
-        } catch (e) {
-          console.error("❌ Erro ao excluir do Firestore:", e);
-          alert("Erro ao excluir do banco de dados.");
-          return;
-        }
+    if (window.materialEditandoIndex !== undefined && window.materialEditandoIndex !== null) {
+    materiais[window.materialEditandoIndex] = { docId: window.materialEditandoDocId, ...novoMaterial };
+    }
+    } else {
+    // ✨ MODO CRIAÇÃO (ADD)
+    const docRef = await db.collection("materiais").add(novoMaterial);
+    console.log("✅ Material salvo no Firestore com ID:", docRef.id);
+    materiais.push({ docId: docRef.id, ...novoMaterial });
+    }
 
-        // Atualiza LocalStorage removendo todos com o mesmo nome
-        const nomeNormalAlvo = (alvo.nome || "").toLowerCase().trim();
-        const novosServicos = servicos.filter(s => (s.nome || "").toLowerCase().trim() !== nomeNormalAlvo);
-        localStorage.setItem("servicos", JSON.stringify(novosServicos));
+    materiais.sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
+    localStorage.setItem("materiais", JSON.stringify(materiais));
+    } else {
+    throw new Error("Firestore não disponível");
+    }
+    } catch (e) {
+    console.error("❌ Erro ao salvar/atualizar no Firestore:", e);
+    // Fallback local simples
+    const materiais = JSON.parse(localStorage.getItem("materiais")) || [];
+    materiais.push(novoMaterial);
+    localStorage.setItem("materiais", JSON.stringify(materiais));
+    }
 
-        // Atualiza lista se estiver aberta
-        const lista = document.getElementById("listaServicos");
-        if (lista && lista.style.display === "block") {
-          mostrarListaServicos();
-        }
+    // Reset variáveis de edição
+    window.materialEditandoDocId = null;
+    window.materialEditandoIndex = null;
 
-        alert(`✅ O serviço "${alvo.nome}" foi removido completamente.`);
-      };
+    alert("✅ Material salvo com sucesso!");
 
-      function cotacaoEstaAbertaParaFornecedor(cotacao, fornecedorEmail) {
-        if (cotacao.status === "fechada") return false;
+    // 🔹 limpa formulário
+    document.getElementById("matNome").value = "";
+    document.getElementById("matCodigo").value = "";
+    document.getElementById("matEmbalagem").value = "";
+    document.getElementById("matQtdEmb").value = "";
 
-        return !cotacao.respostasFornecedores?.some(r =>
-          (r.email || "").toLowerCase().trim() ===
-          fornecedorEmail.toLowerCase().trim()
-        );
-      }
+    // 🔁 atualiza lista SOMENTE se estiver aberta
+    const lista = document.getElementById("listaMateriais");
+    if (lista && lista.style.display === "block") {
+    mostrarListaMateriais();
+    }
+    }
+
+    /* ===============================
+    📦 MATERIAIS – EDITAR / EXCLUIR
+    =============================== */
+
+    function editarMaterial(index) {
+    const materiais = JSON.parse(localStorage.getItem("materiais")) || [];
+    const m = materiais[index];
+    if (!m) return;
+
+    // Preenche formulário
+    document.getElementById("matNome").value = m.nome || "";
+    document.getElementById("matCodigo").value = m.codigo || "";
+    document.getElementById("matEmbalagem").value = m.embalagem || "";
+    document.getElementById("matQtdEmb").value = m.qtdEmb || "";
+
+    // Guarda referência do material sendo editado para salvarMaterial saber o que fazer
+    // Como a lógica atual de salvarMaterial deleta e cria de novo (splices),
+    // vamos manter o docId globalmente para atualizar caso queira fazer um UPDATE real,
+    // ou manter o comportamento atual de splice se for o desejado pelo sistema.
+    // Para simplificar e manter compatibilidade com o fluxo atual:
+    window.materialEditandoIndex = index;
+    window.materialEditandoDocId = m.docId;
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    async function excluirMaterial(index) {
+    const materiais = JSON.parse(localStorage.getItem("materiais")) || [];
+    const m = materiais[index];
+    if (!m) return;
+
+    if (!confirm(`❌ Deseja realmente excluir o material "${m.nome}"?`)) return;
+
+    try {
+    if (typeof db !== "undefined" && m.docId) {
+    await db.collection("materiais").doc(m.docId).delete();
+    console.log("✅ Material removido do Firestore");
+    }
+    } catch (e) {
+    console.error("❌ Erro ao excluir do Firestore:", e);
+    }
+
+    materiais.splice(index, 1);
+    localStorage.setItem("materiais", JSON.stringify(materiais));
+
+    // Atualiza lista se aberta
+    const lista = document.getElementById("listaMateriais");
+    if (lista && lista.style.display === "block") {
+    mostrarListaMateriais();
+    }
+    }
+
+    /* ===============================
+    🛠️ SERVIÇOS – ABERTURA
+    =============================== */
+
+    if (typeof abrirCadastroServico !== "function") {
+    function abrirCadastroServico() {
+    fecharTodasAsSecoes();
+
+    const tela = document.getElementById("cadastroServico");
+    const lista = document.getElementById("listaServicos");
+
+    if (!tela || !lista) return;
+
+    tela.style.display = "block";
+    lista.style.display = "none"; // 🔑 começa sempre fechada
+    }
+    }
+    /* ===============================
+    🛠️ SERVIÇOS – TOGGLE LISTA (CORRETO)
+    =============================== */
+
+    function abrirListaServicos() {
+    const lista = document.getElementById("listaServicos");
+    if (!lista) return;
+
+    const visivel = window.getComputedStyle(lista).display !== "none";
+
+    if (visivel) {
+    lista.style.display = "none";
+    } else {
+    mostrarListaServicos();
+    lista.style.display = "block";
+    }
+    }
+
+
+    async function mostrarListaServicos() {
+    const tabela = document.getElementById("servicosTabela");
+    const lista = document.getElementById("listaServicos");
+
+    if (!tabela || !lista) return;
+
+    tabela.innerHTML = "<tr>
+      <td colspan='5' style='text-align:center;'>⌛ Carregando serviços da nuvem...</td>
+    </tr>";
+
+    let servicos = [];
+    try {
+    if (typeof db !== "undefined") {
+    const snapshot = await db.collection("servicos").get();
+    servicos = snapshot.docs.map(doc => ({
+    docId: doc.id,
+    ...doc.data()
+    }));
+    localStorage.setItem("servicos", JSON.stringify(servicos));
+    console.log("✅ Serviços sincronizados com Firestore");
+    } else {
+    throw new Error("Firestore não disponível");
+    }
+    } catch (e) {
+    console.warn("Erro ao buscar serviços do Firebase, usando local:", e);
+    servicos = JSON.parse(localStorage.getItem("servicos")) || [];
+    }
+
+    tabela.innerHTML = "";
+
+    if (servicos.length === 0) {
+    tabela.innerHTML = `
+    <tr>
+      <td colspan="5" style="text-align:center; padding:10px;">
+        Nenhum serviço cadastrado ainda.
+      </td>
+    </tr>
+    `;
+    return;
+    }
+
+    // 🔥 DEDUPLICAÇÃO SILENCIOSA NA INTERFACE
+    const nomesVistos = new Set();
+    const servicosUnicos = servicos.filter(s => {
+    const nomeNormal = (s.nome || "").toLowerCase().trim();
+    if (nomesVistos.has(nomeNormal)) return false;
+    nomesVistos.add(nomeNormal);
+    return true;
+    });
+
+    servicosUnicos.sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
+
+    servicosUnicos.forEach((s, i) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+    <td>${s.nome}</td>
+    <td>${s.codigo || "-"}</td>
+    <td>${s.categoria}</td>
+    <td>${s.preco || "-"}</td>
+    <td style="text-align:center;">
+      <div style="display:flex; justify-content:center; gap:8px;">
+        <button onclick="editarServico('${s.docId}')" title="Editar">✏️</button>
+        <button onclick="excluirServico('${s.docId}')" title="Excluir">🗑️</button>
+      </div>
+    </td>
+    `;
+    tabela.appendChild(tr);
+    });
+    }
+
+    /* ===============================
+    🛠️ SERVIÇOS – SALVAR
+    =============================== */
+    async function salvarServico() {
+    const nome = document.getElementById("servNome")?.value.trim();
+    const codigo = document.getElementById("servCodigo")?.value.trim();
+    const categoria = document.getElementById("servCategoria")?.value;
+    const descricao = document.getElementById("servDescricao")?.value.trim();
+    const preco = document.getElementById("servPreco")?.value.trim();
+
+    // ✅ SOMENTE NOME E CATEGORIA SÃO OBRIGATÓRIOS
+    if (!nome || !categoria) {
+    alert("⚠️ Preencha ao menos o Nome do Serviço e a Categoria.");
+    return;
+    }
+
+    const novoServico = {
+    nome,
+    codigo: codigo || "", // opcional
+    categoria,
+    descricao: descricao || "", // opcional
+    preco: preco || "", // opcional
+    dataCriacao: new Date().toISOString()
+    };
+
+    try {
+    if (typeof db !== "undefined") {
+    let servicos = JSON.parse(localStorage.getItem("servicos")) || [];
+
+    if (window.servicoEditandoDocId) {
+    // 🔥 MODO EDIÇÃO (UPDATE)
+    await db.collection("servicos").doc(window.servicoEditandoDocId).update(novoServico);
+    console.log("✅ Serviço atualizado no Firestore:", window.servicoEditandoDocId);
+
+    if (window.servicoEditandoIndex !== undefined && window.servicoEditandoIndex !== null) {
+    servicos[window.servicoEditandoIndex] = { docId: window.servicoEditandoDocId, ...novoServico };
+    }
+    } else {
+    // ✨ MODO CRIAÇÃO (ADD)
+    const docRef = await db.collection("servicos").add(novoServico);
+    console.log("✅ Serviço salvo no Firestore com ID:", docRef.id);
+    servicos.push({ docId: docRef.id, ...novoServico });
+    }
+
+    servicos.sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
+    localStorage.setItem("servicos", JSON.stringify(servicos));
+    } else {
+    throw new Error("Firestore não disponível");
+    }
+    } catch (e) {
+    console.error("❌ Erro ao salvar/atualizar no Firestore:", e);
+    // Fallback local simples
+    const servicos = JSON.parse(localStorage.getItem("servicos")) || [];
+    servicos.push(novoServico);
+    localStorage.setItem("servicos", JSON.stringify(servicos));
+    }
+
+    // Reset variáveis de edição
+    window.servicoEditandoDocId = null;
+    window.servicoEditandoIndex = null;
+
+    // 🔹 limpa formulário
+    document.getElementById("servNome").value = "";
+    document.getElementById("servCodigo").value = "";
+    document.getElementById("servCategoria").value = "";
+    document.getElementById("servDescricao").value = "";
+    document.getElementById("servPreco").value = "";
+
+    // 🔁 atualiza lista SOMENTE se estiver aberta
+    const lista = document.getElementById("listaServicos");
+    if (lista && lista.style.display === "block") {
+    mostrarListaServicos();
+    }
+
+    alert("✅ Serviço salvo com sucesso!");
+    }
+
+
+    window.editarServico = function (docId) {
+    const servicos = JSON.parse(localStorage.getItem("servicos")) || [];
+    const index = servicos.findIndex(item => item.docId === docId);
+    const s = servicos[index];
+    if (!s) return;
+
+    // Preenche formulário
+    document.getElementById("servNome").value = s.nome || "";
+    document.getElementById("servCodigo").value = s.codigo || "";
+    document.getElementById("servCategoria").value = s.categoria || "";
+    document.getElementById("servDescricao").value = s.descricao || "";
+    document.getElementById("servPreco").value = s.preco || "";
+
+    // Guarda referência para salvarServico saber quem atualizar
+    window.servicoEditandoIndex = index;
+    window.servicoEditandoDocId = s.docId;
+
+    // Garante que o usuário veja o formulário
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+
+    window.excluirServico = async function (docId) {
+    const servicos = JSON.parse(localStorage.getItem("servicos")) || [];
+    const indexAlvo = servicos.findIndex(item => item.docId === docId);
+    const alvo = servicos[indexAlvo];
+    if (!alvo) return;
+
+    if (!confirm(`❌ Deseja realmente excluir o serviço "${alvo.nome}" e todas as suas duplicatas?`)) return;
+
+    try {
+    if (typeof db !== "undefined") {
+    const nomeAlvo = (alvo.nome || "").toLowerCase().trim();
+
+    // Busca todos os serviços para encontrar duplicatas por nome
+    const snapshot = await db.collection("servicos").get();
+    const docsParaDeletar = snapshot.docs.filter(doc => {
+    const nomeDoc = (doc.data().nome || "").toLowerCase().trim();
+    return nomeDoc === nomeAlvo;
+    });
+
+    if (docsParaDeletar.length > 0) {
+    const batch = db.batch();
+    docsParaDeletar.forEach(doc => {
+    batch.delete(db.collection("servicos").doc(doc.id));
+    });
+    await batch.commit();
+    console.log(`✅ ${docsParaDeletar.length} registros de "${alvo.nome}" removidos do Firestore`);
+    }
+    }
+    } catch (e) {
+    console.error("❌ Erro ao excluir do Firestore:", e);
+    alert("Erro ao excluir do banco de dados.");
+    return;
+    }
+
+    // Atualiza LocalStorage removendo todos com o mesmo nome
+    const nomeNormalAlvo = (alvo.nome || "").toLowerCase().trim();
+    const novosServicos = servicos.filter(s => (s.nome || "").toLowerCase().trim() !== nomeNormalAlvo);
+    localStorage.setItem("servicos", JSON.stringify(novosServicos));
+
+    // Atualiza lista se estiver aberta
+    const lista = document.getElementById("listaServicos");
+    if (lista && lista.style.display === "block") {
+    mostrarListaServicos();
+    }
+
+    alert(`✅ O serviço "${alvo.nome}" foi removido completamente.`);
+    };
+
+    function cotacaoEstaAbertaParaFornecedor(cotacao, fornecedorEmail) {
+    if (cotacao.status === "fechada") return false;
+
+    return !cotacao.respostasFornecedores?.some(r =>
+    (r.email || "").toLowerCase().trim() ===
+    fornecedorEmail.toLowerCase().trim()
+    );
+    }
 
     </script>
 
@@ -11118,6 +10846,6 @@
     </script>
 
     <script src="premium_render.js?v=10014"></script>
-</body>
+    </body>
 
-</html>
+    </html>
