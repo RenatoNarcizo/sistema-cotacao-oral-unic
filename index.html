@@ -11646,7 +11646,7 @@
      🚀 FIX DEFINITIVO (V2) - NON-BLOCKING PUBLISH
   ====================================================== */
   async function publicarCotacaoV2(tipo = "manual") {
-    console.log("🚀 Iniciando publicação V2 (Non-Blocking)...");
+    console.log("🚀 Iniciando publicação V2 (Robust Sync)...");
     let fechamento = "";
     let produtos = [];
     let descricao = "";
@@ -11716,41 +11716,66 @@
       status: "aberta"
     };
 
+    // 🔒 BLOQUEIO DE UI
+    const btnSalvar = document.activeElement;
+    let textoOriginal = "";
+    if (btnSalvar && btnSalvar.tagName === "BUTTON") {
+      textoOriginal = btnSalvar.innerText;
+      btnSalvar.disabled = true;
+      btnSalvar.innerText = "☁️ Enviando para Fornecedores...";
+    }
+
     try {
-      // ✅ 1. LOCAL (Imediato)
+      // ✅ 1. LOCAL (Imediato - Backup)
       const cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
       cotacoes.push(novaCotacao);
       localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
-      console.log("✅ V2: Salvo localmente.");
+      console.log("✅ V2: Backup local salvo.");
 
-      // ☁️ 2. CLOUD (Background - Sem Await)
-      db.collection("cotacoes").doc(String(novaCotacao.numero)).set(novaCotacao)
-        .then(() => console.log("✅ V2: Nuvem OK"))
-        .catch(err => console.log("ℹ️ Info Nuvem: Sincronização pendente (Cota/Rede)."));
+      // ☁️ 2. CLOUD (OBRIGATÓRIO - AWAIT)
+      // Isso garante que o pacote chegue ao servidor antes de fechar a página
+      if (typeof db !== "undefined") {
+        await db.collection("cotacoes").doc(String(novaCotacao.numero)).set(novaCotacao);
+        console.log("✅ V2: Sincronização Nuvem CONFIRMADA.");
+      } else {
+        console.warn("⚠️ V2: Firebase não definido. Operando offline.");
+      }
 
-      // 🔔 3. NOTIFICAÇÃO (Background)
+      // 🔔 3. NOTIFICAÇÃO (Tentativa)
       if (typeof enviarNotificacaoCotacao === "function") {
-        enviarNotificacaoCotacao(novaCotacao).catch(e => console.error("Erro notif V2:", e));
+        try {
+          await enviarNotificacaoCotacao(novaCotacao);
+        } catch (errNotif) {
+          console.error("Erro no envio de notificação (ignorado):", errNotif);
+        }
       }
 
       // 4. LIMPEZA E UI
       window.fornecedoresSelecionadosTemp = [];
       numeroCotacaoAtual = null;
 
-      alert("✅ Cotação publicada e notificação enviada com sucesso!");
+      alert("✅ Cotação publicada com sucesso!\n\nOs fornecedores devem receber a atualização em instantes.");
 
-      // Fecha modal imediatamente
-      voltarMenu();
       limparFormulariosCotacao();
-
-      // Atualiza lista
-      setTimeout(() => {
-        if (typeof carregarCotacoes === 'function') carregarCotacoes();
-      }, 500); // Delay leve para garantir UX
+      window.location.reload();
 
     } catch (e) {
-      console.error("Erro V2:", e);
-      alert("Erro fatal ao salvar localmente.");
+      console.error("Erro FATAL V2:", e);
+      alert("❌ Erro ao publicar: " + e.message + "\n\nVerifique sua conexão e tente novamente. Se persistir, contate o suporte.");
+
+      if (btnSalvar && btnSalvar.tagName === "BUTTON") {
+        btnSalvar.disabled = false;
+        btnSalvar.innerText = textoOriginal;
+      }
+    }
+  }
+
+  // 🛡️ STUB NOTIFICAÇÃO (Para evitar crash se não existir)
+  if (typeof enviarNotificacaoCotacao === "undefined") {
+    window.enviarNotificacaoCotacao = async function (cot) {
+      console.log("🔔 [SIMULAÇÃO] Enviando e-mail para:", cot.fornecedores.map(f => f.email));
+      // Aqui entraria a chamada fetch para seu Webhook (n8n, make, zapier, etc)
+      return true;
     }
   }
 
