@@ -11264,6 +11264,61 @@
     }
   }, 5000);
   */
+
+  // 🔄 Lógica para Reabrir Cotação
+  window.reabrirCotacao = async function (id) {
+    if (!confirm("⚠️ Deseja REABRIR esta cotação?\\n\\nIsso estenderá o prazo de fechamento em 3 dias para tentar atrair novos fornecedores.")) {
+      return;
+    }
+
+    try {
+      let cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
+      const index = cotacoes.findIndex(c => String(c.numero) === String(id) || String(c.id) === String(id));
+
+      if (index === -1) {
+        alert("Cotação não encontrada.");
+        return;
+      }
+
+      const agora = new Date();
+      agora.setDate(agora.getDate() + 3);
+
+      const cot = cotacoes[index];
+      cot.status = 'aberta';
+      cot.prazoEncerrado = false;
+      cot.dataFechamento = agora.toLocaleString();
+
+      localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
+
+      // 🔥 SINCRONIZAÇÃO CLOUD: Atualiza no Firestore se possível
+      if (typeof db !== "undefined") {
+        try {
+          const docId = String(cot.numero || cot.id);
+          await db.collection("cotacoes").doc(docId).update({
+            status: 'aberta',
+            prazoEncerrado: false,
+            dataFechamento: cot.dataFechamento
+          });
+          console.log(`✅ Cotação ${docId} reaberta no Firestore`);
+        } catch (fsError) {
+          console.warn("⚠️ Falha ao atualizar Firestore em reabrirCotacao:", fsError);
+        }
+      }
+
+      alert("✅ Cotação reaberta com sucesso! O prazo foi estendido em 3 dias.");
+
+      if (typeof toggleListaRespondidas === 'function') {
+        toggleListaRespondidas('publicadas', true); // Force refresh
+      } else {
+        window.location.reload();
+      }
+
+    } catch (e) {
+      console.error(e);
+      alert("Erro ao reabrir cotação: " + e.message);
+    }
+  };
+
 </script>
 
 <script src="premium_render.js?v=10013"></script>
