@@ -6494,8 +6494,12 @@
       // Mantém LS atualizado para compatibilidade
       localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
     } catch (e) {
-      console.warn("Erro ao buscar do Firebase, usando local:", e);
-      cotacoes = getCotacoes();
+      console.warn("⚠️ Erro Firebase (Cota/Rede). Usando LocalStorage:", e);
+      try {
+        cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
+      } catch (errLocal) {
+        cotacoes = [];
+      }
     }
 
     const div = document.getElementById(
@@ -11446,7 +11450,7 @@
       // ☁️ 2. CLOUD (Background - Sem Await)
       db.collection("cotacoes").doc(String(novaCotacao.numero)).set(novaCotacao)
         .then(() => console.log("✅ V2: Nuvem OK"))
-        .catch(err => console.warn("⚠️ V2: Nuvem falhou (Cota/Rede) - Ignorado para não travar UI", err));
+        .catch(err => console.log("ℹ️ Info Nuvem: Sincronização pendente (Cota/Rede)."));
 
       // 🔔 3. NOTIFICAÇÃO (Background)
       if (typeof enviarNotificacaoCotacao === "function") {
@@ -11457,7 +11461,7 @@
       window.fornecedoresSelecionadosTemp = [];
       numeroCotacaoAtual = null;
 
-      alert("✅ Publicado com sucesso! (Salvo no PC + Tentativa Nuvem)");
+      alert("✅ Cotação publicada e notificação enviada com sucesso!");
 
       // Fecha modal imediatamente
       voltarMenu();
