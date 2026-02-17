@@ -3797,8 +3797,6 @@
         📥 Solicitações Recebidas
       </h2>
 
-      <p style="text-align:center; opacity:0.7; margin-top:15px;">
-        Nenhuma solicitação carregada ainda.
       </p>
 
       <!-- Aqui entraremos com a lista depois -->
@@ -3809,7 +3807,7 @@
 
   <!-- ======================================================
      ✅ APROVAR COMPRAS (MISSING SECTION RESTORED)
-====================================================== -->
+  ====================================================== -->
   <section id="aprovarCompras" style="display:none;">
     <header>
       <button class="btn-sair" onclick="voltarMenu()">🏠 Menu Principal</button>
@@ -3836,6 +3834,8 @@
 
     </div>
   </section>
+
+
 
   <!-- 📋 MODAL – DETALHES DA SOLICITAÇÃO DE COMPRA -->
   <div id="modalDetalhesSolicitacao" class="modal" style="display:none;">
@@ -6569,9 +6569,16 @@
         c.prazoEncerrado = true;
         alterou = true;
 
-        // 📊 comprador: entra em análise automaticamente
+        // 📊 comprador: entra em análise automaticamente SOMENTE SE TIVER RESPOSTAS
         if (c.status === "aberta") {
-          c.status = "analise";
+          // Verifica se tem respostas válidas
+          const temRespostas = Array.isArray(c.respostasFornecedores) && c.respostasFornecedores.length > 0;
+
+          if (temRespostas) {
+            c.status = "analise";
+          }
+          // Se não tiver respostas, mantém como "aberta" (com prazoEncerrado=true)
+          // Assim o comprador vê na lista de Publicadas e pode decidir (Reabrir ou Excluir)
         }
       }
     });
@@ -6730,9 +6737,14 @@
         </button>`;
         } else if (c.status === "aprovacao") {
           botao = `
-        <span style="color:#f39c12; font-weight:bold; display:flex; align-items:center; gap:5px;">
-          <i class="fa-solid fa-clock"></i> Aguardando Aprovação
-        </span>`;
+        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:5px;">
+          <span style="color:#f39c12; font-weight:bold; display:flex; align-items:center; gap:5px;">
+            <i class="fa-solid fa-clock"></i> Aguardando Aprovação
+          </span>
+          <button onclick="abrirAnalise('${c.numero}')" style="background:#661155; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-size:12px;">
+            👁️ Ver Detalhes
+          </button>
+        </div>`;
         } else if (c.status === "fechada") {
           botao = `
         <button onclick="abrirAnalise('${c.numero}')" style="background:#28a745; color:white; border:none; padding:8px 16px; border-radius:4px; cursor:pointer;">
