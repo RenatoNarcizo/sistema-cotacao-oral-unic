@@ -7928,10 +7928,10 @@
 
     if (modalContent) {
       modalContent.style.width = window.isColunasExpandidas ? "99vw" : "1200px";
-      modalContent.style.max  dth = window.isColunasExpandidas ?      " : "1200px";
+      modalContent.style.maxWidth = window.isColunasExpandidas ? "99vw" : "1200px";
     }
 
-    if (  on) {
+    if (icon) {
       icon.className = window.isColunasExpandidas ? 'fa-solid fa-compress' : 'fa-solid fa-expand';
       icon.title = window.isColunasExpandidas ? 'Contrair' : 'Expandir';
     }
@@ -8493,7 +8493,7 @@
         total += t;
 
         // Verifica anexo
-        con    emAnexo = arquivosCotacao.some        (arq.usuario     ").toLowerCase() === (i.fornecedor || "").toLowerCase());
+        const temAnexo = arquivosCotacao.some(arq => (arq.usuario || "").toLowerCase() === (i.fornecedor || "").toLowerCase());
         let iconAnexo = "";
         if (temAnexo) {
           iconAnexo = `<i class="fa-solid fa-paperclip" 
