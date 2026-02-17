@@ -5616,34 +5616,57 @@
     carregarPendentesAprovacao();
   };
 
-  window.carregarPendentesAprovacao = function () {
+  window.carregarPendentesAprovacao = async function () {
     const listaDiv = document.getElementById("listaPendentesAprovacao");
-    const cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
 
-    console.log("🔍 Carregando pendentes. Total cotações:", cotacoes.length);
+    listaDiv.innerHTML = `
+      <div style="text-align:center; padding:20px; color:#aaa;">
+        <i class="fa-solid fa-cloud-arrow-down fa-bounce"></i><br>
+        Buscando cotações na nuvem...
+      </div>
+    `;
+
+    let cotacoes = [];
+
+    // 1. TENTATIVA CLOUD (Prioriade Máxima - Pedido do Usuário)
+    if (typeof db !== "undefined") {
+      try {
+        console.log("☁️ Buscando pendentes diretamente do Firestore...");
+        const snapshot = await db.collection("cotacoes").where("status", "==", "aprovacao").get();
+
+        const cotacoesCloud = [];
+        snapshot.forEach(doc => {
+          cotacoesCloud.push({ ...doc.data(), id: doc.id });
+        });
+
+        // Se achou na nuvem, usa ela. Se não, fallback pro local (caso offline)
+        if (cotacoesCloud.length > 0 || snapshot.size === 0) { // snapshot.size === 0 significa que conectou mas não tem nada
+          cotacoes = cotacoesCloud;
+          // Atualiza local apenas para manter sync
+          // (Opcional, mas bom para evitar cache stale misturado)
+        }
+      } catch (err) {
+        console.error("Erro ao buscar da nuvem:", err);
+        listaDiv.innerHTML = `<p style="color:red; text-align:center;">Erro de conexão com a nuvem.</p>`;
+        // Fallback local
+        cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
+      }
+    } else {
+      cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
+    }
+
+    // Filtro adicional (para garantir)
+    const pendentes = cotacoes.filter(c => c.status === "aprovacao" || (c.status === "respondida" && c.statusAprovacao === "pendente"));
+
+    console.log("☁️ Pendentes encontradas (Cloud/Final):", pendentes.length);
 
     listaDiv.innerHTML = "";
 
-    // Filtra apenas fechadas (prontas para aprovação final)
-    const pendentes = cotacoes.filter(c => c.status === "aprovacao" || (c.status === "respondida" && c.statusAprovacao === "pendente"));
-
-    console.log("🔍 Pendentes encontradas:", pendentes.length);
-
     if (pendentes.length === 0) {
-      // DIAGNÓSTICO PARA O USUÁRIO VER
-      const statusContagem = cotacoes.reduce((acc, c) => {
-        acc[c.status] = (acc[c.status] || 0) + 1;
-        return acc;
-      }, {});
-
       listaDiv.innerHTML = `
         <div style="text-align:center; color:#ccc; padding:20px;">
           <i class="fa-solid fa-folder-open" style="font-size:30px; margin-bottom:10px; color:#555;"></i>
-          <p>Nenhuma cotação aguardando aprovação.</p>
-          <div style="font-size:12px; color:#555; margin-top:10px; border:1px solid #333; padding:10px; display:inline-block; text-align:left;">
-             <strong>Diagnóstico (Status encontrados):</strong><br>
-             ${Object.entries(statusContagem).map(([k, v]) => `${k}: ${v}`).join('<br>')}
-          </div>
+          <p>Nenhuma cotação aguardando aprovação na nuvem.</p>
         </div>
       `;
       return;
@@ -5661,13 +5684,13 @@
       card.innerHTML = `
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <div>
-                   <strong style="color:white; font-size:16px;">${cot.descricao}</strong>
+                   <strong style="color:white; font-size:16px;">${cot.descricao || "Cotação sem descrição"}</strong>
                    <span style="display:block; font-size:12px; color:#aaa;">
-                     #${cot.numero} - ${new Date(cot.dataFechamento).toLocaleDateString()}
-                     <span style="color:#f39c12; margin-left:8px;">(${cot.status})</span>
+                     #${cot.numero} - ${cot.dataFechamento ? new Date(cot.dataFechamento).toLocaleDateString() : 'Sem data'}
+                     <span style="color:#f39c12; margin-left:8px;">(Nuvem)</span>
                    </span>
                 </div>
-                <button onclick="analisarCotacao('${cot.numero}')" style="background:#661155; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer;">
+                <button onclick="window.analisarCotacao('${cot.numero}')" style="background:#661155; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer;">
                    🔍 Analisar
                 </button>
             </div>
