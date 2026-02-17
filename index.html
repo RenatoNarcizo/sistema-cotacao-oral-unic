@@ -11689,25 +11689,6 @@
     carregarCotacoesAprovacao(); // Atualiza a lista
   };
 
-  // 🔄 TOGGLE LISTA RESPONDIDAS (Placeholder para compatibilidade)
-  window.toggleListaRespondidas = function (aba, forceRefresh) {
-    console.log(`📌 toggleListaRespondidas chamado: aba="${aba}", forceRefresh=${forceRefresh}`);
-
-    // Se for para ir para aprovação, abre a tela de aprovar compras
-    if (aba === 'aprovacao') {
-      abrirAprovarCompras();
-    } else {
-      // Para outras abas, apenas loga (pode ser expandido no futuro)
-      console.log(`ℹ️ Aba "${aba}" não implementada ainda.`);
-    }
-  };
-
-  // 📋 CARREGAR COTAÇÕES (Placeholder para compatibilidade)
-  window.carregarCotacoes = function (tipo) {
-    console.log(`📌 carregarCotacoes chamado: tipo="${tipo}"`);
-    // Placeholder - pode ser expandido conforme necessário
-  };
-
   // 🔄 REABRIR COTAÇÃO (Correção do erro "reabrirCotacao is not defined")
   window.reabrirCotacao = async function (id) {
     if (!confirm("⚠️ Deseja REABRIR esta cotação?\n\nIsso estenderá o prazo de fechamento em 3 dias para tentar atrair novos fornecedores.")) {
@@ -11750,11 +11731,7 @@
 
       alert("✅ Cotação reaberta com sucesso! O prazo foi estendido em 3 dias.");
 
-      if (typeof toggleListaRespondidas === 'function') {
-        toggleListaRespondidas('publicadas', true);
-      } else {
-        window.location.reload();
-      }
+      window.location.reload();
 
     } catch (e) {
       console.error(e);
