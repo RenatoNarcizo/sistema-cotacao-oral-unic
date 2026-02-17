@@ -4297,7 +4297,8 @@
 
     // 🔄 Tenta migrar materiais e cotações em background se for admin
     if (usuario.tipo === "administrador" || usuario.tipo === "comprador") {
-      setTimeout(migrarDadosParaCloud, 1000);
+      // ⚠️ DESATIVADO TEMPORARIAMENTE PARA EVITAR ERRO DE COTA (Quota Exceeded)
+      // setTimeout(migrarDadosParaCloud, 1000);
     }
 
     console.log("✅ Login realizado com sucesso para:", usuario.email);
