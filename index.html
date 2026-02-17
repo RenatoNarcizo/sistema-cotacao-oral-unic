@@ -7022,7 +7022,7 @@
             if (c.status === "aberta" || c.status === "respondida" || c.status === "reanalise") {
               botao = `
                 <button onclick="encerrarCotacaoManualmente('${c.numero}')" style="background:#cc0000; color:white; border:none; padding:12px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:14px; width:100%;">
-                  <i class="fa-solid fa-lock"></i> Encerrar
+                  <i class="fa-solid fa-lock" style="color:#ffcc00;"></i> Encerrar
                 </button>`;
             } else {
               botao = "";
@@ -7077,7 +7077,7 @@
           ${botao}
           <button onclick="reabrirCotacao('${c.numero}')" 
                   style="background:#ffcc00; color:#000; border:none; padding:12px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:14px; width:100%;">
-            <i class="fa-solid fa-arrows-rotate"></i> Reabrir / Estender
+            <span style="background:#007bff; color:white; padding:3px; border-radius:3px; font-size:10px; margin-right:5px; display:inline-flex; align-items:center; justify-content:center;"><i class="fa-solid fa-arrows-rotate"></i></span> Reabrir / Estender
           </button>
           <button onclick="excluirCotacao('${c.numero}')" 
                   style="background:transparent; border:1px solid #ff4444; color:#ff4444; padding:8px; border-radius:6px; cursor:pointer; width:100%;">
@@ -7492,7 +7492,7 @@
             // 🔒 ENCERRAR (Vermelho)
             if (c.status === "aberta" || c.status === "respondida" || c.status === "reanalise") {
               const btnEncerrar = document.createElement("button");
-              btnEncerrar.innerHTML = '<i class="fa-solid fa-lock"></i> Encerrar';
+              btnEncerrar.innerHTML = '<i class="fa-solid fa-lock" style="color:#ffcc00;"></i> Encerrar';
               btnEncerrar.style.cssText = "background:#cc0000; color:white; border:none; padding:12px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:14px; width:100%;";
               btnEncerrar.onclick = () => encerrarCotacaoManualmente(c.numero);
               acoesDiv.appendChild(btnEncerrar);
@@ -7500,7 +7500,7 @@
 
             // 🔄 REABRIR / ESTENDER (Amarelo)
             const btnReabrir = document.createElement("button");
-            btnReabrir.innerHTML = '<i class="fa-solid fa-arrows-rotate"></i> Reabrir / Estender';
+            btnReabrir.innerHTML = '<span style="background:#007bff; color:white; padding:3px; border-radius:3px; font-size:10px; margin-right:5px; display:inline-flex; align-items:center; justify-content:center;"><i class="fa-solid fa-arrows-rotate"></i></span> Reabrir / Estender';
             btnReabrir.style.cssText = "background:#ffcc00; color:#000; border:none; padding:12px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:14px; width:100%;";
             btnReabrir.onclick = () => reabrirCotacao(c.numero);
             acoesDiv.appendChild(btnReabrir);
