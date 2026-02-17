@@ -11319,6 +11319,213 @@
     }
   };
 
+  // 🗑️ Lógica para Excluir Cotação (OTIMISTA E COM BLACKLIST)
+  window.excluirCotacao = async function (id) {
+    if (!confirm("⚠️ ATENÇÃO: Tem certeza que deseja EXCLUIR permanentemente esta cotação?\\n\\nEssa ação apagará todos os itens e respostas vinculadas em seu navegador IMEDIATAMENTE.")) {
+      return;
+    }
+
+    try {
+      const idStr = String(id);
+
+      // 🛡️ 1. ADICIONA À BLACKLIST LOCAL IMEDIATAMENTE
+      let blacklist = JSON.parse(localStorage.getItem("cotacoes_deletadas_local")) || [];
+      if (!blacklist.includes(idStr)) {
+        blacklist.push(idStr);
+        localStorage.setItem("cotacoes_deletadas_local", JSON.stringify(blacklist));
+      }
+
+      // 🔥 2. LIMPEZA LOCAL IMEDIATA (OTIMISTA)
+      let cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
+      const cotacaoAlvo = cotacoes.find(c => String(c.numero) === idStr || String(c.id) === idStr);
+      const statusAnterior = cotacaoAlvo ? cotacaoAlvo.status : 'aberta';
+
+      const novaLista = cotacoes.filter(c => String(c.numero) !== idStr && String(c.id) !== idStr);
+      localStorage.setItem("cotacoes", JSON.stringify(novaLista));
+
+      // Limpeza de Respostas (Várias chaves possíveis)
+      const keysParaRemover = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        const match = key.startsWith(`resposta_${idStr}_`) ||
+          key.startsWith(`resposta_${idStr} _`) ||
+          key.startsWith(`res_${idStr}_`) ||
+          key.startsWith(`res_${idStr} _`);
+        if (match) keysParaRemover.push(key);
+      }
+      keysParaRemover.forEach(k => localStorage.removeItem(k));
+
+      if (window.decisoesAnalise && window.decisoesAnalise[idStr]) {
+        delete window.decisoesAnalise[idStr];
+        localStorage.setItem('decisoesAnalise', JSON.stringify(window.decisoesAnalise));
+      }
+
+      // 🔄 3. ATUALIZAÇÃO DA UI IMEDIATA
+      const modal = document.getElementById('modalAnaliseCotacao');
+      if (modal) modal.style.display = "none";
+
+      if (typeof toggleListaRespondidas === 'function') {
+        const abaAlvo = statusAnterior === 'aberta' ? 'publicadas' : 'analise';
+        console.log(`🔄 UI Atualizada otimisticamente na aba: ${abaAlvo}`);
+        toggleListaRespondidas(abaAlvo, true); // Force refresh
+      }
+
+      alert("✅ Cotação removida localmente com sucesso!");
+
+      // ☁️ 4. EXCLUSÃO EM SEGUNDO PLANO (FIRESTORE)
+      if (typeof db !== "undefined") {
+        const docId = idStr;
+        console.log(`☁️ Tentando remover ${docId} do Firestore em background...`);
+        db.collection("cotacoes").doc(docId).delete()
+          .then(() => console.log(`✅ Firestore: Cotação ${docId} removida.`))
+          .catch(fsError => console.warn("⚠️ Firestore: Falha na exclusão (Quota?), mas o item permanecerá oculto localmente.", fsError));
+      }
+
+    } catch (e) {
+      console.error("Erro ao excluir cotação:", e);
+      alert("Ocorreu um erro ao processar a exclusão local: " + e.message);
+    }
+  };
+
+  // 🚀 ENVIAR PARA APROVAÇÃO (COM DECISÕES MANUAIS)
+  window.enviarParaAprovacao = function () {
+    // Tenta pegar o número da cotação do título ou do contexto
+    let numeroCotacao = null;
+
+    // Tenta IDs conhecidos do H1
+    const titleEl = document.getElementById("analiseNumero") || document.getElementById("cotacaoNumero");
+
+    if (titleEl) {
+      numeroCotacao = titleEl.innerText.replace("Cotação: ", "").trim();
+    }
+
+    if (!numeroCotacao) {
+      // Fallback: Tenta pegar do atributo do modal se houver
+      const modal = document.getElementById("modalAnaliseCotacao");
+      if (modal && modal.getAttribute("data-cotacao")) {
+        numeroCotacao = modal.getAttribute("data-cotacao");
+      }
+    }
+
+    if (!numeroCotacao) return alert("Erro ao identificar cotação. Tente reabrir a análise.");
+
+    if (!confirm("Confirma o envio desta cotação para aprovação final?")) return;
+
+    // 1. Carrega dados
+    let cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
+    const index = cotacoes.findIndex(c => c.numero === numeroCotacao || c.id === numeroCotacao);
+
+    if (index === -1) return alert("Cotação não encontrada na base.");
+    let cotacao = cotacoes[index];
+
+    const decisoes = JSON.parse(localStorage.getItem("decisoesAnalise")) || {};
+    const decisoesCotacao = decisoes[numeroCotacao] || {};
+
+    // 2. Carrega respostas (Varredura no LocalStorage)
+    let respostas = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      // Match flexível para chaves de resposta
+      if (key.includes(`res_${cotacao.id}_`) || key.includes(`resposta_${cotacao.numero}_`) || key.includes(`res_${cotacao.numero}_`)) {
+        respostas.push(JSON.parse(localStorage.getItem(key)));
+      }
+    }
+
+    // 3. Monta a lista de ADJUDICAÇÃO (Vencedores)
+    const adjudicacao = [];
+    const norm = (s) => (s || "").toLowerCase().trim();
+
+    cotacao.produtos.forEach((prod, idx) => {
+      let vencedorEmail = null;
+      let vencedorNome = "Sem Oferta";
+      let menorPreco = Infinity;
+      let precoFinal = 0;
+
+      // CHAVE POR INDEX (Mais Robusto)
+      const keyItem = `item_${idx}`;
+
+      // A. Verifica decisão manual primeiro (Index ou Nome - retrocompatibilidade)
+      if (decisoesCotacao[keyItem]) {
+        vencedorEmail = norm(decisoesCotacao[keyItem]);
+      } else if (decisoesCotacao[prod.nome]) {
+        vencedorEmail = norm(decisoesCotacao[prod.nome]); // Fallback legado
+      }
+
+      // Se achou manual...
+      if (vencedorEmail) {
+        // Busca dados do vencedor manual
+        const resp = respostas.find(r => norm(r.email || r.emailFornecedor) === vencedorEmail);
+
+        if (resp) {
+          vencedorNome = resp.fornecedor || resp.fornecedorNome;
+          // Busca o item específico na resposta
+          const itemResp = (resp.itens || []).find(i =>
+            norm(i.produto || i.descricao) === norm(prod.nome)
+          );
+
+          if (itemResp) {
+            precoFinal = parseFloat(itemResp.preco || itemResp.precoUnitario || itemResp.valor || 0);
+          }
+        } else {
+          vencedorNome = "Manual (Não encontrado)";
+        }
+      }
+      // B. Se não tiver manual, calcula o menor preço (Automático)
+      else {
+        respostas.forEach(r => {
+          const item = (r.itens || []).find(i => norm(i.produto || i.descricao) === norm(prod.nome));
+
+          if (item) {
+            const val = parseFloat(item.preco || item.precoUnitario || item.valor || 0);
+            if (val > 0 && val < menorPreco) {
+              menorPreco = val;
+              vencedorEmail = norm(r.email || r.emailFornecedor);
+              vencedorNome = r.fornecedor || r.fornecedorNome;
+              precoFinal = val;
+            }
+          }
+        });
+      }
+
+      if (vencedorEmail) {
+        adjudicacao.push({
+          produto: prod.nome,
+          quantidade: prod.quantidade,
+          fornecedor: vencedorNome,
+          emailFornecedor: vencedorEmail,
+          preco: precoFinal,
+          total: precoFinal * prod.quantidade
+        });
+      }
+    });
+
+    // 4. Salva e Atualiza Status
+    if (adjudicacao.length === 0) {
+      return alert("⚠️ Nenhum vencedor identificado. Verifique se há respostas válidas antes de aprovar.");
+    }
+
+    // Salva na cotação
+    cotacao.adjudicacao = adjudicacao;
+    cotacao.status = "aprovacao"; // Avança workflow
+
+    cotacoes[index] = cotacao;
+    localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
+
+    alert(`✅ Cotação enviada para aprovação com ${adjudicacao.length} itens adjudicados!`);
+
+    // Atualiza UI sem recarregar (evita logout)
+    const modal = document.getElementById('modalAnaliseCotacao');
+    if (modal) modal.style.display = "none";
+    document.body.style.overflow = "auto";
+
+    if (typeof carregarCotacoes === 'function') carregarCotacoes('analise');
+
+    // Tenta ir para a aba de aprovação
+    if (typeof toggleListaRespondidas === 'function') {
+      toggleListaRespondidas('aprovacao');
+    }
+  };
+
 </script>
 
 <script src="premium_render.js?v=10013"></script>
