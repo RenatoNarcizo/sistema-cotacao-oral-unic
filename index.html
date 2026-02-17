@@ -5519,13 +5519,22 @@
 
     lista.sort((a, b) => a.nome.localeCompare(b.nome));
 
-    listaDiv.innerHTML = lista.map(f => `
+    listaDiv.innerHTML = lista.map(f => {
+      // 🟢 FIX: Combina todos os e-mails disponíveis (string e array)
+      let emailsCombo = [];
+      if (f.email) emailsCombo.push(f.email);
+      if (Array.isArray(f.emails)) emailsCombo.push(...f.emails);
+
+      // Remove duplicatas e junta com vírgula
+      const emailFinal = [...new Set(emailsCombo)].join(", ");
+
+      return `
     <label style="display:block; padding:8px; border-bottom:1px solid #333; cursor:pointer;">
       <input
         type="checkbox"
         class="checkFornecedor"
         data-nome="${f.nome}"
-        data-email="${f.email || f.emails || ""}"
+        data-email="${emailFinal}" 
         style="margin-right:6px;"
       >
       <strong>${f.nome}</strong> — ${f.tipo || "Sem tipo"}<br>
@@ -5533,7 +5542,7 @@
       <small>📞 ${f.telefone || "-"} • 💬 ${f.whats || "-"}</small><br>
       <small>👤 ${f.responsavel || "-"}</small>
     </label>
-  `).join("");
+  `}).join("");
   }
 
   // carrega todos os fornecedores (FIREBASE)
@@ -6604,29 +6613,13 @@
   ====================================================== */
 
   /* ======================================================
-     🧹 LIMPEZA DE FORMULÁRIOS (FUNÇÃO FALTANTE)
-     ====================================================== */
-  function limparFormulariosCotacao() {
-    // Limpa inputs gerais do formulário de cotação
-    const inputs = document.querySelectorAll('#formCotacao input, #formCotacao textarea, #formCotacao select');
-    inputs.forEach(el => el.value = "");
+     STATUS / LISTAGEM / RESPOSTA — DEFINITIVO (CORRIGIDO)
+  ====================================================== */
 
-    // Reseta variável global de fornecedores selecionados
-    window.fornecedoresSelecionadosTemp = [];
+  /* (Função duplicada removida) */
 
-    // Limpa a lista visual de produtos (se houver containers específicos)
-    const listaMateriais = document.getElementById("listaMateriaisCotacao");
-    if (listaMateriais) listaMateriais.innerHTML = "";
+  // ...
 
-    const listaServicos = document.getElementById("listaServicosCotacao");
-    if (listaServicos) listaServicos.innerHTML = "";
-
-    // Atualiza contador visual de fornecedores
-    const countEl = document.getElementById("countFornecedores");
-    if (countEl) countEl.innerText = "0";
-
-    console.log("🧹 Formulários e variáveis temporárias limpos.");
-  }
 
   /* ======================================================
      STATUS / LISTAGEM / RESPOSTA — DEFINITIVO (CORRIGIDO)
@@ -6757,7 +6750,11 @@
             const fLower = f.toLowerCase();
             return fLower.includes(emailUser) || fLower.includes(nomeUser);
           } else if (typeof f === 'object' && f !== null) {
-            const emailF = normalizarEmail(f.email || f.emails);
+            // 🛡️ FIX: Garante que tratamos array ou string corretamente
+            let emailsRaw = f.email || f.emails || "";
+            if (Array.isArray(emailsRaw)) emailsRaw = emailsRaw.join(",");
+
+            const emailF = normalizarEmail(emailsRaw);
             const nomeF = (f.nome || "").toLowerCase().trim();
             return emailF.includes(emailUser) || (nomeF && nomeF === nomeUser);
           }
@@ -11953,74 +11950,7 @@
 
 </script>
 
-<script>
-  /* ======================================================
-     🚑 DIAGNÓSTICO E RECUPERAÇÃO DE DADOS (VERSÃO FINAL)
-     ====================================================== */
-  function recuperarCotacoesPerdidas() {
-    console.log("🚑 Rodando diagnóstico de cotações...");
-    const cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
 
-    // 1. DIAGNÓSTICO: Listar o que existe
-    const idsExistentes = cotacoes.map(c => c.numero);
-    console.log("📂 Cotações encontradas no banco local:", idsExistentes);
-
-    let corrigiu = false;
-    let recuperadas = [];
-
-    // IDs reportados pelo usuário
-    const idsAlvo = ["COT-20260217-1004", "COT-20260217-1003", "COT-20260217-1002", "COT-20260217-1001"];
-
-    cotacoes.forEach(c => {
-      // A. Está na lista de desaparecidas?
-      if (idsAlvo.includes(c.numero)) {
-        // Se estado não for visível, força!
-        if (c.status !== "aberta") {
-          c.status = "aberta";
-          c.prazoEncerrado = true;
-          corrigiu = true;
-          recuperadas.push(c.numero);
-        }
-
-        // Reparar fornecedores vazios
-        if (!Array.isArray(c.fornecedores) || c.fornecedores.length === 0) {
-          const todosForn = JSON.parse(localStorage.getItem("fornecedores")) || [];
-          if (todosForn.length > 0) {
-            c.fornecedores = todosForn.map(f => ({ nome: f.nome, email: f.email, emails: f.emails }));
-            corrigiu = true;
-          }
-        }
-      }
-
-      // B. Está presa em analise vazia? (Correção Geral)
-      else if (c.status === "analise") {
-        const semRespostas = !c.respostasFornecedores || c.respostasFornecedores.length === 0;
-        if (semRespostas) {
-          c.status = "aberta";
-          c.prazoEncerrado = true;
-          corrigiu = true;
-          recuperadas.push(c.numero);
-        }
-      }
-    });
-
-    if (corrigiu) {
-      localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
-      alert(`✅ Cotações Recuperadas: ${recuperadas.join(", ")}\n\n(A página será recarregada)`);
-      window.location.reload();
-    } else {
-      // Se NÃO corrigiu nada, mas os IDs Alvo NÃO estão na lista, avisa o usuário
-      const perdidas = idsAlvo.filter(id => !idsExistentes.includes(id));
-      if (perdidas.length > 0) {
-        alert(`⚠️ DIAGNÓSTICO:\nAs seguintes cotações NÃO foram encontradas no banco de dados local:\n${perdidas.join("\n")}\n\nElas podem ter sido excluídas permanentemente pelo erro de sincronização anterior.`);
-      }
-    }
-  }
-
-  // Executa uma vez ao carregar
-  setTimeout(recuperarCotacoesPerdidas, 2000);
-
-</script>
 <script src="premium_render.js?v=10015"></script>
 </body>
 
