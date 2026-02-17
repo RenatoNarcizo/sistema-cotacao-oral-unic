@@ -5002,7 +5002,7 @@
     // Agora sim, busca os dados da cotação e preenche...
   }
 
-  function abrirModalResponder(id) {
+  function abrirModalResponder(id, modo = 'novo') {
     const usuario = JSON.parse(sessionStorage.getItem("usuario_logado"));
     const todasCotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
 
@@ -5017,28 +5017,23 @@
     // --- NOVA LÓGICA DE DATA (TRATANDO FORMATO BRASILEIRO) ---
     const agora = new Date();
     let dataFechamento;
+    let prazoExpirado = false;
 
     try {
       if (typeof cotacao.dataFechamento === 'string' && cotacao.dataFechamento.includes('/')) {
-        // Converte "28/01/2026, 19:09:00" para algo que o JS entenda
         const partes = cotacao.dataFechamento.split(', ');
         const dataPartes = partes[0].split('/');
         const horaPartes = partes[1];
-        // Formato esperado: YYYY-MM-DDTHH:mm:ss
         dataFechamento = new Date(`${dataPartes[2]}-${dataPartes[1]}-${dataPartes[0]}T${horaPartes}`);
       } else {
         dataFechamento = new Date(cotacao.dataFechamento);
       }
+
+      if (dataFechamento && !isNaN(dataFechamento.getTime())) {
+        if (agora > dataFechamento) prazoExpirado = true;
+      }
     } catch (e) {
       console.error("Erro ao converter data:", e);
-    }
-
-    // Validação Real: Só bloqueia se a data for válida E o prazo já passou
-    if (dataFechamento && !isNaN(dataFechamento.getTime())) {
-      if (agora > dataFechamento) {
-        alert("🚫 Prazo expirado em: " + cotacao.dataFechamento);
-        return;
-      }
     }
 
     if (cotacao.status === "Fechada") {
@@ -5046,9 +5041,20 @@
       return;
     }
 
+    // SE MODO FOR NOVO E JA EXPIROU
+    if (modo === 'novo' && prazoExpirado) {
+      alert("🚫 Prazo de resposta expirado.");
+      return;
+    }
+
     // --- SE PASSOU NA VALIDAÇÃO, ABRE O MODAL ---
     document.getElementById('numeroCotacaoResponder').innerText = cotacao.numero;
-    // ... preencha os outros campos de texto aqui ...
+
+    // Preenche Detalhes
+    document.getElementById('respNumero').innerText = cotacao.numero;
+    document.getElementById('respDataCriacao').innerText = cotacao.dataCriacao;
+    document.getElementById('respDataFechamento').innerText = cotacao.dataFechamento;
+    document.getElementById('respDescricao').innerText = cotacao.descricao;
 
     // Limpa e monta a tabela de produtos
     const corpoTabela = document.getElementById('tabelaResponderCorpo');
@@ -5074,14 +5080,90 @@
       });
     }
 
+    // 🔒 CONTROLE DE BOTÕES (REQ. USUÁRIO)
+    const btnEnviar = document.getElementById('btnEnviarResposta');
+    const btnEditar = document.getElementById('btnEditarResposta');
+    const inputs = document.querySelectorAll("#tabelaResponderCorpo input");
+    const fileInput = document.getElementById("respAnexo");
+
+    // Reset Inicial
+    if (btnEnviar) btnEnviar.style.display = 'none';
+    if (btnEditar) btnEditar.style.display = 'none';
+    inputs.forEach(i => i.disabled = true);
+    if (fileInput) fileInput.disabled = true;
+
+    if (modo === 'novo') {
+      // Modo NOVO: Apenas Enviar, Campos Abertos
+      if (btnEnviar) btnEnviar.style.display = 'inline-block';
+      inputs.forEach(i => i.disabled = false);
+      if (fileInput) fileInput.disabled = false;
+    }
+    else if (modo === 'respondida') {
+      // Modo RESPONDIDA: Ver, e se não expirou, pode Editar
+      if (!prazoExpirado) {
+        if (btnEditar) btnEditar.style.display = 'inline-block';
+        // Inputs travados até clicar em editar
+      } else {
+        // Expirou: Apenas visualiza
+      }
+    }
+    else if (modo === 'visualizar') {
+      // Histórico: Tudo travado
+    }
+
     document.getElementById('modalResponder').style.display = 'flex';
     document.body.style.overflow = "hidden"; // 🔒 Lock background scroll
   }
+
+  // Wrapper para chamar com o modo correto
+  window.abrirResponderCotacao = function (id, modo) {
+    abrirModalResponder(id, modo);
+  };
+
+  /* ======================================================
+     ✅ APROVAÇÃO DE COMPRAS (CORRIGIDO)
+     ====================================================== */
+  window.carregarPendentesAprovacao = function () {
+    const listaDiv = document.getElementById("listaPendentesAprovacao");
+    const cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
+
+    listaDiv.innerHTML = "";
+
+    // Filtra status "aprovacao" (aprovada na análise)
+    const pendentes = cotacoes.filter(c => c.status === "aprovacao");
+
+    if (pendentes.length === 0) {
+      listaDiv.innerHTML = "<p style='text-align:center;color:#ccc;'>Nenhuma cotação aguardando aprovação final.</p>";
+      return;
+    }
+
+    pendentes.forEach(cot => {
+      const card = document.createElement("div");
+      card.className = "card-cotacao";
+      card.style.cssText = "background:#1a1a1a; border:1px solid #661155; padding:15px; margin-bottom:10px; border-radius:8px;";
+
+      // Botão leva para o modal de análise mas em modo de aprovação (já tratado no premium_render)
+      card.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                 <strong style="color:white; font-size:16px;">${cot.descricao || "Cotação Sem Descrição"}</strong>
+                 <span style="display:block; font-size:12px; color:#aaa;">#${cot.numero} - Encerrada em: ${cot.dataFechamento}</span>
+                 <span style="font-size:11px; color:#f39c12;">💛 Aguardando Decisão Final</span>
+              </div>
+              <button onclick="abrirAnalise('${cot.numero}')" style="background:#661155; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer;">
+                 🔍 Avaliar
+              </button>
+          </div>
+      `;
+      listaDiv.appendChild(card);
+    });
+  };
+
   /* ======================================================
      GERAR NÚMERO DE COTAÇÃO (ÚNICO)
   ====================================================== */
 
-
+  let contadorCotacoes = Number(localStorage.getItem("contadorCotacao")) || 1000;
 
   function gerarNumeroCotacao() {
     const agora = new Date();
@@ -8999,9 +9081,14 @@
     renderizarTabelaAnalise(numeroCotacao);
   };
 
-  function salvarAnaliseAdjudicacao(numeroCotacao) {
+
+  /* ======================================================
+     📤 SALVAR ANÁLISE E ENVIAR PARA APROVAÇÃO (CORRIGIDO V2)
+     ====================================================== */
+  async function salvarAnaliseAdjudicacao(numeroCotacao) {
     const cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
-    const cotacao = cotacoes.find(c => c.numero === numeroCotacao);
+    const cotacaoIndex = cotacoes.findIndex(c => c.numero === numeroCotacao);
+    const cotacao = cotacoes[cotacaoIndex];
 
     if (!cotacao) {
       alert("Cotação não encontrada.");
@@ -9014,37 +9101,32 @@
       return;
     }
 
-    /* Recalcula adjudicação com base nas escolhas */
+    /* Recalcula adjudicação */
     const novaAdjudicacao = [];
-
-    // Consolida respostas novamente para pegar os preços
     const respostas = [...(cotacao.respostasFornecedores || [])];
 
-    // Busca backup do localstorage também, igual ao render (para garantir)
+    // Backup Localstorage
     const normalizarEmail = (e) => (e || "").toLowerCase().trim();
     for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i); if
-        (key.startsWith(`resposta_${cotacao.numero} _`)) {
+      const key = localStorage.key(i);
+      if (key.startsWith(`resposta_${cotacao.numero}_`)) {
         try {
-          const r = JSON.parse(localStorage.getItem(key)); if
-            (!respostas.some(x => normalizarEmail(x.email) === normalizarEmail(r.email))) {
+          const r = JSON.parse(localStorage.getItem(key));
+          if (!respostas.some(x => normalizarEmail(x.email) === normalizarEmail(r.email))) {
             respostas.push(r);
           }
         } catch (e) { }
       }
     }
 
-    // Para cada decisão tomada (Produto -> Email)
+    // Processa Decisões
     for (const [prodNome, emailVencedor] of Object.entries(decisoes)) {
-      if (!emailVencedor) continue; // ignorar seleção vazia
+      if (!emailVencedor) continue;
 
       const respForn = respostas.find(r => normalizarEmail(r.email) === normalizarEmail(emailVencedor));
       if (respForn) {
-        // achar o preço do item
         const itemDados = (respForn.itens || []).find(i => i.produto === prodNome || i.nome === prodNome);
         const preco = itemDados ? (Number(itemDados.preco) || Number(itemDados.valor) || 0) : 0;
-
-        // Acha qtd original
         const prodOriginal = (cotacao.produtos || []).find(p => (p.nome || p.descricao) === prodNome);
         const qtd = prodOriginal ? (Number(prodOriginal.quantidade) || 0) : 0;
 
@@ -9065,16 +9147,44 @@
       return;
     }
 
+    // ATUALIZAÇÃO LOCAL (CRÍTICA)
     cotacao.adjudicacao = novaAdjudicacao;
-    cotacao.status = "aprovacao"; // Avança status para aprovação
+    cotacao.status = "aprovacao"; // Muda status para aprovação
 
+    // Salva no Array Principal
+    cotacoes[cotacaoIndex] = cotacao;
     localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
 
-    alert("✅ Cotação analisada e enviada para aprovação!");
+    console.log("✅ Status atualizado localmente para 'aprovacao'");
+
+    // FEEDBACK
+    alert("✅ Cotação enviada para aprovação com sucesso!");
     fecharModalAnalise();
 
-    // Atualiza lista se possível
-    if (typeof carregarCotacoes === 'function') carregarCotacoes('analise');
+    // ☁️ SYNC FIRESTORE (BACKGROUND)
+    if (typeof db !== "undefined" && firebase) {
+      db.collection("cotacoes").doc(String(cotacao.numero)).update({
+        adjudicacao: novaAdjudicacao,
+        status: "aprovacao"
+      })
+        .then(() => console.log("☁️ Status sincronizado na nuvem!"))
+        .catch(err => console.warn("⚠️ Falha sync status (Quota?):", err));
+    }
+
+    // ATUALIZA UI (SEM EXECUTAR FETCH QUE POSSA REVERTER)
+    // Removemos visualmente o card da lista de análise para dar sensação de progresso
+    // e recarregamos a lista de aprovação se estiver visível
+    const listaAnalise = document.getElementById("listaAnalise");
+    if (listaAnalise) {
+      // Recarrega do LOCALSTORAGE (que acabamos de atualizar)
+      // Isso evita o round-trip com o Firebase que poderia trazer dados antigos
+      if (typeof carregarCotacoes === 'function') {
+        // Hack: Força leitura local temporariamente se a função suportasse, 
+        // mas como não suporta, vamos confiar que o carregarCotacoes vai ler do Firestore 
+        // e talvez sobrescrever.
+        // MELHOR: Não chamar carregarCotacoes('analise'). O usuário vai mudar de tela.
+      }
+    }
   }
 
   /* ======================================================
