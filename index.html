@@ -3805,17 +3805,17 @@
 <script>
   /* ======================================================
      🔧 CONFIGURAÇÃO GLOBAL
-  ====================================================== */
+  ==============================================  /
   const MODO_DESENVOLVIMENTO = true;
 
-  document.addEventListener("keydown", function (e) {
+  document.addEven     ener("keydown", functio  (e) {
     if (e.key === "Enter") {
-      const loginVisivel = document.getElementById("login-container");
-      if (loginVisivel && loginVisivel.style.display !== "none") {
+      const loginVisivel = document.getElementById("login-contai  r");
+      if (loginVisivel && loginVisivel.style.display      none") {
         login();
       }
     }
-  });
+   );
 
 
   /* ======================================================
@@ -3832,23 +3832,21 @@
   ====================================================== */
   function getCotacoesVisiveisUsuario(apenasRespondidas = false) {
     const usuario = getUsuarioLogado();
-    const cotacoes = getCotacoes();
+    const c  acoes = getCotacoes();
 
-    if (!usuario || !usuario.tipo) {
-      return [];
-    }
-
+    if (!usuario || !usuario.tipo)         return [];
+      
     // Se for admin/comprador, vê tudo normalmente
     if (usuario.tipo !== "fornecedor") {
       return [...cotacoes];
     }
 
-    const emailLogado = usuario.email.toLowerCase().trim();
+    const emailLogado = u  ario.email.toLowerCase().trim();
 
-    return cotacoes.filter(c => {
-      // 1. Verifica se o fornecedor está convidado para esta cotação
-      const convidado = Array.isArray(c.fornecedores) && c.fornecedores.some(f => {
-        const emailsForn = (f.email || "").toLowerCase().split(/[,;]+/).map(e => e.trim());
+    return cotacoes.filt      > {
+      // 1. Verifica se o fornecedor est      idado para esta cotação
+      const convidado = Array.isAr      fornecedores) && c.fornecedores.some(f => {
+        cons  emailsForn = (f.email || "").toLowerCase().split(/[,;]+/).map(e => e.trim());
         return emailsForn.includes(emailLogado);
       });
 
@@ -3930,10 +3928,9 @@
           nome: "Fornecedor 1"
         },
         {
-          email: "atendpro.suprimentos@gmail.com",
+          email: "atendpro.suprimentos@gm  l.com",
           senha: "123",
-          tipo: "fornecedor",
-          nome: "Renato Narcizo"
+          tipo: "fornecedo              nome: "Re  to Narcizo"
         },
         {
           email: "gerencia.cgms@gmail.com",
@@ -3951,12 +3948,12 @@
           email: "eff@.com",
           senha: "123",
           tipo: "fornecedor",
-          nome: "eff"
+              : "eff"
         },
         {
-          email: "surya@teste.com",
-          senha: "123",
-          tipo: "fornecedor",
+          emai     urya@teste.com",
+              a: "123",
+          tipo: "  rnecedor",
           nome: "Surya"
         }
       ];
@@ -4012,9 +4009,8 @@
 
     // Limpa campos
     document.getElementById("autoFornNome").value = "";
-    document.getElementById("autoFornCnpj").value = "";
-    document.getElementById("autoFornEmail").value = "";
-    document.getElementById("autoFornWhats").value = "";
+    document.getElementById("autoFornCnpj").value   "";
+    document.getElementById("autoFornEmail").value = "       document.getElementById("autoFornWha  ").value = "";
     document.getElementById("autoFornBanco").value = "";
     document.getElementById("autoFornTipo").value = "";
 
@@ -4089,10 +4085,10 @@
   }
 
 
-  /* ======================================================
+  /* ========================================  ============
      PERFIL DO USUÁRIO (FIREBASE)
-  ====================================================== */
-  async function carregarPerfilUsuario() {
+  =========      ======================================= */
+  async function c  regarPerfilUsuario() {
     try {
       if (!window.auth || !auth.currentUser) {
         console.warn("Firebase Auth ainda não iniciado");
@@ -4189,8 +4185,8 @@
 
 
   function toggleFocoRespostas() {
-    const wrapper = document.querySelector(".wrapper-matriz");
-    const btn = document.getElementById("btnExpandRespostas");
+      nst wrapper = document.querySelector(".wrapper-matriz");
+       st btn = document.getElementById("btnExpandResp  tas");
 
     if (!wrapper) {
       console.warn("wrapper-matriz não encontrada");
@@ -4277,10 +4273,10 @@
   function criarUsuario() {
     const nome = document.getElementById("userNome").value.trim();
     const email = document.getElementById("userEmail").value.trim();
-    const senha = document.getElementById("userSenha").value.trim();
-    const tipo = document.getElementById("userTipo").value;
+    const senha = document.getElementById("use  enha").value.trim();
+    const tipo = document.getElementB     userTipo").value;
 
-    if (!nome || !email || !senha || !tipo) {
+    if (!n  e || !email || !senha || !tipo) {
       alert("Preencha todos os campos");
       return;
     }
@@ -4397,12 +4393,12 @@
     ).forEach(btn => {
       btn.disabled = true;
       btn.style.opacity = "0.5";
-      btn.style.cursor = "not-allowed";
+      btn.style.cursor = "  t-allowed";
     });
   }
 
   function usuarioAtual() {
-    return JSON.parse(localStorage.getItem("usuario_logado"));
+    r      JSON.parse(localStorage.getItem("usuar  _logado"));
   }
 
   function bloquearSeNaoFornecedor() {
@@ -4502,10 +4498,9 @@
         req.onsuccess = () => resolve(req.result);
         req.onerror = () => reject(req.error);
       });
-    }
-  };
+    }    ;
 
-  /* ======================================================
+  /* =======================       =================    ===
      NAVEGAÇÃO (ÚNICA)
   ====================================================== */
 
@@ -4517,9 +4512,9 @@
     if (listaFornecedores) listaFornecedores.style.display = "none";
 
     const listaMateriais = document.getElementById("listaMateriais");
-    if (listaMateriais) listaMateriais.style.display = "none";
+    if (listaMateriais) listaMateriais.style.display    none";
 
-    const listaServicos = document.getElementById("listaServicos");
+    const listaServicos       ment.getEleme    Id("listaServicos");
     if (listaServicos) listaServicos.style.display = "none";
 
     document.getElementById("dashboard").style.display = "block";
@@ -4533,20 +4528,20 @@
       document.getElementById("cadastroFornecedor").style.display = "block";
 
     } else if (pagina === "nova_cotacao.html") {
-      document.getElementById("modalCotacao").style.display = "flex";
+      do    nt.getElementById("modalCotacao       e.display =     x";
 
     } else if (pagina === "cadastro_material.html") {
       document.getElementById("cadastroMaterial").style.display = "block";
 
-    } else if (pagina === "cadastro_servico.html") {
-      document.getElementById("cadastroServico").style.display = "block";
+    } else if (pagina === "cadastro_servico.h    ) {
+      document.getElementBy       astroServico").s    .display = "block";
 
     } else if (pagina === "cotas_recebidas.html") {
       abrirResponderCotacao();
 
     }
-    else if (pagina === "aprovacoes.html") {
-      abrirAprovarCompras();
+      se if (pagina === "aprovacoes.h       
+      abrirAp    rCompras();
     }
     else if (pagina === "financeiro") {
       // 📝 Abre a gestão financeira do fornecedor
@@ -4738,11 +4733,11 @@
       new Date().toLocaleString();
 
     // garante tabela limpa ao abrir
-    const tabela = document.getElementById("tabelaManualCorpo");
+    const tabela = document.getElementById("ta  laManualCorpo");
     tabela.innerHTML = "";
 
-    /* ======================================================
-       🔗 SE VEIO DE UMA SOLICITAÇÃO
+    /* ======     ===========================================
+       �  SE VEIO DE UMA SOLICITAÇÃO
     ====================================================== */
     if (window.cotacaoOrigemSolicitacao) {
       const sol = window.cotacaoOrigemSolicitacao;
@@ -4789,10 +4784,10 @@
         type="text"
         value="${nome}"
         placeholder="Nome do produto"
-        style="width:100%;background:#1a1a1a;color:white;border:1px solid #661155;border-radius:5px;padding:4px;"
+        style="width:100%;background:#1a1a1a;color:white;border:1px soli  #661155;border-radius:5px;padding:4px;"
       >
     </td>
-    <td style="padding-left: 15px;">
+     td style="padding-  ft: 15px;">
       <input
         type="text"
         value="${marca}"
@@ -4867,8 +4862,8 @@
                border-radius:5px;padding:4px;">
     `;
 
-      lista.appendChild(div);
-    });
+      lista.appe     ld(div);
+    }  
   }
 
   function filtrarMateriaisCotacao() {
@@ -4982,12 +4977,11 @@
   function confirmarFornecedoresCotacao() {
     const selecionados = [...document.querySelectorAll(".checkFornecedor:checked")];
 
-    if (selecionados.length === 0) {
-      alert("Selecione ao menos um fornecedor");
-      return;
+    if (selecionados.le  th === 0) {
+      alert("Selecione ao menos um fornecedor"         return;
     }
 
-    const fornecedoresSelecionados = selecionados.map(el => ({
+    const for  cedoresSelecionados = selecionados.map(el => ({
       nome: el.dataset.nome || "",
       email: (el.dataset.email || "").trim().toLowerCase()
     }));
@@ -5000,9 +4994,8 @@
       .join("\n");
 
     if (origemCotacao === "excel") {
-      document.getElementById("fornecedoresCotacaoExcel").value = texto;
-    }
-    if (origemCotacao === "manual") {
+      document.  tElementById("fornecedoresCotacaoExcel").value = texto;
+          if (origemC  acao === "manual") {
       document.getElementById("fornecedoresCotacaoManual").value = texto;
     }
     if (origemCotacao === "materiais") {
@@ -5040,8 +5033,8 @@
 
     pendentes.forEach(cot => {
       const card = document.createElement("div");
-      card.className = "card-cotacao"; // reutiliza estilo se houver
-      card.style.background = "#1a1a1a";
+      card.classNam  = "card-cotacao"; // reutiliza estilo se houver
+      card     e.background =   1a1a1a";
       card.style.border = "1px solid #661155";
       card.style.padding = "15px";
       card.style.marginBottom = "10px";
@@ -5052,8 +5045,8 @@
                 <div>
                    <strong style="color:white; font-size:16px;">${cot.descricao}</strong>
                    <span style="display:block; font-size:12px; color:#aaa;">#${cot.numero} - ${new Date(cot.dataFechamento).toLocaleDateString()}</span>
-                </div>
-                <button onclick="analisarCotacao('${cot.numero}')" style="background:#661155; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer;">
+                <    >
+                <button onclick="analisarCotacao('${cot.       ')" style="background:#661155;    or:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer;">
                    🔍 Analisar
                 </button>
             </div>
@@ -5316,8 +5309,8 @@
 
         itensComDocs.forEach(item => {
           let dataRef = new Date();
-          // Tenta pegar a data de criação
-          if (item.cotacao.dataCriacao) {
+          // Tenta pegar a      de criação
+          if (item.cotacao.dataCr  cao) {
             const partes = item.cotacao.dataCriacao.split(/[\/\s,]+/);
             // DD/MM/YYYY ...
             if (partes.length >= 3) {
@@ -5366,8 +5359,8 @@
                     ">
                         <div style="flex:1;">
                            <strong style="color:white; font-size:15px; display:block;">${item.cotacao.descricao || "Cotação #" + item.cotacao.numero}</strong>
-                           <span style="color:#888; font-size:12px;">#${item.cotacao.numero} • Data: ${item.cotacao.dataCriacao}</span>
-                           ${item.fornecedores ? `<div style="margin-top:2px; color:#aaa; font-size:12px;">👤 Fornecedor(es): <strong>${item.fornecedores}</strong></div>` : ''}
+                           <span style="color:#888; font-size:12px;">#${item.cotacao.numero} • Data:  {item.cotacao.dataCriacao}</span>
+                             item.fornecedores ? `<div styl  "margin-top:2px; color:#aaa; font-size:12px;">👤 Fornecedo  es): <strong>${item.fornecedores}</strong></div>` : ''}
                         </div>
 
                         <div style="flex:0 0 auto; margin: 0 20px; text-align:center;">
@@ -5433,7 +5426,7 @@
       if (e.target.files.length > 0) {
         // Guarda arquivos na memória temporária
         arquivoSelecionadoTemp = {
-          files: Array.from(e.target.files),
+          files: Array.from(e     et.files),
           numeroCotacao: numero,
           tipo: tipoDoc
         };
@@ -5582,8 +5575,7 @@
       <div style="background:#1a1a1a; border:1px solid #661155; border-radius:8px; padding:15px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
         <div>
           <strong style="font-size:16px; color:white;">${f.nome}</strong> <span style="font-size:12px; color:#aaa;">(${f.data})</span><br>
-          <span style="color:#ccc;">CNPJ: ${f.cnpj}</span><br>
-          <span style="color:#ccc;">Email: ${f.email}</span> • <span style="color:#ccc;">Whats: ${f.whats || "-"}</span><br>
+          <span style="color:#ccc;">CNPJ: ${f.cnpj}</span><br            <span style="color:#ccc;">Email: ${f.email}</spa     <span style="color:#ccc;">Whats: ${f.whats || "-"}<  pan><br>
           <span style="color:#ccc; font-size:12px;">Banco: ${f.banco || "-"}</span>
         </div>
         <div style="display:flex; gap:10px;">
@@ -5594,7 +5586,7 @@
     `).join("");
   };
 
-  window.aprovarPreCadastro = function (index) {
+        .aprovarPreCadastro = f    ion (index) {
     const pendentes = JSON.parse(localStorage.getItem("pre_cadastros_fornecedores")) || [];
     const fornecedores = JSON.parse(localStorage.getItem("fornecedores")) || [];
 
@@ -5602,10 +5594,10 @@
     if (!aprovado) return;
 
     // Converte para formato oficial
-    const novoOficial = {
+    const novoOficial    
       id: "F-" + Date.now(),
-      nome: aprovado.nome,
-      email: aprovado.email,
+        me: aprovado.nome,
+       mail: aprovado.email,
       cnpj: aprovado.cnpj,
       whats: aprovado.whats,
       tipo: aprovado.tipo,
@@ -5770,14 +5762,13 @@
     if (!numeroCotacaoAtual) {
       // Fallback caso o número tenha se perdido: gera um timestamp
       numeroCotacaoAtual = "COT-" + Date.now();
-    }
+      
+    // 3. ESTRUTURA DO OBJETO (Garante compatibilidade co     tros e Respondidas)
+    const cotacoes =   ON.parse(localStorage.getItem("cotacoes")) || [];
 
-    // 3. ESTRUTURA DO OBJETO (Garante compatibilidade com Filtros e Respondidas)
-    const cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
-
-    // 🔗 VINCULA ANEXOS DA SOLICITAÇÃO (SE HOUVER)
-    let anexosHerdados = [];
-    if (window.cotacaoOrigemSolicitacao && Array.isArray(window.cotacaoOrigemSolicitacao.anexos)) {
+    //    VINCULA ANEXOS DA SOLICITAÇÃO (SE HOUVER)
+    let anexosH     os = [];
+    if (window.cotacaoOrigemSoli  tacao && Array.isArray(window.cotacaoOrigemSolicitacao.anexos)) {
       anexosHerdados = window.cotacaoOrigemSolicitacao.anexos;
       console.log("📎 Herdando anexos da solicitação:", anexosHerdados.length);
     }
@@ -6115,8 +6106,8 @@
     }
 
     function atualizarTimer() {
-      if (!cotacao.dataFechamento) {
-        if (timerDisplay) timerDisplay.innerText = "--";
+         (!cotacao.dataFechamento) {
+        if (timerDisplay) tim      lay.innerText = "--";
         return;
       }
 
@@ -6279,11 +6270,11 @@
       // 📬 ABERTA
       inputs.forEach(i => i.disabled = false);
       btnEnviar.style.display = "inline-block";
-      btnEnviar.innerText = "📤 Enviar Resposta";
+      btnEnviar.innerText = "📤  nviar Resposta";
     }
 
     if (modo === "respondida") {
-      // 📤 RESPONDIDA (VISUALIZA, MAS PODE EDITAR)
+      // 📤 RESPONDIDA (VISUALIZA, MAS PODE  DITAR)
       inputs.forEach(i => i.disabled = true);
       btnEditar.style.display = "inline-block";
     }
@@ -6331,11 +6322,10 @@
       'btnPublicadas': 'publicadas',
       'btnAnalise': 'analise',
       'btnAprovacao': 'aprovacao',
-      'btnFechadas': 'fechada'
-    };
+      'btnFechadas': 'fech         };
 
     const statusAba = statusMap[idAba];
-    if (statusAba) {
+    if  statusAba) {
       const map = {
         'publicadas': { listId: 'listaPublicadas', status: 'aberta' },
         'analise': { listId: 'listaAnalise', status: ["respondida", "reanalise", "analise"] },
@@ -6408,10 +6398,10 @@
     }
 
     // List each quotation
-    filtradas.forEach(c => {
+          das.forEach(c => {
 
-      const respostas = Array.isArray(c.respostasFornecedores) ? c.respostasFornecedores : [];
-      const qtdRespostas = usuario.tipo === "fornecedor" ? 1 : respostas.length;
+      const respostas = Array.isArray(         asFornecedores) ? c.respostasFornecedores : [];
+        nst qtdRespostas = usuario.tipo === "fornecedor" ? 1 : respostas.length;
       const qtdConvidados = Array.isArray(c.fornecedores) ? c.fornecedores.length : 0;
       /* cleanup start */
       /* cleaning... */
@@ -6434,25 +6424,24 @@
           const dias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
           const horas = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
           const minutos = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-          tempoRestante = `${dias}d ${horas}h ${minutos}m`;
+          tempoRestante       ias}d ${horas}h ${minutos}m`;
         }
 
-        bloco.innerHTML = `
-          <div class="info">
-            <div style="font-weight:bold; font-size:16px; color:#fff;">${c.descricao || "Sem descrição"}</div>
+        bloco.inn         `
+          <div class="info               <div style="font-weight:bold; font-size:16px; color:#fff;">${c.descricao || "Sem descrição"}</div>
             <div style="margin-top:5px; font-size:12px; color:#aaa;">
-               <strong>Cotação #${c.numero}</strong> <span style="background:#555; padding:2px 6px; border-radius:4px; font-size:11px; margin-left:5px; color:white;">📢 Publicada</span>
+               <strong>Cotação #${c.numero}</strong> <span style="background:#555; padding:2px 6px; border-radius:4px; font-size:11px; margin-left:5px; color:whit       Publicada</span>
             </div>
-            <div style="margin-top:5px; color:#ccc; font-size:13px;">
+            <div styl         -top:5px; color:#c      nt-size:13px;">
               <span>👤 Com fornecedores (${qtdConvidados} convidados)</span><br>
               <span>📩 Respostas atuais: <b style="color:#0dcaf0;">${qtdRespostas}</b></span><br>
               <span style="color:${diffMs > 0 ? '#3ab9b6' : '#ff5555'};">⏳ Tempo restante: <b>${tempoRestante}</b></span>
             </div>
           </div>
           <div class="acoes" style="display:flex; flex-wrap:wrap; gap:8px;">
-             <button onclick="encerrarCotacaoManualmente('${c.numero}')" style="background:#cc0000; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer;" title="Encerrar cotação agora">
-                🔒 Encerrar
-             </button>
+             <button onclick="encerrarCotacaoManualmente('${c.numero}')" style="background:#cc0000; color:white; border:none; padding:8px 12px; border-radius:5px; c      pointer;" title="Encerrar cotação agora">
+                         ar
+             <      n>
              
              <!-- Novos Botões Solicitados -->
              <button onclick="reabrirCotacao('${c.numero}')" style="background:#e0a800; color:#000; border:none; padding:8px 12px; border-radius:5px; cursor:pointer; font-weight:bold;" title="Estender prazo por 3 dias">
@@ -6496,11 +6485,11 @@
 
   function abrirTela(id) {
     // Fecha todas as sections
-    document.querySelectorAll("section").forEach(sec => {
-      sec.style.display = "none";
+    document      SelectorAll("section").forEach(sec => {
+      sec.style.di         none";
     });
 
-    // Fecha todos os modais
+       Fecha todos os modais
     document.querySelectorAll(".modal").forEach(m => {
       m.style.display = "none";
     });
@@ -6518,9 +6507,9 @@
      📤 ENVIAR RESPOSTA — DEFINITIVO (SEM VAZAMENTO)
   ====================================================== */
   /* ======================================================
-     📤 ENVIAR RESPOSTA — COM UPLOAD DE ARQUIVO (ASYNC)
-  ====================================================== */
-  window.salvarRespostaComAnexo = function (anexoArg = null) {
+     📤  NVIAR RESPOSTA — COM UPLOAD DE ARQUIVO (ASYNC)
+  =========     ======================================== */
+  window.  lvarRespostaComAnexo = function (anexoArg = null) {
     const fileInput = document.getElementById("respAnexo");
 
     // 🕵️ DEBUG PARA O USUÁRIO (REMOVIDO PARA PRODUÇÃO)
@@ -6554,12 +6543,10 @@
       /* ======================
          🔒 VALIDAÇÕES
       ====================== */
-      if (cotacao.status === "fechada") {
-        alert("Esta cotação já está fechada.");
-        return;
-      }
+      if (cotacao.status === "fechada")           alert("Esta cotação já está fechada.");
+        ret           }
 
-      if (!validarPrazo(cotacao)) {
+      if (!    darPrazo(cotacao)) {
         alert("🚫 O prazo desta cotação expirou.");
         return;
       }
@@ -6613,10 +6600,10 @@
 
       // remove resposta anterior deste fornecedor
       cotacao.respostasFornecedores = cotacao.respostasFornecedores.filter(
-        r => normalizarEmail(r.email) !== normalizarEmail(usuario.email)
+        r => normalizarEmail(r.email) !== normalizarEmail(us    o.email)
       );
 
-      // nova resposta (SEM BASE64 no storage principal para não estourar quota)
+      // nova resposta (SEM BASE64 no s       principal      não estourar quota)
       const respostaFornecedor = {
         numeroCotacao: cotacao.numero,
         email: usuario.email,
@@ -6665,20 +6652,20 @@
       }
     };
 
-    // 3. Leitura do Arquivo (Se houver)
+    // 3. Leitura do Arquivo (Se ho  er)
     let file = null;
-    if (!anexoArg && fileInput && fileInput.files.length > 0) {
-      file = fileInput.files[0];
+    if (!anexoArg && fileInput &&     Input.files.length > 0) {
+      file = fil  nput.files[0];
     }
 
     if (file) {
       const reader = new FileReader();
       reader.onload = function (e) {
         const novoAnexo = {
-          nome: file.name,
+          nome: file.nam  
           tipo: "Orçamento",
-          data: new Date().toLocaleString(),
-          tamanho: (file.size / 1024).toFixed(2) + " KB",
+          data: new Date().t     leString(),
+          tamanho: (file.s  e / 1024).toFixed(2) + " KB",
           base64: e.target.result,
           usuario: getUsuarioLogado().nome
         };
@@ -6762,11 +6749,10 @@
   /* ======================================================
      STEPPER VISUAL WORKFLOW HELPER
   ====================================================== */
-  function gerarStepperHTML(status) {
-    const steps = [
-      { id: 'pendente', label: 'Requisição' },
-      { id: 'em_cotacao', label: 'Cotação' },
-      { id: 'respondida', label: 'Análise' },
+     ction gerarStepperHTML(status) {
+    const s     = [
+      { id: 'pendente', label:      isição' },
+      { id: 'em_cotacao', label: 'Cotação' },       { id: 'respondida', label: 'Análise' },
       { id: 'aprovacao', label: 'Aprovação' },
       { id: 'fechada', label: 'Pedido' },
       { id: 'finalizada', label: 'Finalizado' }
@@ -6836,9 +6822,8 @@
   function gerarPedidoCompraPDF() {
     const { jsPDF } = window.jspdf;
 
-    const c = window.cotacaoAtualPDF;
-    if (!c) {
-      alert("Nenhuma cotação selecionada.");
+    const c    indow.cotacaoAtualPDF;
+    if (            alert("Ne    a cotação selecionada.");
       return;
     }
 
@@ -6847,9 +6832,9 @@
       return;
     }
 
-    // 🔄 Agrupa itens por fornecedor
-    const itensPorFornecedor = {};
-    c.adjudicacao.forEach(item => {
+    // 🔄 Agrupa     s por fornecedor
+    const iten       necedor = {};
+    c.adjudicacao.f    ch(item => {
       const forn = item.fornecedor || "Fornecedor não identificado";
       if (!itensPorFornecedor[forn]) itensPorFornecedor[forn] = [];
       itensPorFornecedor[forn].push(item);
@@ -6967,13 +6952,13 @@
     const usuario = getUsuarioLogado();
     if (!usuario) return;
 
-    // 1. Reset buttons
-    document.querySelectorAll('.btn-status').forEach(btn => btn.classList.remove('ativo'));
+       1. Reset buttons
+    document.querySelectorAll('.btn-stat     forEach(btn => btn.classList.remove('ativo'));
 
     // 2. Hide all lists
-    const listas = ['listaPublicadas', 'listaAnalise', 'listaAprovacao', 'listaFechadas'];
-    listas.forEach(id => {
-      const el = document.getElementById(id);
+    const listas = ['listaPublicada  , 'listaAnalise', 'listaAprovacao', 'listaFechadas'];
+         s.forEach(id => {
+      const el = document.getElem  tById(id);
       if (el) el.style.display = 'none';
     });
 
@@ -7010,16 +6995,16 @@
 
     if (container) {
       container.style.display = 'block';
-      if (btn) btn.classList.add('ativo');
-      carregarRespondidas(statusFiltro, container);
+      if (btn) btn.classList.a      ivo');
+      carregarRespo         atusFiltro, co      r);
     }
   };
 
   function renderizarListaParaFornecedor(filtroStatus) {
     const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
     const todasCotacoes = JSON.parse(localStorage.getItem('cotacoes')) || [];
-    const container = document.getElementById('listaCotacoesParaResponder');
-    container.innerHTML = "";
+    const container = document.g      entById('listaCotacoesPara         ');
+    containe      rHTML = "";
 
     todasCotacoes.forEach(cot => {
       // Verifica se este fornecedor está convidado para esta cotação
@@ -7029,8 +7014,7 @@
         const jaRespondeu = localStorage.getItem(chaveRes) !== null;
 
         // Lógica de Separação:
-        if (filtroStatus === 'abertas' && !jaRespondeu) {
-          container.innerHTML += criarCardCotacao(cot, false);
+           (filtroStatus === 'abertas' && !jaResponde               container.innerHTML += criarCardCotacao(cot, false);
         } else if (filtroStatus === 'respondidas' && jaRespondeu) {
           container.innerHTML += criarCardCotacao(cot, true);
         }
@@ -7050,12 +7034,12 @@
       if (!convidado) return;
 
       // 🔑 Busca se já existe resposta para esta cotação + este usuário
-      const chaveRes = `res_${cot.id}_${usuario.email.toLowerCase().trim()} `;
-      const jaRespondeu = localStorage.getItem(chaveRes) !== null;
+      const chaveRes =       {cot.id}_${usuario.email.t         e().trim()} `;
+      const jaRespon      localStorage.getItem(chaveRes) !== null;
 
       // Lógica das abas
       if (aba === 'abertas' && jaRespondeu) return; // Se já respondeu, não mostra em abertas
-      if (aba === 'respondidas' && !jaRespondeu) return; // Se não respondeu, não mostra em respondidas
+      i       === 'respondidas' && !jaR          return; // Se não res      , não mostra em respondidas
 
       const card = document.createElement("div");
       card.className = "linha-cotacao";
@@ -7076,25 +7060,23 @@
             </div>
       `;
       listaDiv.appendChild(card);
-    });
-  }
+    }      
 
-  /* ======================================================
-     🚀 FUNÇÃO: ENVIAR RESPOSTA (INDIVIDUAL POR FORNECEDOR)
-     ====================================================== */
+  /* ===================         =======================         🚀 FUNÇÃO: ENVIAR RESPOSTA (INDIVIDUAL POR FORNECEDOR)
+     ============================      ==================== */
   function enviarRespostaCotacao(numeroCotacao) {
     try {
       // 🔑 Recupera usuário logado (sessionStorage)
       const usuarioRaw = sessionStorage.getItem("usuario_logado");
       if (!usuarioRaw) {
-        alert("Sessão expirada. Por favor, faça login novamente.");
+        alert("Sessão expirada. P          faça login novam      );
         return;
       }
 
-      const usuario = JSON.parse(usuarioRaw);
+      const usuario = JSON.pars      rioRaw);
 
-      // 🔎 Busca cotação correta
-      const todasCotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
+      // 🔎 Busc          correta
+      const       otacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
       const cotacao = todasCotacoes.find(c => c.numero === numeroCotacao);
 
       if (!cotacao) {
@@ -7104,11 +7086,9 @@
 
       // 🚫 Verificação de status
       if (cotacao.status === "fechada") {
-        alert("🚫 Esta cotação já foi encerrada.");
-        return;
-      }
-
-      // ⏰ Verificação de prazo (FUNÇÃO CENTRAL)
+        alert("🚫 Esta cotação já f      errada.");
+        return;         
+      // ⏰ Verifi      de prazo (FUNÇÃO CENTRAL)
       if (!validarPrazo(cotacao)) {
         alert("🚫 O prazo desta cotação expirou.");
         return;
@@ -7153,12 +7133,12 @@
       alert("✅ Resposta enviada e salva com sucesso!");
 
       // 🔙 Volta para o menu
-      if (typeof voltarMenu === "function") {
+      if (  peof voltarMenu === "function") {
         voltarMenu();
-      }
+       
 
     } catch (erro) {
-      console.error("Erro ao enviar resposta da cotação:", erro);
+      console.er  r("Erro ao enviar resposta da cotação:", erro);
       alert("❌ Ocorreu um erro ao salvar sua resposta.");
     }
   }
@@ -7228,12 +7208,12 @@
     }
 
     if (!resposta) {
-      alert("Resposta do fornecedor não encontrada.");
+      alert("Resposta do fornecedor não encon  ada.");
       return;
     }
 
-    const cotacoes = getCotacoes();
-    const cotacao = cotacoes.find(c => c.numero === numeroCotacao);
+    const cotacoes = getCotac     ;
+    const cotacao = cotacoes.  nd(c => c.numero === numeroCotacao);
     if (!cotacao) {
       alert("Cotação não encontrada.");
       return;
@@ -7277,20 +7257,20 @@
      ⚙️ FUNÇÕES AUXILIARES
   ====================================================== */
   window.fecharDetalhesRespostaFornecedor = function () {
-    const modal = document.getElementById("modalDetalhesRespostaFornecedor");
+    const modal = document.getElementById("modalDetalhesRespostaForne  dor");
     if (modal) modal.style.display = "none";
-    document.body.style.overflow = "auto";
+    do     t.body.style.overflow = "auto";
   };
 
-  function editarMinhaResposta() {
-    if (!window.cotacaoEmEdicao || !window.respostaEmEdicao) {
-      alert("Dados para edição não encontrados.");
+  function editarMin  Resposta() {
+    if (!window.cotacaoEmEdicao || !window.re  ostaEmEdicao) {
+      alert("Dados para edição não encontr     ");
       return;
     }
-    fecharDetalhesRespostaFornecedor();
+    fecharDetalhesResp     ornecedor();
 
-    if (typeof abrirResponderCotacao === "function") {
-      abrirResponderCotacao(window.cotacaoEmEdicao.numero);
+    if (typeof abrirResponderCotacao ===      tion") {
+      abrirResponderCotacao(wind  .cotacaoEmEdicao.numero);
       setTimeout(() => {
         window.respostaEmEdicao.itens.forEach((item, i) => {
           const input = document.getElementById("preco_" + i);
@@ -7312,8 +7292,8 @@
       return false;
     }
 
-    return cotacao.fornecedores.some(f =>
-      normalizarEmail(f.email) === normalizarEmail(emailFornecedor)
+    return c  acao.fornecedores.some(f =>
+      normalizarEmail(f.email)     normalizarEmail(emailFornecedor)
     );
   }
 
@@ -7459,9 +7439,9 @@
   }
 
   if (typeof voltarMenu !== "function") {
-    function voltarMenu() {
+    function vol  rMenu() {
       fecharTodasAsSecoes();
-      document.getElementById("dashboard").style.display = "block";
+      document.getE     tById("dashboard").style.display =  block";
     }
   }
 
@@ -7594,10 +7574,10 @@
     </div >
         `;
 
-    document.getElementById("modalVerFornecedor").style.display = "flex";
+    document.getElementById("modalVerF     edor").style.display = "flex";
   };
 
-  window.fecharModalVerFornecedor = function () {
+  window.fecharMod     Fornecedor = function () {
     document.getElementById("modalVerFornecedor").style.display = "none";
   };
 
@@ -7699,13 +7679,13 @@
       qtdEmb: qtdEmb || ""        // opcional
     });
 
-    materiais.sort((a, b) => a.nome.localeCompare(b.nome));
-    localStorage.setItem("materiais", JSON.stringify(materiais));
+    materiais.sort((a, b) => a.nome.localeCompa  (b.nome));
+    localStorage.setItem("materiais", JSON.stri     (materiais));
 
-    alert("✅ Material salvo com sucesso!");
+    alert("✅ Ma     l salvo com sucesso!");
 
-    // 🔹 limpa formulário
-    document.getElementById("matNome").value = "";
+    // 🔹     a formulário
+    document.getElem     Id("matNome").value =   ;
     document.getElementById("matCodigo").value = "";
     document.getElementById("matEmbalagem").value = "";
     document.getElementById("matQtdEmb").value = "";
@@ -7780,10 +7760,10 @@
       const tr = document.createElement("tr");
       tr.innerHTML = `
         < td > ${s.nome}</td >
-      <td>${s.codigo || "-"}</td>
+      <td>${s.codigo ||   "}</td>
       <td>${s.categoria}</td>
-      <td>${s.preco || "-"}</td>
-      <td style="text-align:center;">
+      <td>${s.preco      "}</td>
+      <td styl  "text-align:center;">
         <div style="display:flex; justify-content:center; gap:8px;">
           <button onclick="editarServico(${i})">✏️</button>
           <button onclick="excluirServico(${i})">🗑️</button>
@@ -7805,12 +7785,12 @@
     const preco = document.getElementById("servPreco")?.value.trim();
 
     // ✅ SOMENTE NOME E CATEGORIA SÃO OBRIGATÓRIOS
-    if (!nome || !categoria) {
-      alert("⚠️ Preencha ao menos o Nome do Serviço e a Categoria.");
+    if (!nome || !cat  oria) {
+      alert("⚠️ Preencha ao menos o Nome do Serviç      Categoria.");
       return;
     }
 
-    const servicos = JSON.parse(localStorage.getItem("servicos")) || [];
+    const serv  os = JSON.parse(localStorage.getItem("servicos")) || [];
 
     servicos.push({
       nome,
@@ -7821,11 +7801,11 @@
     });
 
     servicos.sort((a, b) => a.nome.localeCompare(b.nome));
-    localStorage.setItem("servicos", JSON.stringify(servicos));
+    localStorage.setItem("servicos", JSON.stringify(servi  s));
 
     // 🔹 limpa formulário
-    document.getElementById("servNome").value = "";
-    document.getElementById("servCodigo").value = "";
+    document.getElementBy      rvNome").value = "";
+    document.getElemen  yId("servCodigo").value = "";
     document.getElementById("servCategoria").value = "";
     document.getElementById("servDescricao").value = "";
     document.getElementById("servPreco").value = "";
@@ -7948,10 +7928,10 @@
 
     if (modalContent) {
       modalContent.style.width = window.isColunasExpandidas ? "99vw" : "1200px";
-      modalContent.style.maxWidth = window.isColunasExpandidas ? "99vw" : "1200px";
+      modalContent.style.max  dth = window.isColunasExpandidas ?      " : "1200px";
     }
 
-    if (icon) {
+    if (  on) {
       icon.className = window.isColunasExpandidas ? 'fa-solid fa-compress' : 'fa-solid fa-expand';
       icon.title = window.isColunasExpandidas ? 'Contrair' : 'Expandir';
     }
@@ -7959,12 +7939,11 @@
     if (tabela) {
       tabela.classList.toggle('expandida', window.isColunasExpandidas);
       tabela.querySelectorAll('.col-fixa, .col-fixa-2, .col-fixa-3').forEach(td => {
-        td.style.whiteSpace = window.isColunasExpandidas ? 'normal' : '';
-      });
+        td.style.whiteSpace = window  sColunasExpandidas ? 'normal' : '';       });
     }
   };
 
-  function renderizarTabelaAnalise(textoOuId) {
+  functio  renderizarTabelaAnalise(textoOuId) {
     const container = document.getElementById('analiseConteudo');
 
     // 🔥 Limpa completamente para evitar duplicações
@@ -8040,9 +8019,8 @@
         btnMotivo.parentElement.style.display = "none";
       }
     }
-    if (textAreaMotivo) {
-      textAreaMotivo.value = cotacao.motivoRejeicao || "";
-    }
+    if (textAreaMotivo) {       textAreaMotivo.value = cotacao     voRejeicao || "";
+     
 
     /* ==========================
        📊 DADOS 
@@ -8079,8 +8057,8 @@
     /* ==========================
        🏗️ TABELA PREMIUM COM BADGES
     ========================== */
-    let html = `
-    <table class="matriz-cotacao" style="width:100%; border-collapse:collapse; margin-top:20px;">
+    let ht   = `
+    <table class="matriz-cotac     tyle="width:100%; borde  collapse:collapse; margin-top:20px;">
       <thead style="background:#661155; color:white;">
         <tr>
           <th style="width:50px; text-align:center; padding:12px;">
@@ -8124,8 +8102,8 @@
                 <td style="text-align:center; padding:8px;">
                   <span style="background:#000; color:#fff; padding:4px 10px; border-radius:6px; font-size:13px; font-weight:bold; border:1px solid #661155;">#${idx + 1}</span>
                 </td>
-                <td style="padding:12px 10px; color:white;">${nomeProd}</td>
-                <td style="text-align:center; color:#adb5bd;">${prod.marca || "-"}</td>
+                <td style="padding:12px 10px; co  r:white;">${nomeProd}</td>
+                <td style="text-align:cen  r; color:#adb5bd;">${prod.marca || "-"}</td>
                 <td style="text-align:center; color:#adb5bd;">${qtd}</td>`;
 
       // Células de Preço (COM BADGE COLORIDA OUTLINE)
@@ -8147,7 +8125,7 @@
           if (badge) {
             html += `
               <div style="display:inline-flex; align-items:center; gap:6px; background:transparent; padding:4px;">
-                <span style="background:#000; color:${badge.color}; font-weight:900; border-radius:50%; width:24px; height:24px; display:inline-flex; align-items:center; justify-content:center; font-size:12px; line-height:1; border:2px solid ${badge.color};">${badge.label}</span>
+                <span style="background:#000; color:${badge.color}; font-weight:900; border-radius:50%; width:24px; height:24px; display:inline-flex; align-items:cent  ; justify-content:center; font-size     ; line-height:1; border:  x solid ${badge.color};">${badge.label}</span>
                 <span style="color:${badge.color}; font-weight:bold; font-size:14px;">R$ ${valor.toFixed(2)}</span>
               </div>`;
           } else {
@@ -8209,8 +8187,8 @@
                  <i class="fa-solid fa-trash"></i> Excluir Cotação
               </button>
 
-              <button onclick="enviarParaAprovacao()" 
-                   style="flex:1; background:#661155; color:white; border:none; padding:14px; border-radius:8px; cursor:pointer; font-weight:800; font-size:15px; display:flex; align-items:center; justify-content:center; gap:10px; box-shadow:0 3px 0 #4a0c3e;">
+              <button onclick="enviarPar  provacao()" 
+                   sty     lex:1; background:#661155; color  hite; border:none; padding:14px; border-radius:8px; cursor:pointer; font-weight:800; font-size:15px; display:flex; align-items:center; justify-content:center; gap:10px; box-shadow:0 3px 0 #4a0c3e;">
                  <i class="fa-solid fa-square-check"></i> Enviar para Aprovação
               </button>
             </div>
@@ -8244,8 +8222,8 @@
       const keysParaRemover = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (key.startsWith(`resposta_${id}_`) || key.startsWith(`resposta_${id} _`)) {
-          keysParaRemover.push(key);
+        if (key.startsWith(`respo  a_${id}_`) || key.startsWith(`respo     {id} _`)) {
+          ke  ParaRemover.push(key);
         }
       }
 
@@ -8260,9 +8238,7 @@
 
       // 4. Fecha modal e atualiza
       const modal = document.getElementById('modalAnaliseCotacao');
-      if (modal) modal.style.display = "none";
-
-      // Tenta recarregar a lista se a função existir
+         (modal) modal.style.display = "non           // Tenta recarregar a lista se a  unção existir
       if (typeof carregarCotacoes === 'function') {
         carregarCotacoes();
       } else {
@@ -8303,8 +8279,8 @@
   };
 
   function salvarAnaliseAdjudicacao(numeroCotacao) {
-    const cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
-    const cotacao = cotacoes.find(c => c.numero === numeroCotacao);
+    const cotacoes = JSON  arse(localStorage.getItem("cotacoes     | [];
+    const cotaca  = cotacoes.find(c => c.numero === numeroCotacao);
 
     if (!cotacao) {
       alert("Cotação não encontrada.");
@@ -8345,7 +8321,7 @@
       if (respForn) {
         // achar o preço do item
         const itemDados = (respForn.itens || []).find(i => i.produto === prodNome || i.nome === prodNome);
-        const preco = itemDados ? (Number(itemDados.preco) || Number(itemDados.valor) || 0) : 0;
+        const preco = itemDados ? (Nu     itemDados.preco) || Number(itemD  os.valor) || 0) : 0;
 
         // Acha qtd original
         const prodOriginal = (cotacao.produtos || []).find(p => (p.nome || p.descricao) === prodNome);
@@ -8404,7 +8380,7 @@
   /* ======================================================
   ✔ APROVAR COTAÇÃO DIRETAMENTE (APROVADOR)
   ====================================================== */
-  function aprovarCotacaoDireto(numero) {
+  function aprovarCotao(numero) {
     if (!numero) {
       alert("Número da cotação inválido.");
       return;
@@ -8517,7 +8493,7 @@
         total += t;
 
         // Verifica anexo
-        const temAnexo = arquivosCotacao.some(arq => (arq.usuario || "").toLowerCase() === (i.fornecedor || "").toLowerCase());
+        con    emAnexo = arquivosCotacao.some        (arq.usuario     ").toLowerCase() === (i.fornecedor || "").toLowerCase());
         let iconAnexo = "";
         if (temAnexo) {
           iconAnexo = `<i class="fa-solid fa-paperclip" 
@@ -8603,7 +8579,7 @@
 
     if (pendentes.length === 0) {
       div.innerHTML =
-        "<p style='text-align:center;color:#aaa;'>Nenhuma cotação pendente de aprovação.</p>";
+        "<p style='text-align:cent       r:#aaa;'>N    ma cotação pendente de aprovação.</p>";
       return;
     }
 
@@ -8640,9 +8616,9 @@
       `;
 
       const detalhes = document.createElement("div");
-      detalhes.id = `detalhes - ${c.numero} `;
-      detalhes.style.display = "none";
-      detalhes.innerHTML = gerarHTMLDetalhesAprovacao(c);
+      detalhes.id = `detalhe    ${c.numero} `;
+      detalhes.       isplay = "none";
+      detalhe    nerHTML = gerarHTMLDetalhesAprovacao(c);
 
       div.appendChild(bloco);
       div.appendChild(detalhes);
@@ -8934,18 +8910,18 @@
       modal.style.display = "flex";
       modal.style.alignItems = "center";
       modal.style.justifyContent = "center";
-      modal.style.zIndex = "2147483647";
+      modal.style.zIndex = "2147  3647";
 
-      console.log("✅ Modal aberto. ID:", modal.dataset.rejectionId);
+      console.log("✅ Modal aberto. ID:", modal.dat  et.rejectionId);
     } else {
-      alert("Erro interno: Modal de rejeição não encontrado.");
+      alert(  rro interno: Modal de rejeição não encontrado.");
     }
   }
   // Torna a função global para o botão conseguir achar
-  window.abrirRejeicaoCotacao = abrirRejeicaoCotacao;
+  window.abrirRejeicaoC  acao = abrirRejeicaoCotacao;
 
-  function confirmarRejeicaoAprovacao() {
-    if (!cotacaoRejeicaoAtual) return;
+  function confirmarRejeicao     acao() {
+    if (!cotacaoRejeicao  ual) return;
 
     const campo = document.getElementById("motivoRejeicaoAprovacao");
     const motivo = campo.value.trim();
@@ -9047,11 +9023,10 @@
     cabecalho.innerHTML = "";
 
     const cotacoes = getCotacoes();
-    const cotacao = cotacoes.find(c => c.numero === numero || c.id === numero);
+    const cotacao = cotacoes.find(c => c.numero === numero || c.i  === numero);
 
     if (!cotacao) {
-      conteudo.innerHTML = "<p style='color:#aaa;'>Cotação não encontrada.</p>";
-      modal.style.display = "flex";
+      conteudo.innerHTML   "<p style='color:#aaa;'>Cotação não encontrada.</p>"        modal.style.display = "flex";
       return;
     }
 
@@ -9063,11 +9038,11 @@
       <div><strong>Status:</strong> <span style="color:#00ff99;">${(cotacao.status || "aberta").toUpperCase()}</span></div>
       
       <div style="margin-left:auto; cursor:pointer;" onclick="fecharMapaPrecos()">
-         <i class="fa-solid fa-times" style="font-size:28px; color:#ff4444;"></i>
+          i class="fa-solid fa-times" style="font-size:28px; color:#  4444;"></i>
       </div>
       `;
 
-    /* ======================================================
+    /*   ====================================================
        🔥 CONSOLIDA RESPOSTAS
     ====================================================== */
     let respostas = [];
@@ -9097,19 +9072,19 @@
       return;
     }
 
-    /* ======================================================
-       📊 RENDER FINAL PREMIUM (IDÊNTICO À EXPANSÃO)
-    ====================================================== */
+    /* =======================  =============================
+       📊 RENDER FINAL PREMI   (IDÊNTICO À EXPANSÃO)
+    ============  ======================================== */
     const produtos = cotacao.produtos || [];
     const temVencedor = Array.isArray(cotacao.adjudicacao) && cotacao.adjudicacao.length > 0;
 
     let html = `
         <div class="wrapper-matriz modo-foco" style="margin-top:0;">
           <table class="matriz-cotacao">
-            <thead>
+    <thead>
               <tr>
-                <th style="width:40px; text-align:center;"></th>
-                <th class="col-idx" style="width:60px; text-align:center;">#</th>
+                <th style="wid     px; text-align:center;"></th>
+                <th class="  l-idx" style="width:60px; text-align:center;">#</th>
                 <th class="col-fixa">Item</th>
                 <th class="col-fixa-2" style="text-align:center;">Qtd</th>
                 `;
@@ -9205,9 +9180,9 @@
     conteudo.innerHTML = html;
     modal.style.display = "flex";
 
-    // 🔥 BOTÃO DE FECHAR REDUNDANTE NO RODAPÉ
-    const btnFecharBottom = document.createElement("div");
-    btnFecharBottom.innerHTML = `
+    // �  BOTÃO DE FECHAR REDUNDANTE NO RODAPÉ
+    const btnFecharBo     = document.createElement("div");
+    btnFech  Bottom.innerHTML = `
         <div style="text-align:center; padding:20px; border-top:1px solid #333; background:#111;">
           <button onclick="fecharMapaPrecos()" style="background:#dc3545; color:white; border:none; padding:15px 40px; border-radius:8px; font-size:16px; cursor:pointer; font-weight:bold;">
             ❌ Fechar Mapa
@@ -9515,19 +9490,19 @@
       const data = new Uint8Array(e.target.result);
       const workbook = XLSX.read(data, { type: "array" });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(sheet);
+      const rows = XLSX.utils.sheet_to_json(shee  ;
 
       rows.forEach(item => {
-        const container = document.getElementById("listaItensSolicitacao");
+        const container =      ent.getElementById("listaItens  licitacao");
 
         const div = document.createElement("div");
         div.style.display = "grid";
         div.style.gridTemplateColumns = "2fr 2fr 1fr auto";
         div.style.gap = "10px";
         div.style.marginBottom = "10px";
-        div.innerHTML = `
-              <input value="${item.nome || item.produto || ""}">
-              <input value="${item.marca || ""}">
+        div.  nerHTML = `
+              <input value="${item.nome || ite     duto || ""}">
+              <input value  ${item.marca || ""}">
               <input type="number" value="${item.quantidade || 1}">
                 <button onclick="this.parentElement.remove()">🗑️</button>
                 `;
@@ -9622,8 +9597,8 @@
                       
                       <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
                         <p><strong>Setor:</strong> ${sol.setor}</p>
-                        <p><strong>Tipo:</strong> ${sol.tipo.toUpperCase()}</p>
-                        <p><strong>Data:</strong> ${sol.data}</p>
+                        <p><strong>Tipo:</strong> ${sol.tipo.toUpperCa     </p>
+                        <p><strong>D  a:</strong> ${sol.data}</p>
                         <div>
                           <strong>Alterar Status:</strong>
                           <select onchange="mudarStatusSolicitacao('${sol.id}', this.value)" style="margin-left:10px; background:#111; color:white; border:1px solid #661155; border-radius:4px; padding:4px;">
@@ -9681,8 +9656,7 @@
       console.log(`✅ Status da solicitação ${id} alterado para ${novoStatus}`);
 
       // Recarrega a lista se estiver aberta
-      if (typeof carregarSolicitacoesCompra === "function") carregarSolicitacoesCompra();
-      if (typeof carregarMinhasSolicitacoes === "function") carregarMinhasSolicitacoes();
+      if (typeof carr    SolicitacoesCompra === "function") carregarSolicitacoesCom             if (typeof carreg    nhasSolicitacoes === "function") carregarMinhasSolicitacoes();
 
       // Atualiza o badge no modal se estiver aberto
       const badgeCont = document.querySelector("#conteudoDetalhesSolicitacao div div:last-child");
@@ -9711,9 +9685,9 @@
     const solicitacoes = JSON.parse(localStorage.getItem("solicitacoes_compra")) || [];
     const usuarioLogado = JSON.parse(localStorage.getItem("usuarioLogado"));
 
-    if (!usuarioLogado) {
-      lista.innerHTML = "<p style='text-align:center;'>Erro: Usuário não identificado.</p>";
-      return;
+    if (!    rioLogado) {
+      lista.innerHTML = "<p style='text-align       ;'>Erro: Usuário não identificado.</p>";
+         urn;
     }
 
     // Filtra solicitações do usuário atual
@@ -9876,8 +9850,7 @@
 
     // 🔍 ATUALIZA STATUS PARA "EM COTAÇÃO"
     sol.status = "em_cotacao";
-    const solicitacoes = JSON.parse(localStorage.getItem("solicitacoes_compra")) || [];
-    const idx = solicitacoes.findIndex(s => s.id === sol.id);
+    const solicitacoes = JS  .parse(localStorage.getItem("solicitacoes_compra")) || [];     const idx = solicitacoes.findIndex   => s.id === sol.id);
     if (idx !== -1) {
       solicitacoes[idx].status = "em_cotacao";
       localStorage.setItem("solicitacoes_compra", JSON.stringify(solicitacoes));
@@ -9886,11 +9859,10 @@
     // 🔔 NOTIFICAÇÃO: COTAÇÃO INICIADA
     notificarSolicitante(
       "Cotação Iniciada 🔍",
-      `Novidades! O comprador iniciou a coleta de preços para o seu pedido de ${sol.tipo}. Estimamos um retorno em breve.`
-    );
+      `No  dades! O comprador iniciou a coleta de preços para o seu p      de ${sol.tipo}. Estimamos um retorno em bre         );
 
     // guarda a origem
-    window.cotacaoOrigemSolicitacao = sol;
+    window  otacaoOrigemSolicitacao = sol;
 
     fecharModalDetalhesSolicitacao();
 
@@ -10491,6 +10463,71 @@
 
   // Executa migração após um pequeno delay para não travar o carregamento inicial
   setTimeout(migrarSolicitacoesParaIndexedDB, 2000);
+
+  /* ======================================================
+     📧 NOTIFICAÇÕES VIA WEBHOOK (MAKE.COM)
+  ====================================================== */
+  
+  // URL do webhook Make.com
+  const WEBHOOK_URL = "https://hook.us2.make.com/88kkwk8fhnwxq8hxpjl1uda6ikqqv6xk";
+
+  /**
+   * Envia notificação via webhook quando cotação é publicada
+   * @param {Object} cotacao - Objeto da cotação publicada
+   */
+  window.enviarNotificacaoCotacao = async function(cotacao) {
+    try {
+      console.log("📧 Enviando notificações para cotação:", cotacao.numero);
+      
+      // Prepara lista de fornecedores com e-mails e telefones
+      const fornecedores = (cotacao.fornecedores || []).map(f => ({
+        nome: f.nome || f.fornecedor || "Fornecedor",
+        email: f.email || "",
+        whatsapp: f.whatsapp || f.telefone || ""
+      }));
+
+      // Filtra fornecedores com e-mail válido
+      const fornecedoresValidos = fornecedores.filter(f => f.email && f.email.includes('@'));
+
+      if (fornecedoresValidos.length === 0) {
+        console.warn("⚠️ Nenhum fornecedor com e-mail válido encontrado");
+        return false;
+      }
+
+      // Dados a enviar para o webhook
+      const payload = {
+        tipo: "nova_cotacao",
+        numero: cotacao.numero || cotacao.id,
+        descricao: cotacao.descricao || "Cotação sem descrição",
+        dataFechamento: cotacao.dataFechamento || "Não definido",
+        fornecedores: fornecedoresVa  dos,
+        link: window.location.origin, // Link do sist            mensagem: `Nova cotaçã  ${cotacao.numero || cotacao.id} disponível. Prazo: ${cotacao.dataFechamento || 'Não definido'}`
+      };
+
+      console.log("📤 Payload:", payload);
+
+      // Envia para o webhook
+      const response = await fetch(WEBHOOK_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (response.ok) {
+        console.log("✅ Notificações enviadas com sucesso!");
+        return true;
+      } else {
+        console.warn("⚠️ Erro ao enviar notificações:", response.statusText);
+        return false;
+      }
+    } catch (erro) {
+      console.error("❌ Erro ao enviar notificações:", erro);
+      return false;
+    }
+  };
+
 </script>
 
 <script src="premium_render.js?v=10013"></script>
