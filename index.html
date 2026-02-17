@@ -4926,6 +4926,11 @@
   function voltarMenu() {
     fecharTodasAsSecoes();
 
+    // 🔒 FORÇA FECHAMENTO DO MODAL DE COTAÇÃO POR ID (CRÍTICO)
+    const modalCotacao = document.getElementById("modalCotacao");
+    if (modalCotacao) modalCotacao.style.display = "none";
+    document.body.style.overflow = "auto"; // Libera scroll
+
     // 🔑 fecha listas internas (mesmo padrão do Material)
     const listaFornecedores = document.getElementById("listaFornecedoresCadastrados");
     if (listaFornecedores) listaFornecedores.style.display = "none";
