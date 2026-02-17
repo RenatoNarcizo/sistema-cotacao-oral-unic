@@ -11362,6 +11362,129 @@
     }
   };
 
+  /* ======================================================
+     🚀 FIX DEFINITIVO (V2) - NON-BLOCKING PUBLISH
+  ====================================================== */
+  async function publicarCotacaoV2(tipo = "manual") {
+    console.log("🚀 Iniciando publicação V2 (Non-Blocking)...");
+    let fechamento = "";
+    let produtos = [];
+    let descricao = "";
+
+    // 1. COLETA DE DADOS (Cópia da lógica original)
+    if (tipo === "excel") {
+      fechamento = document.getElementById("dataFechamentoExcel")?.value;
+      descricao = document.getElementById("descricaoCotacaoExcel")?.value.trim();
+      document.querySelectorAll("#tabelaCotacaoExcelCorpo tr").forEach(tr => {
+        const tds = tr.querySelectorAll("td");
+        if (tds[1]?.innerText && tds[3]?.innerText) {
+          produtos.push({ nome: tds[1].innerText, marca: tds[2]?.innerText || "-", quantidade: Number(tds[3].innerText) });
+        }
+      });
+    } else if (tipo === "manual") {
+      fechamento = document.getElementById("dataFechamentoManual")?.value;
+      descricao = document.getElementById("descricaoCotacaoManual")?.value.trim();
+      document.querySelectorAll("#tabelaManualCorpo tr").forEach(tr => {
+        const inputs = tr.querySelectorAll("input");
+        if (inputs[0]?.value && inputs[2]?.value) {
+          produtos.push({ nome: inputs[0].value, marca: inputs[1]?.value || "-", quantidade: Number(inputs[2].value) });
+        }
+      });
+    } else if (tipo === "materiais") {
+      fechamento = document.getElementById("dataFechamentoMateriais")?.value;
+      descricao = document.getElementById("descricaoCotacaoMateriais")?.value.trim();
+      document.querySelectorAll("#listaMateriaisCotacao input[type='number']").forEach(inp => {
+        if (Number(inp.value) > 0) {
+          produtos.push({ nome: inp.dataset.nome, marca: inp.dataset.marca || "-", quantidade: Number(inp.value) });
+        }
+      });
+    } else if (tipo === "servicos") {
+      fechamento = document.getElementById("dataFechamentoServicos")?.value;
+      descricao = document.getElementById("descricaoCotacaoServicos")?.value.trim();
+      document.querySelectorAll("#listaServicosCotacao input[type='number']").forEach(inp => {
+        if (Number(inp.value) > 0) {
+          produtos.push({ nome: inp.dataset.nome, marca: "-", quantidade: Number(inp.value) });
+        }
+      });
+    }
+
+    // 2. VALIDAÇÕES
+    if (!fechamento) return alert("⚠️ Preencha a data e hora de fechamento!");
+    if (produtos.length === 0) return alert("⚠️ Informe ao menos um item!");
+    const fornecedores = window.fornecedoresSelecionadosTemp || [];
+    if (fornecedores.length === 0) return alert("⚠️ Selecione ao menos um fornecedor!");
+
+    if (!numeroCotacaoAtual) numeroCotacaoAtual = "COT-" + Date.now();
+
+    // 🔗 ANEXOS
+    let anexosHerdados = [];
+    if (window.cotacaoOrigemSolicitacao && Array.isArray(window.cotacaoOrigemSolicitacao.anexos)) {
+      anexosHerdados = window.cotacaoOrigemSolicitacao.anexos;
+    }
+
+    const novaCotacao = {
+      id: numeroCotacaoAtual,
+      numero: numeroCotacaoAtual,
+      tipo: tipo,
+      descricao: (descricao && descricao.length > 0) ? descricao : "Sem descrição",
+      dataCriacao: new Date().toLocaleString(),
+      dataFechamento: fechamento,
+      fornecedores: fornecedores,
+      produtos: produtos,
+      anexos: anexosHerdados,
+      idSolicitacao: window.cotacaoOrigemSolicitacao ? window.cotacaoOrigemSolicitacao.id : null,
+      status: "aberta"
+    };
+
+    try {
+      // ✅ 1. LOCAL (Imediato)
+      const cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
+      cotacoes.push(novaCotacao);
+      localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
+      console.log("✅ V2: Salvo localmente.");
+
+      // ☁️ 2. CLOUD (Background - Sem Await)
+      db.collection("cotacoes").doc(String(novaCotacao.numero)).set(novaCotacao)
+        .then(() => console.log("✅ V2: Nuvem OK"))
+        .catch(err => console.warn("⚠️ V2: Nuvem falhou (Cota/Rede) - Ignorado para não travar UI", err));
+
+      // 🔔 3. NOTIFICAÇÃO (Background)
+      if (typeof enviarNotificacaoCotacao === "function") {
+        enviarNotificacaoCotacao(novaCotacao).catch(e => console.error("Erro notif V2:", e));
+      }
+
+      // 4. LIMPEZA E UI
+      window.fornecedoresSelecionadosTemp = [];
+      numeroCotacaoAtual = null;
+
+      alert("✅ Publicado com sucesso! (Salvo no PC + Tentativa Nuvem)");
+
+      // Fecha modal imediatamente
+      voltarMenu();
+      limparFormulariosCotacao();
+
+      // Atualiza lista
+      setTimeout(() => {
+        if (typeof carregarCotacoes === 'function') carregarCotacoes();
+      }, 500); // Delay leve para garantir UX
+
+    } catch (e) {
+      console.error("Erro V2:", e);
+      alert("Erro fatal ao salvar localmente.");
+    }
+  }
+
+  // 🔄 OVERRIDE RUNTIME
+  window.publicarCotacao = publicarCotacaoV2;
+
+  // 🛡️ HELPER GET (Garante lista)
+  window.getCotacoes = function () {
+    try {
+      return JSON.parse(localStorage.getItem("cotacoes")) || [];
+    } catch (e) { return []; }
+  };
+  console.log("🚀 PATCH V2 APLICADO: Funcionalidade de publicação otimizada.");
+
 </script>
 
 <script src="premium_render.js?v=10013"></script>
