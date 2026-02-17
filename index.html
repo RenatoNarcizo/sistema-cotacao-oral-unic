@@ -6991,78 +6991,63 @@
           let botao = "";
 
           if (usuario.tipo === "fornecedor") {
-
             if (encerrada) {
-              // 🔒 histórico
               botao = `
-          <button onclick="abrirResponderCotacao('${c.numero}', 'visualizar')">
-            🔍 Detalhes
-          </button>`;
-            }
-
-            else if (respondeu) {
+                <button onclick="abrirResponderCotacao('${c.numero}', 'visualizar')">
+                  🔍 Detalhes
+                </button>`;
+            } else if (respondeu) {
               botao = `
-          <button onclick="abrirResponderCotacao('${c.numero}', 'respondida')">
-            🔍 Detalhes
-          </button>`;
-            }
-
-            else {
+                <button onclick="abrirResponderCotacao('${c.numero}', 'respondida')">
+                  🔍 Detalhes
+                </button>`;
+            } else {
               botao = `
-          <button onclick="abrirResponderCotacao('${c.numero}', 'novo')">
-            Responder
-          </button>`;
+                <button onclick="abrirResponderCotacao('${c.numero}', 'novo')">
+                  Responder
+                </button>`;
             }
-          }
-        } else {
-          // 🛒 COMPRADOR / ADMIN
-          if(c.status === "respondida" || c.status === "analise" || c.status === "reanalise" || c.status === "aberta") {
-          const btnAnalisar = document.createElement("button");
-          btnAnalisar.innerText = "Analisar Resposta";
-          btnAnalisar.style.cssText = "background:#ffcc00; color:#000; border:none; padding:12px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:14px; width:100%; margin-bottom:4px;";
-          btnAnalisar.onclick = () => analisarCotacao(c.numero);
-          // acoesDiv não está definido no innerHTML antigo aqui, mas o dashboard usa uma lógica diferente
-          // No dashboard (carregarCotacoes), o 'botao' é injetado.
-          botao = `
+          } else {
+            // 🛒 COMPRADOR / ADMIN
+            if (c.status === "respondida" || c.status === "analise" || c.status === "reanalise" || c.status === "aberta") {
+              botao = `
                 <button onclick="analisarCotacao('${c.numero}')" style="background:#ffcc00; color:#000; border:none; padding:12px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:14px; width:100%; margin-bottom:4px;">
                    Analisar Resposta
                 </button>
               `;
-        }
+            }
 
-        if (c.status === "aberta" || c.status === "respondida" || c.status === "reanalise") {
-          botao = `
+            if (c.status === "aberta" || c.status === "respondida" || c.status === "reanalise") {
+              botao += `
                 <button onclick="encerrarCotacaoManualmente('${c.numero}')" style="background:#cc0000; color:white; border:none; padding:12px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:14px; width:100%;">
                   <i class="fa-solid fa-lock" style="color:#ffcc00;"></i> Encerrar
                 </button>`;
-        } else {
-          botao = "";
-        }
-      }
+            }
+          }
 
-      // --- ℹ️ INFO SECTION (RESTAURADA) ---
-      let statusBadge = "";
-      if (c.status === "aberta") {
-        statusBadge = '<span style="background:#555; padding:2px 8px; border-radius:10px; font-size:11px; margin-left:8px; color:white; border: 1px solid #777;"><i class="fa-solid fa-bullhorn" style="font-size:10px; color:#ff66cc;"></i> Publicada</span>';
-      }
+          // --- ℹ️ INFO SECTION (RESTAURADA) ---
+          let statusBadge = "";
+          if (c.status === "aberta") {
+            statusBadge = '<span style="background:#555; padding:2px 8px; border-radius:10px; font-size:11px; margin-left:8px; color:white; border: 1px solid #777;"><i class="fa-solid fa-bullhorn" style="font-size:10px; color:#ff66cc;"></i> Publicada</span>';
+          }
 
-      let tempoRestanteHTML = "";
-      const agora = new Date();
-      const fim = new Date(c.dataFechamento);
-      const diffMs = fim - agora;
-      let tempoTexto = "Expirado";
-      if (diffMs > 0) {
-        const dias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-        const horas = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutos = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-        tempoTexto = `${dias}d ${horas}h ${minutos}m`;
-      }
-      tempoRestanteHTML = `<span style="color:#3ab9b6;">⏳ Tempo restante: <b>${tempoTexto}</b></span>`;
+          let tempoRestanteHTML = "";
+          const agora = new Date();
+          const fim = new Date(c.dataFechamento);
+          const diffMs = fim - agora;
+          let tempoTexto = "Expirado";
+          if (diffMs > 0) {
+            const dias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+            const horas = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutos = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+            tempoTexto = `${dias}d ${horas}h ${minutos}m`;
+          }
+          tempoRestanteHTML = `<span style="color:#3ab9b6;">⏳ Tempo restante: <b>${tempoTexto}</b></span>`;
 
-      const qtdConvidados = Array.isArray(c.fornecedores) ? c.fornecedores.length : 0;
-      const qtdRespostas = Array.isArray(c.respostasFornecedores) ? c.respostasFornecedores.length : 0;
+          const qtdConvidados = Array.isArray(c.fornecedores) ? c.fornecedores.length : 0;
+          const qtdRespostas = Array.isArray(c.respostasFornecedores) ? c.respostasFornecedores.length : 0;
 
-      const infoHTML = `
+          const infoHTML = `
             <div style="font-weight:bold; font-size:18px; color:#fff; margin-bottom:4px;">
               ${c.descricao || "Sem descrição"}
             </div>
@@ -7076,10 +7061,10 @@
             </div>
           `;
 
-      /* ======================================================
-         🧱 RENDER FINAL (RESTAURADO)
-      ====================================================== */
-      div.innerHTML += `
+          /* ======================================================
+             🧱 RENDER FINAL (RESTAURADO)
+          ====================================================== */
+          div.innerHTML += `
       <div class="linha-cotacao" style="display:flex; justify-content:space-between; align-items:flex-start; background: #110811; border: 1px solid #4a0c3e; padding: 15px; border-radius: 8px; margin-bottom: 12px;">
         <div class="info" style="flex:1;">
           ${infoHTML}
@@ -7615,7 +7600,6 @@
         });
 
         // 🏁 SE FOR FORNECEDOR, ESCONDE AS ABAS ADMINISTRATIVAS NO TOPO (Pequeno hack visual de segurança)
-        const usuario = getUsuarioLogado();
         if (usuario && usuario.tipo === "fornecedor") {
           const btnAnalise = document.getElementById("btnAnalise");
           const btnAprovacao = document.getElementById("btnAprovacao");
