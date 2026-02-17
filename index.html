@@ -6333,11 +6333,21 @@
       cotacoes.push(novaCotacao);
       localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
 
-      // 🔥 SINCRONIZA COM FIRESTORE
-      await db.collection("cotacoes").doc(String(novaCotacao.numero)).set(novaCotacao);
-      console.log("✅ Cotação salva no Firestore");
+      // 🔥 SINCRONIZA COM FIRESTORE (COM PROTEÇÃO DE COTA)
+      try {
+        await db.collection("cotacoes").doc(String(novaCotacao.numero)).set(novaCotacao);
+        console.log("✅ Cotação salva no Firestore");
+      } catch (errQuota) {
+        console.warn("⚠️ Cota do Firestore excedida ou erro de rede. Cotação salva apenas LOCALMENTE.", errQuota);
+        // Não interrompe o fluxo, pois já salvou no LocalStorage
+      }
 
-      // 🔔 NOTIFICAÇÃO PARA FORNECEDORES
+      // 🔔 NOTIFICAÇÃO: NOVA FUNÇÃO (WEBHOOK)
+      if (typeof enviarNotificacaoCotacao === "function") {
+        enviarNotificacaoCotacao(novaCotacao);
+      }
+
+      // 🔔 NOTIFICAÇÃO PARA FORNECEDORES (LEGADO)
       if (typeof dispararNotificacaoFornecedores === "function") {
         dispararNotificacaoFornecedores(novaCotacao);
       }
