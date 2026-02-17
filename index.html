@@ -7460,89 +7460,98 @@
           bloco.className = "linha-cotacao";
 
 
-          // --- ℹ️ INFO SECTION (RESTAURADA) ---
-          const infoDiv = document.createElement("div");
-          infoDiv.className = "info";
-          infoDiv.style.flex = "1";
+          const numeroExibicao = c.numero.startsWith('COT-') ? c.numero : 'COT-' + c.numero;
 
-          let statusBadge = "";
           if (c.status === "aberta") {
-            statusBadge = '<span style="background:#555; padding:2px 8px; border-radius:10px; font-size:11px; margin-left:8px; color:white; border: 1px solid #777;"><i class="fa-solid fa-bullhorn" style="font-size:10px; color:#ff66cc;"></i> Publicada</span>';
-          }
+            // --- ℹ️ INFO SECTION (RESTAURADA - PUBLICADAS) ---
+            const infoDiv = document.createElement("div");
+            infoDiv.className = "info";
+            infoDiv.style.flex = "1";
 
-          let tempoRestanteHTML = "";
-          const agora = new Date();
-          const fim = new Date(c.dataFechamento);
-          const diffMs = fim - agora;
-          let tempoTexto = "Expirado";
-          if (diffMs > 0) {
-            const dias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-            const horas = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            const minutos = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-            tempoTexto = `${dias}d ${horas}h ${minutos}m`;
-          }
-          tempoRestanteHTML = `<span style="color:#3ab9b6;">⏳ Tempo restante: <b>${tempoTexto}</b></span>`;
+            const statusBadge = '<span style="background:#555; padding:2px 8px; border-radius:10px; font-size:11px; margin-left:8px; color:white; border: 1px solid #777;"><i class="fa-solid fa-bullhorn" style="font-size:10px; color:#ff66cc;"></i> Publicada</span>';
 
-          infoDiv.innerHTML = `
-            <div style="font-weight:bold; font-size:18px; color:#fff; margin-bottom:4px;">
-              ${c.descricao || "Sem descrição"}
-            </div>
-            <div style="font-size:13px; color:#ccc; margin-bottom:8px; display:flex; align-items:center;">
-              Cotação #${c.numero.startsWith('COT-') ? c.numero : 'COT-' + c.numero} ${statusBadge}
-            </div>
-            <div style="font-size:13px; color:#ccc; line-height:1.6;">
-              <span style="color:#a855f7;">👤</span> Com fornecedores (${qtdConvidados} convidados)<br>
-              <span style="color:#ff66cc;">📊</span> Respostas atuais: <b>${qtdRespostas}</b><br>
-              ${tempoRestanteHTML}
-            </div>
-          `;
-
-          // --- 🔘 BOTÕES DE AÇÃO (COLUNA DIREITA) ---
-          const acoesDiv = document.createElement("div");
-          acoesDiv.className = "acoes";
-          acoesDiv.style.cssText = "display:flex; flex-direction:column; gap:8px; min-width:250px;";
-
-          if (usuario.tipo !== "fornecedor") {
-            // 📊 ANALISAR (Novo/Restaurado) — Apenas se tiver respostas ou em estados de análise
-            if (c.status === "respondida" || c.status === "analise" || c.status === "reanalise" || c.status === "aberta") {
-              const btnAnalisar = document.createElement("button");
-              btnAnalisar.innerText = "Analisar Resposta";
-              btnAnalisar.style.cssText = "background:#ffcc00; color:#000; border:none; padding:12px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:14px; width:100%; margin-bottom:4px;";
-              btnAnalisar.onclick = () => analisarCotacao(c.numero);
-              acoesDiv.appendChild(btnAnalisar);
+            let tempoRestanteHTML = "";
+            const agora = new Date();
+            const fim = new Date(c.dataFechamento);
+            const diffMs = fim - agora;
+            let tempoTexto = "Expirado";
+            if (diffMs > 0) {
+              const dias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+              const horas = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+              const minutos = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+              tempoTexto = `${dias}d ${horas}h ${minutos}m`;
             }
+            tempoRestanteHTML = `<span style="color:#3ab9b6;">⏳ Tempo restante: <b>${tempoTexto}</b></span>`;
 
-            // 🔒 ENCERRAR (Vermelho)
-            if (c.status === "aberta" || c.status === "respondida" || c.status === "reanalise") {
+            infoDiv.innerHTML = `
+              <div style="font-weight:bold; font-size:18px; color:#fff; margin-bottom:4px;">
+                ${c.descricao || "Sem descrição"}
+              </div>
+              <div style="font-size:13px; color:#ccc; margin-bottom:8px; display:flex; align-items:center;">
+                Cotação #${numeroExibicao} ${statusBadge}
+              </div>
+              <div style="font-size:13px; color:#ccc; line-height:1.6;">
+                <span style="color:#a855f7;">👤</span> Com fornecedores (${qtdConvidados} convidados)<br>
+                <span style="color:#ff66cc;">📊</span> Respostas atuais: <b>${qtdRespostas}</b><br>
+                ${tempoRestanteHTML}
+              </div>
+            `;
+
+            // --- 🔘 BOTÕES DE AÇÃO (PUBLICADAS) ---
+            const acoesDiv = document.createElement("div");
+            acoesDiv.className = "acoes";
+            acoesDiv.style.cssText = "display:flex; flex-direction:column; gap:8px; min-width:250px;";
+
+            if (usuario.tipo !== "fornecedor") {
               const btnEncerrar = document.createElement("button");
               btnEncerrar.innerHTML = '<i class="fa-solid fa-lock" style="color:#ffcc00;"></i> Encerrar';
               btnEncerrar.style.cssText = "background:#cc0000; color:white; border:none; padding:12px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:14px; width:100%;";
               btnEncerrar.onclick = () => encerrarCotacaoManualmente(c.numero);
               acoesDiv.appendChild(btnEncerrar);
+
+              const btnReabrir = document.createElement("button");
+              btnReabrir.innerHTML = '<span style="background:#007bff; color:white; padding:3px; border-radius:3px; font-size:10px; margin-right:5px; display:inline-flex; align-items:center; justify-content:center;"><i class="fa-solid fa-arrows-rotate"></i></span> Reabrir / Estender';
+              btnReabrir.style.cssText = "background:#ffcc00; color:#000; border:none; padding:12px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:14px; width:100%;";
+              btnReabrir.onclick = () => reabrirCotacao(c.numero);
+              acoesDiv.appendChild(btnReabrir);
+
+              const btnExcluir = document.createElement("button");
+              btnExcluir.innerHTML = '<i class="fa-solid fa-trash"></i>';
+              btnExcluir.style.cssText = "background:transparent; border:1px solid #ff4444; color:#ff4444; padding:8px; border-radius:6px; cursor:pointer; width:100%;";
+              btnExcluir.onclick = () => excluirCotacao(c.numero);
+              acoesDiv.appendChild(btnExcluir);
+            } else {
+              const btnForn = document.createElement("button");
+              const jaRespondeu = fornecedorRespondeu(c, usuario.email);
+              btnForn.innerText = jaRespondeu ? "Editar Resposta" : "Responder";
+              btnForn.style.cssText = "background:#3ab9b6; color:white; border:none; padding:12px; border-radius:6px; cursor:pointer; font-weight:bold; width:100%;";
+              btnForn.onclick = () => abrirModalResponder(c.numero);
+              acoesDiv.appendChild(btnForn);
             }
 
-            // 🔄 REABRIR / ESTENDER (Amarelo)
-            const btnReabrir = document.createElement("button");
-            btnReabrir.innerHTML = '<span style="background:#007bff; color:white; padding:3px; border-radius:3px; font-size:10px; margin-right:5px; display:inline-flex; align-items:center; justify-content:center;"><i class="fa-solid fa-arrows-rotate"></i></span> Reabrir / Estender';
-            btnReabrir.style.cssText = "background:#ffcc00; color:#000; border:none; padding:12px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:14px; width:100%;";
-            btnReabrir.onclick = () => reabrirCotacao(c.numero);
-            acoesDiv.appendChild(btnReabrir);
-
-            // 🗑️ EXCLUIR (Lixeira)
-            const btnExcluir = document.createElement("button");
-            btnExcluir.innerHTML = '<i class="fa-solid fa-trash"></i>';
-            btnExcluir.style.cssText = "background:transparent; border:1px solid #ff4444; color:#ff4444; padding:8px; border-radius:6px; cursor:pointer; width:100%;";
-            btnExcluir.onclick = () => excluirCotacao(c.numero);
-            acoesDiv.appendChild(btnExcluir);
+            bloco.style.cssText = "display:flex; justify-content:space-between; align-items:flex-start; background: #110811; border: 1px solid #4a0c3e; padding: 15px; border-radius: 8px; margin-bottom: 12px;";
+            bloco.appendChild(infoDiv);
+            bloco.appendChild(acoesDiv);
           } else {
-            // FORNECEDOR
-            const btnForn = document.createElement("button");
-            const jaRespondeu = fornecedorRespondeu(c, usuario.email);
-            btnForn.innerText = jaRespondeu ? "Editar Resposta" : "Responder";
-            btnForn.style.cssText = "background:#3ab9b6; color:white; border:none; padding:12px; border-radius:6px; cursor:pointer; font-weight:bold; width:100%;";
-            btnForn.onclick = () => abrirModalResponder(c.numero);
-            acoesDiv.appendChild(btnForn);
+            // ======================================================
+            // 📊 LAYOUT ABA "ANÁLISE DE RESPOSTAS" (Fiel à foto)
+            // ======================================================
+            bloco.style.cssText = "display:flex; justify-content:space-between; align-items:center; background: #110811; border: 1px solid #4a0c3e; padding: 15px; border-radius: 8px; margin-bottom: 12px;";
+
+            bloco.innerHTML = `
+              <div class="info">
+                <div style="font-weight:bold; font-size:16px; color:#fff; margin-bottom:4px;">${c.descricao || "Sem descrição"}</div>
+                <div style="font-size:13px; color:#ccc;">Cotação #${numeroExibicao}</div>
+                <div style="font-size:13px; color:#ccc; margin-top:4px;">Respostas recebidas: <b>${qtdRespostas}</b></div>
+              </div>
+              <div class="acoes">
+                <button onclick="analisarCotacao('${c.numero}')" style="background:#661155; color:white; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; font-weight:bold; display:flex; align-items:center; gap:8px;">
+                  <i class="fa-solid fa-chart-column"></i> Analisar Respostas
+                </button>
+              </div>
+            `;
           }
+
 
           bloco.style.cssText = "display:flex; justify-content:space-between; align-items:flex-start; background: #110811; border: 1px solid #4a0c3e; padding: 15px; border-radius: 8px; margin-bottom: 12px;";
           bloco.appendChild(infoDiv);
