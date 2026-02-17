@@ -3855,6 +3855,56 @@
     </div>
   </div>
 
+
+  <!-- 📂 MODAL – LISTA DE DOCUMENTOS (ANEXOS) -->
+  <div id="modalListaDocumentos" class="modal" style="display:none;">
+    <div class="modal-content"
+      style="max-width:550px; padding:30px; border-radius:15px; border:2px solid #661155; box-shadow:0 0 40px rgba(102,17,85,0.6);">
+      <button class="close-btn" onclick="fecharModalDocumentos()"
+        style="background:#661155; color:white; border:none; width:35px; height:35px; border-radius:50%; position:absolute; top:15px; right:15px; cursor:pointer; font-weight:bold; font-size:20px;">&times;</button>
+
+      <h2
+        style="color:#661155; margin-bottom:20px; display:flex; align-items:center; gap:12px; border-bottom:1px solid #222; padding-bottom:15px;">
+        <i class="fa-solid fa-folder-tree"></i> <span>Documentos e Anexos</span>
+      </h2>
+
+      <div id="wrapperListaDocumentos" style="margin-top:10px;">
+        <ul id="corpoListaDocumentos"
+          style="list-style:none; padding:0; margin:0; max-height:450px; overflow-y:auto; padding-right:5px;">
+          <!-- Injetado via JS -->
+        </ul>
+      </div>
+
+      <div style="margin-top:20px; text-align:center;">
+        <button onclick="fecharModalDocumentos()"
+          style="background:#333; color:white; border:none; padding:10px 25px; border-radius:6px; cursor:pointer; font-weight:bold;">Fechar
+          Janela</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ✅ MODAL – DETALHES DA APROVAÇÃO (MAPA RESUMINDO) -->
+  <div id="modalAprovacao" class="modal" style="display:none;">
+    <div class="modal-content" style="max-width:900px; padding:30px; border-radius:15px; border:1px solid #661155;">
+      <button class="close-btn"
+        onclick="document.getElementById('modalAprovacao').style.display='none'">&times;</button>
+      <h2 style="color:#661155; margin-bottom:15px;">✅ Detalhes para Aprovação</h2>
+
+      <div id="conteudoAprovacao" style="margin-top:20px;">
+        <!-- Tabela detalhada injetada aqui -->
+      </div>
+
+      <div style="margin-top:25px; display:flex; justify-content:flex-end; gap:15px;">
+        <button onclick="document.getElementById('modalAprovacao').style.display='none'"
+          style="background:#333; color:white; border:none; padding:12px 25px; border-radius:8px; cursor:pointer; font-weight:bold;">Voltar</button>
+        <button onclick="aprovarCotacaoDireto(window.cotacaoAprovacaoAtual)"
+          style="background:#10b981; color:white; border:none; padding:12px 30px; border-radius:8px; cursor:pointer; font-weight:900; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.4);">
+          APROVAR COTAÇÃO
+        </button>
+      </div>
+    </div>
+  </div>
+
   <div id="modalMapaPrecos" class="modal" style="display:none;">
     <div class="modal-content"
       style="position: fixed; top:0; left:0; width:100vw; height:100vh; max-width:none; background:#000; border:none; display:flex; flex-direction:column; margin:0; padding:0;">
@@ -5011,287 +5061,14 @@
         }
       }
 
+
       /* ======================================================
-         ✅ GESTÃO DE APROVAÇÕES E COTAÇÕES RESPONDIDAS
+         ✅ GESTÃO DE RESPOSTAS — FORNECEDOR
       ====================================================== */
-      window.abrirAprovarCompras = function () {
-        abrirTela("aprovacoes");
-        carregarPendentesAprovacao();
-      };
-
-      window.carregarPendentesAprovacao = async function () {
-        const lista = document.getElementById("listaPendentesAprovacao");
-        if (!lista) return;
-        lista.innerHTML = "<p style='text-align:center;'>⌛ Carregando...</p>";
-        try {
-          const snap = await db.collection("cotacoes").where("status", "==", "aprovacao").get();
-          const pendentes = snap.docs.map(doc => doc.data());
-          if (pendentes.length === 0) {
-            lista.innerHTML = "<p style='text-align:center; color:#aaa;'>Nenhuma cotação aguardando aprovação final.</p>";
-            return;
-          }
-          lista.innerHTML = pendentes.map(c => `
-            <div class="linha-cotacao">
-              <div class="info">
-                <strong>Cotação ${c.numero}</strong><br>
-                <small>${c.descricao || "Sem descrição"}</small>
-              </div>
-              <div class="acoes">
-                <button onclick="analisarCotacao('${c.numero}')">Analisar</button>
-              </div>
-            </div>
-          `).join("");
-        } catch (e) {
-          console.error(e);
-          lista.innerHTML = "Erro ao carregar.";
-        }
-      };
-
       window.abrirResponderCotacao = function () {
+        console.log("📬 Abrindo Central de Respostas...");
         abrirTela("responderCotacao");
-        carregarResponderCotacao();
-      };
-
-      window.carregarResponderCotacao = async function () {
-        const lista = document.getElementById("listaResponderCotacao");
-        if (!lista) return;
-        lista.innerHTML = "<p style='text-align:center;'>⌛ Buscando cotações...</p>";
-        try {
-          const user = getUsuarioLogado();
-          if (!user) return;
-          const snap = await db.collection("cotacoes").where("status", "==", "aberta").get();
-          let cotacoes = snap.docs.map(doc => doc.data());
-
-          // Filtra as que o fornecedor está convidado
-          cotacoes = cotacoes.filter(c => {
-            return (c.fornecedores || []).some(f => f.email.toLowerCase() === user.email.toLowerCase());
-          });
-
-          if (cotacoes.length === 0) {
-            lista.innerHTML = "<p style='text-align:center; color:#aaa;'>Nenhuma cotação aberta para você no momento.</p>";
-            return;
-          }
-
-          lista.innerHTML = cotacoes.map(c => `
-            <div class="linha-cotacao">
-              <div class="info">
-                <strong>Cotação ${c.numero}</strong><br>
-                <small>Prazo: ${c.dataFechamento}</small>
-              </div>
-              <div class="acoes">
-                <button onclick="abrirModalResponder('${c.numero}')">Responder</button>
-              </div>
-            </div>
-          `).join("");
-        } catch (e) {
-          console.error(e);
-          lista.innerHTML = "Erro ao carregar.";
-        }
-      };
-
-      /* Omitted duplicate Firebase transition functions to resolve UI conflicts with verified versions below */
-      window.abrirAprovarCompras = function () {
-        abrirPagina('aprovarCompras');
-        carregarPendentesAprovacao();
-      };
-
-      /* ======================================================
-         💾 GESTÃO DE FORNECEDORES (CADASTRO E LISTAGEM)
-      ====================================================== */
-      window.salvarFornecedor = async function () {
-        const nome = document.getElementById("fornNome")?.value.trim();
-        const cnpj = document.getElementById("fornCnpj")?.value.trim();
-        const email = (document.getElementById("fornEmails")?.value || "").toLowerCase().trim();
-        const tipo = document.getElementById("fornTipo")?.value;
-
-        if (!nome) return alert("⚠️ Preencha ao menos o Nome da Empresa");
-
-        const novoFornecedor = {
-          nome, cnpj, email, tipo,
-          logradouro: document.getElementById("fornLogradouro")?.value.trim(),
-          numero: document.getElementById("fornNumero")?.value.trim(),
-          bairro: document.getElementById("fornBairro")?.value.trim(),
-          cidade: document.getElementById("fornCidade")?.value.trim(),
-          cep: document.getElementById("fornCep")?.value.trim(),
-          telefone: document.getElementById("fornTelefone")?.value.trim(),
-          whats: document.getElementById("fornWhats")?.value.trim(),
-          responsavel: document.getElementById("fornResponsavel")?.value.trim(),
-          status: "ativo",
-          dataCriacao: new Date().toLocaleString()
-        };
-        novoFornecedor.endereco = `${novoFornecedor.logradouro || ""} ${novoFornecedor.numero || ""}`.trim();
-
-        try {
-          let fornecedoresLocais = JSON.parse(localStorage.getItem("fornecedores")) || [];
-          if (window.fornecedorEditando !== null && typeof window.fornecedorEditando !== 'undefined') {
-            fornecedoresLocais.splice(window.fornecedorEditando, 1);
-            window.fornecedorEditando = null;
-          }
-          fornecedoresLocais.push(novoFornecedor);
-          localStorage.setItem("fornecedores", JSON.stringify(fornecedoresLocais));
-
-          const docId = (email || nome).toLowerCase().trim();
-          await db.collection("fornecedores").doc(docId).set(novoFornecedor);
-
-          alert("✅ Fornecedor salvo com sucesso!");
-          if (typeof limparFormFornecedor === "function") limparFormFornecedor();
-
-          const listaDiv = document.getElementById("listaFornecedoresCadastrados");
-          if (listaDiv && listaDiv.style.display === "block") mostrarListaFornecedores(true);
-        } catch (e) {
-          console.error(e);
-          alert("Erro ao salvar.");
-        }
-      };
-
-      window.mostrarListaFornecedores = async function (apenasRecarregar = false) {
-        const listaDiv = document.getElementById("listaFornecedoresCadastrados");
-        const tbody = document.getElementById("tabelaFornecedores");
-        if (!listaDiv || !tbody) return;
-
-        if (!apenasRecarregar) {
-          if (listaDiv.style.display === "block") {
-            listaDiv.style.display = "none";
-            return;
-          }
-          listaDiv.style.display = "block";
-        }
-
-        tbody.innerHTML = "<tr><td colspan='5' style='text-align:center;'>⌛ Carregando...</td></tr>";
-
-        try {
-          const snap = await db.collection("fornecedores").get();
-          const empresas = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          empresas.sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
-          localStorage.setItem("fornecedores", JSON.stringify(empresas));
-
-          tbody.innerHTML = "";
-          if (empresas.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Nenhuma empresa cadastrada.</td></tr>';
-            return;
-          }
-
-          empresas.forEach((f, index) => {
-            const tr = document.createElement("tr");
-            tr.innerHTML = `
-              <td><strong>${f.nome || "-"}</strong><br><small style="color:#0dcaf0;">${f.tipo || "Geral"}</small></td>
-              <td style="font-size:12px; color:#aaa;">${f.endereco || f.logradouro || "-"}</td>
-              <td>${f.whats || f.whatsapp || "-"}</td>
-              <td>${f.responsavel || "-"}</td>
-              <td style="text-align:center;">
-                <button onclick="editarFornecedor(${index})" style="background:none; border:none; color:#ffd900; cursor:pointer;"><i class="fa-solid fa-pen"></i></button>
-                <button onclick="removerFornecedor('${f.id}')" style="background:none; border:none; color:#ff4444; cursor:pointer;"><i class="fa-solid fa-trash"></i></button>
-              </td>
-            `;
-            tbody.appendChild(tr);
-          });
-        } catch (error) {
-          console.error(error);
-          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Erro.</td></tr>';
-        }
-      };
-
-      window.removerFornecedor = async function (id) {
-        if (!confirm("Remover fornecedor?")) return;
-        try {
-          await db.collection("fornecedores").doc(id).delete();
-          mostrarListaFornecedores(true);
-        } catch (e) { console.error(e); }
-      };
-
-      window.editarFornecedor = function (index) {
-        const fornecedoresLocais = JSON.parse(localStorage.getItem("fornecedores")) || [];
-        const f = fornecedoresLocais[index];
-        if (!f) return;
-        document.getElementById("fornNome").value = f.nome || "";
-        document.getElementById("fornCnpj").value = f.cnpj || "";
-        document.getElementById("fornLogradouro").value = f.logradouro || "";
-        document.getElementById("fornNumero").value = f.numero || "";
-        document.getElementById("fornBairro").value = f.bairro || "";
-        document.getElementById("fornCidade").value = f.cidade || "";
-        document.getElementById("fornCep").value = f.cep || "";
-        document.getElementById("fornTelefone").value = f.telefone || "";
-        document.getElementById("fornWhats").value = f.whats || "";
-        document.getElementById("fornEmails").value = f.email || "";
-        document.getElementById("fornResponsavel").value = f.responsavel || "";
-        document.getElementById("fornTipo").value = f.tipo || "";
-        window.fornecedorEditando = index;
-        document.getElementById("conteudoFornManual").scrollIntoView();
-      };
-
-      /* ======================================================
-         📎 GESTÃO DE DOCUMENTOS (NOTAS/BOLETOS)
-      ====================================================== */
-      window.visualizarDocumentos = async function (numeroCotacao) {
-        const modal = document.getElementById("modalVisualizarDocumentos");
-        const lista = document.getElementById("listaDocumentosModal");
-        if (!modal || !lista) return;
-
-        lista.innerHTML = "<p style='text-align:center;'>⌛ Carregando documentos...</p>";
-        modal.style.display = "flex";
-
-        try {
-          // Busca no Firestore para garantir dados mais recentes
-          const snap = await db.collection("cotacoes").doc(String(numeroCotacao)).get();
-          const cot = snap.exists ? snap.data() : {};
-
-          // Consolida anexos da cotação e das respostas
-          let documentos = [];
-          if (cot.anexos) documentos = [...cot.anexos];
-
-          if (cot.respostasFornecedores) {
-            cot.respostasFornecedores.forEach(r => {
-              if (r.arquivos) {
-                r.arquivos.forEach(arq => {
-                  documentos.push({ ...arq, fornecedor: r.fornecedor });
-                });
-              }
-            });
-          }
-
-          if (documentos.length === 0) {
-            lista.innerHTML = "<p style='text-align:center; color:#aaa;'>Nenhum documento encontrado para esta cotação.</p>";
-            return;
-          }
-
-          lista.innerHTML = documentos.map(doc => `
-            <div style="background:#111; border:1px solid #333; padding:12px; border-radius:8px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
-              <div>
-                <strong style="color:#0dcaf0;">${doc.nome}</strong><br>
-                <small style="color:#888;">${doc.fornecedor ? `Enviado por: ${doc.fornecedor}` : 'Documento da Cotação'}</small>
-              </div>
-              <button onclick="abrirArquivoAnexo('${doc.url || ""}', '${doc.base64 || ""}')" 
-                      style="background:#661155; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer; font-weight:bold;">
-                👁️ Ver
-              </button>
-            </div>
-          `).join("");
-        } catch (e) {
-          console.error(e);
-          lista.innerHTML = "Erro ao carregar lista de documentos.";
-        }
-      };
-
-      window.abrirArquivoAnexo = function (url, base64) {
-        if (url) {
-          window.open(url, '_blank');
-        } else if (base64) {
-          const win = window.open();
-          win.document.write(`<iframe src="${base64}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`);
-        } else {
-          alert("Erro: Link do arquivo não disponível.");
-        }
-      };
-
-      /* ======================================================
-         🚀 FINALIZAÇÃO E MIGRAÇÃO
-      ====================================================== */
-      window.migrarParaFirebaseCompleto = async function () {
-        if (!confirm("Deseja iniciar a migração completa dos dados locais para a nuvem?")) return;
-        console.log("Migração iniciada...");
-        // ... (Lógica de migração já existe no topo como migrarDadosParaCloud)
-        await migrarDadosParaCloud();
-        alert("Migração concluída!");
+        if (typeof carregarResponderCotacao === 'function') carregarResponderCotacao();
       };
 
       /* ======================================================
@@ -9109,602 +8886,62 @@
 
     </script>
 
+
     <script>
-
-      function abrirAnaliseCotacao(id) {
-        document.getElementById('modalAnaliseCotacao').style.display = 'flex';
-        renderizarTabelaAnalise(id);
-      }
-      window.analisarCotacao = abrirAnaliseCotacao;
-
-      function fecharModalAnalise() {
-        document.getElementById('modalAnaliseCotacao').style.display = 'none';
-      }
-
-      window.toggleItemDetalhe = function (id) {
-        const el = document.getElementById(id);
-        const icon = document.getElementById('icon-' + id);
-        if (el) {
-          const isHidden = el.style.display === 'none';
-          el.style.display = isHidden ? 'table-row' : 'none';
-          if (icon) {
-            icon.className = isHidden ? 'fa-solid fa-chevron-down' : 'fa-solid fa-chevron-right';
-          }
-        }
-      };
-
-      // Variável para controlar o estado global (Expandir/Recolher Todos)
-      window.estadoExpandidoGlobal = false;
-
-      window.toggleExpansaoColunas = function () {
-        window.isColunasExpandidas = !window.isColunasExpandidas;
-        document.body.classList.toggle('modo-focalizado', window.isColunasExpandidas);
-
-        const modalMain = document.getElementById('modalAnaliseCotacao');
-        if (modalMain) {
-          const children = modalMain.querySelector('.modal-content').children;
-          for (let child of children) {
-            if (child.id !== 'analiseConteudo') {
-              child.style.display = window.isColunasExpandidas ? 'none' : '';
-            }
-          }
-          // Garantir o ícone visível se estiver em um th da tabela
-          const container = document.getElementById('analiseConteudo');
-          if (container) container.style.display = 'block';
-        }
-
-        const tabela = document.querySelector('.matriz-cotacao');
-        const icon = document.getElementById('iconExpandirGlobal');
-        const modalContent = modalMain ? modalMain.querySelector('.modal-content') : null;
-
-        if (modalContent) {
-          modalContent.style.width = window.isColunasExpandidas ? "99vw" : "1200px";
-          modalContent.style.maxWidth = window.isColunasExpandidas ? "99vw" : "1200px";
-        }
-
-        if (icon) {
-          icon.className = window.isColunasExpandidas ? 'fa-solid fa-compress' : 'fa-solid fa-expand';
-          icon.title = window.isColunasExpandidas ? 'Contrair' : 'Expandir';
-        }
-
-        if (tabela) {
-          tabela.classList.toggle('expandida', window.isColunasExpandidas);
-          tabela.querySelectorAll('.col-fixa, .col-fixa-2, .col-fixa-3').forEach(td => {
-            td.style.whiteSpace = window.isColunasExpandidas ? 'normal' : '';
-          });
-        }
-      };
-
-      function renderizarTabelaAnalise(textoOuId) {
-        const container = document.getElementById('analiseConteudo');
-
-        // 🔥 Limpa completamente para evitar duplicações
-        if (container) container.innerHTML = "";
-
-        // 🔍 Helper Local
-        const normalizarEmail = (e) => (e || "").toLowerCase().trim();
-
-        const cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
-        let cotacao = cotacoes.find(c => c.id === textoOuId);
-        if (!cotacao) {
-          cotacao = cotacoes.find(c => c.numero === textoOuId);
-        }
-
-        if (!cotacao) {
-          container.innerHTML = "<p>Cotação não encontrada.</p>";
-          return;
-        }
-
-        /* ==========================
-           📌 CABEÇALHO 
-        ========================== */
-        const elNum = document.getElementById("analiseNumero");
-        if (elNum) elNum.textContent = cotacao.numero || cotacao.id;
-
-        const elDesc = document.getElementById("analiseDescricao");
-        if (elDesc) elDesc.textContent = cotacao.descricao || "— Sem descrição";
-
-        const elData = document.getElementById("analiseDataCriacao");
-        if (elData) elData.textContent = cotacao.dataCriacao || "-";
-
-        const elFech = document.getElementById("analiseDataFechamento");
-        if (elFech) elFech.textContent = cotacao.dataFechamento || "-";
-
-        // Controle de Status / Visibilidade de Botões EXTERNOS
-        const divAcoesFechada = document.getElementById("acoesFechada");
-        const statusDiv = document.getElementById("statusAprovacao");
-        const btnEnviarExterno = document.getElementById("btnEnviarAprovacao");
-        const btnVerTodosAnexos = document.getElementById("btnVerTodosAnexos");
-        const contEnviarAprovacao = document.getElementById("contEnviarAprovacao");
-
-        // Reseta visibilidade externa - DESATIVADOS (botões agora são internos/premium)
-        if (divAcoesFechada) divAcoesFechada.style.display = "none";
-        if (statusDiv) statusDiv.innerHTML = "";
-        if (btnEnviarExterno) btnEnviarExterno.style.display = "none";
-        if (btnVerTodosAnexos) btnVerTodosAnexos.style.display = "none";
-        if (contEnviarAprovacao) contEnviarAprovacao.style.display = "none"; // 🔥 Esconde container inteiro
-
-        // 1. ANÁLISE (Comprador) - Botões agora são renderizados internamente
-        const isAnalise = (cotacao.status === "analise" || cotacao.status === "respondida" || cotacao.status === "reanalise");
-        // Removido a ativação dos botões externos - agora usamos apenas os internos (premium)
-
-        // 2. APROVAÇÃO (Aprovador vê, Comprador vê status)
-        if (cotacao.status === "aprovacao") {
-          if (statusDiv) statusDiv.innerHTML = "⏳ Aguardando Aprovação";
-        }
-
-        // 3. FECHADA
-        if (cotacao.status === "fechada") {
-          if (statusDiv) statusDiv.innerHTML = "🔒 Fechada (Pedido Gerado)";
-          if (divAcoesFechada) divAcoesFechada.style.display = "flex";
-          window.cotacaoAtualPDF = cotacao;
-        }
-
-        // Botão de Motivo
-        const textAreaMotivo = document.getElementById("motivoRejeicao");
-        const btnMotivo = document.getElementById("btnMotivoRejeicao");
-
-        if (btnMotivo && btnMotivo.parentElement) {
-          if (cotacao.motivoRejeicao) {
-            btnMotivo.parentElement.style.display = "block";
+      /* ======================================================
+         🚀 PONTE DE ANÁLISE PREMIUM (RESTAURADA)
+      ====================================================== */
+      window.analisarCotacao = function (id) {
+        console.log("📊 Abrindo análise Premium para:", id);
+        const modal = document.getElementById('modalAnaliseCotacao');
+        if (modal) {
+          modal.style.display = 'flex';
+          document.body.style.overflow = 'hidden';
+          if (typeof renderizarTabelaAnalise === 'function') {
+            renderizarTabelaAnalise(id);
           } else {
-            btnMotivo.parentElement.style.display = "none";
+            console.error("❌ Erro: renderizarTabelaAnalise não encontrada em premium_render.js");
+            alert("Erro: O motor de análise não foi carregado corretamente.");
           }
-        }
-        if (textAreaMotivo) {
-          textAreaMotivo.value = cotacao.motivoRejeicao || "";
-        }
-
-        /* ==========================
-           📊 DADOS 
-        ========================== */
-        let respostas = [];
-        if (Array.isArray(cotacao.respostasFornecedores)) {
-          respostas = [...cotacao.respostasFornecedores];
-        }
-
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key.startsWith(`resposta_${cotacao.numero}_`) || key.startsWith(`resposta_${cotacao.numero} _`)) {
-            try {
-              const r = JSON.parse(localStorage.getItem(key));
-              const jaExiste = respostas.some(
-                existing => normalizarEmail(existing.email) === normalizarEmail(r.email)
-              );
-              if (!jaExiste) {
-                respostas.push({
-                  fornecedor: r.fornecedor || r.fornecedorNome || "Fornecedor",
-                  email: r.email || r.emailFornecedor || "",
-                  itens: r.itens || r.precos || []
-                });
-              }
-            } catch (e) { }
-          }
-        }
-
-        if (respostas.length === 0) {
-          container.innerHTML = "<p>Nenhuma resposta recebida para esta cotação ainda.</p>";
-          return;
-        }
-
-        /* ==========================
-           🏗️ TABELA PREMIUM COM BADGES
-        ========================== */
-        let html = `
-    <table class="matriz-cotacao" style="width:100%; border-collapse:collapse; margin-top:20px;">
-      <thead style="background:#661155; color:white;">
-        <tr>
-          <th style="width:50px; text-align:center; padding:12px;">
-            <i class="fa-solid fa-expand" style="cursor:pointer; color:#3ab9b6; font-size:14px;" onclick="toggleExpansaoColunas()" title="Expandir"></i>
-          </th>
-          <th style="width:60px; text-align:center;">#</th>
-          <th style="text-align:left; padding-left:10px;">Item</th>
-          <th style="text-align:center;">Marca</th>
-          <th style="text-align:center;">Qtd</th>`;
-
-        // Cabeçalhos fornecedores
-        respostas.forEach(r => {
-          html += `<th style="text-align:center; min-width:140px;">${r.fornecedor}</th>`;
-        });
-
-        // Coluna VENCEDOR
-        html += `<th style="text-align:center; color:#00ff99; min-width:200px;">VENCEDOR</th>`;
-        html += `</tr></thead><tbody style="background:#000;">`;
-
-        // Iterar produtos
-        const produtos = cotacao.itens || cotacao.produtos || [];
-        produtos.forEach((prod, idx) => {
-          const nomeProd = prod.nome || prod.descricao || prod.produto || "Item";
-          const qtd = prod.quantidade || 0;
-
-          // Cálculo de melhor preço
-          let precosRow = [];
-          respostas.forEach(r => {
-            const pItem = (r.itens || []).find(it => (it.produto === nomeProd) || (it.nome === nomeProd));
-            if (pItem) {
-              const valor = Number(pItem.preco) || Number(pItem.valor) || 0;
-              if (valor > 0) precosRow.push({ fornecedor: r.fornecedor, email: r.email, val: valor });
-            }
-          });
-          precosRow.sort((a, b) => a.val - b.val);
-          const melhorPreco = precosRow.length > 0 ? precosRow[0] : null;
-
-          html += `<tr style="border-bottom:1px solid #333;">
-                <td style="text-align:center; padding:10px;">
-                </td>
-                <td style="text-align:center; padding:8px;">
-                  <span style="background:#000; color:#fff; padding:4px 10px; border-radius:6px; font-size:13px; font-weight:bold; border:1px solid #661155;">#${idx + 1}</span>
-                </td>
-                <td style="padding:12px 10px; color:white;">${nomeProd}</td>
-                <td style="text-align:center; color:#adb5bd;">${prod.marca || "-"}</td>
-                <td style="text-align:center; color:#adb5bd;">${qtd}</td>`;
-
-          // Células de Preço (COM BADGE COLORIDA OUTLINE)
-          respostas.forEach(r => {
-            const pItem = (r.itens || []).find(it => (it.produto === nomeProd) || (it.nome === nomeProd));
-            const valor = pItem ? (Number(pItem.preco) || Number(pItem.valor) || 0) : 0;
-
-            const rankIndex = precosRow.findIndex(x => normalizarEmail(x.email) === normalizarEmail(r.email));
-            const badgeColors = [
-              { color: '#00ff99', label: '1&ordm;' },  // Verde
-              { color: '#ffd700', label: '2&ordm;' },  // Amarelo
-              { color: '#ff4444', label: '3&ordm;' }   // Vermelho
-            ];
-            const badge = rankIndex >= 0 && rankIndex < 3 ? badgeColors[rankIndex] : null;
-
-            html += `<td style="text-align:center; padding:8px;">`;
-
-            if (valor > 0) {
-              if (badge) {
-                html += `
-              <div style="display:inline-flex; align-items:center; gap:6px; background:transparent; padding:4px;">
-                <span style="background:#000; color:${badge.color}; font-weight:900; border-radius:50%; width:24px; height:24px; display:inline-flex; align-items:center; justify-content:center; font-size:12px; line-height:1; border:2px solid ${badge.color};">${badge.label}</span>
-                <span style="color:${badge.color}; font-weight:bold; font-size:14px;">R$ ${valor.toFixed(2)}</span>
-              </div>`;
-              } else {
-                html += `<span style="color:#ccc; font-size:14px;">R$ ${valor.toFixed(2)}</span>`;
-              }
-            } else {
-              html += `<span style="color:#555;">-</span>`;
-            }
-
-            html += `</td>`;
-          });
-
-          // VENCEDOR com Troféu
-          let emailEscolhido = window.decisoesAnalise?.[cotacao.numero]?.[nomeProd];
-          if (!emailEscolhido && melhorPreco) {
-            emailEscolhido = melhorPreco.email;
-            if (!window.decisoesAnalise) window.decisoesAnalise = {};
-            if (!window.decisoesAnalise[cotacao.numero]) window.decisoesAnalise[cotacao.numero] = {};
-            window.decisoesAnalise[cotacao.numero][nomeProd] = emailEscolhido;
-          }
-
-          const fornEscolhido = respostas.find(r => normalizarEmail(r.email) === normalizarEmail(emailEscolhido));
-          const nomeEscolhido = fornEscolhido ? fornEscolhido.fornecedor : "Selecione";
-
-          html += `<td style="text-align:center; padding:8px;">
-                <div style="background:#111; border:1px solid #00ff99; padding:8px 12px; border-radius:6px; display:inline-flex; align-items:center; gap:8px; min-width:160px; position:relative;">
-                  <i class="fa-solid fa-trophy" style="color:#ffcc00;"></i>
-                  <span style="color:#00ff99; font-weight:bold; flex:1;">${nomeEscolhido}</span>
-                  ${isAnalise ? `
-                    <select onchange="atualizarDecisaoVencedor('${cotacao.numero}', '${nomeProd}', this.value)" 
-                            style="position:absolute; top:0; left:0; width:100%; height:100%; opacity:0; cursor:pointer;">
-                      ${precosRow.map(p => `
-                        <option value="${p.email}" ${normalizarEmail(p.email) === normalizarEmail(emailEscolhido) ? 'selected' : ''}>
-                          ${p.fornecedor} - R$ ${p.val.toFixed(2)}
-                        </option>
-                      `).join('')}
-                    </select>
-                    <i class="fa-solid fa-chevron-down" style="color:#00ff99; font-size:10px;"></i>
-                  ` : ''}
-                </div>
-              </td>`;
-
-          html += `</tr>`;
-        });
-
-        html += `</tbody></table>`;
-
-        // BOTÕES FULL WIDTH (PREMIUM) - Exibidos apenas em modo de análise
-        if (isAnalise) {
-          html += `
-         <div style="margin-top:25px; display:flex; flex-direction:column; gap:12px;">
-            <button onclick="visualizarDocumentos('${cotacao.numero}')" 
-                 style="width:100%; background:#3ab9b6; color:#fff; border:none; padding:14px; border-radius:8px; cursor:pointer; font-weight:800; font-size:15px; display:flex; align-items:center; justify-content:center; gap:10px; box-shadow:0 3px 0 #2a8f8c;">
-               <i class="fa-solid fa-folder-open" style="color:#ffd700;"></i> <span style="color:#fff;">Ver Todos os Anexos</span>
-            </button>
-            <div style="display:flex; gap:12px;">
-              <button onclick="excluirCotacao('${cotacao.numero}')" 
-                   style="flex:1; background:#b93a3a; color:white; border:none; padding:14px; border-radius:8px; cursor:pointer; font-weight:800; font-size:15px; display:flex; align-items:center; justify-content:center; gap:10px; box-shadow:0 3px 0 #8f2a2a;">
-                 <i class="fa-solid fa-trash"></i> Excluir Cotação
-              </button>
-
-              <button onclick="enviarParaAprovacao()" 
-                   style="flex:1; background:#661155; color:white; border:none; padding:14px; border-radius:8px; cursor:pointer; font-weight:800; font-size:15px; display:flex; align-items:center; justify-content:center; gap:10px; box-shadow:0 3px 0 #4a0c3e;">
-                 <i class="fa-solid fa-square-check"></i> Enviar para Aprovação
-              </button>
-            </div>
-         </div>
-      `;
-        }
-
-        container.innerHTML = html;
-      }
-
-      // 🗑️ Lógica para Excluir Cotação
-      window.excluirCotacao = function (id) {
-        if (!confirm("⚠️ ATENÇÃO: Tem certeza que deseja EXCLUIR permanentemente esta cotação?\n\nEssa ação apagará todos os itens e respostas vinculadas e NÃO poderá ser desfeita.")) {
-          return;
-        }
-
-        try {
-          // 1. Remove da lista principal
-          let cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
-          const novaLista = cotacoes.filter(c => c.numero !== id && c.id !== id);
-
-          if (cotacoes.length === novaLista.length) {
-            alert("Erro: Cotação não encontrada na lista.");
-            return;
-          }
-
-          localStorage.setItem("cotacoes", JSON.stringify(novaLista));
-
-          // 2. Remove respostas vinculadas (Limpeza)
-          // Percorre keys para achar respostas desta cotação
-          const keysParaRemover = [];
-          for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key.startsWith(`resposta_${id}_`) || key.startsWith(`resposta_${id} _`)) {
-              keysParaRemover.push(key);
-            }
-          }
-
-          keysParaRemover.forEach(k => localStorage.removeItem(k));
-
-          // 3. Remove decisões salvas se houver
-          if (window.decisoesAnalise && window.decisoesAnalise[id]) {
-            delete window.decisoesAnalise[id];
-          }
-
-          alert("✅ Cotação excluída com sucesso!");
-
-          // 4. Fecha modal e atualiza
-          const modal = document.getElementById('modalAnaliseCotacao');
-          if (modal) modal.style.display = "none";
-
-          // Tenta recarregar a lista se a função existir
-          if (typeof toggleListaRespondidas === 'function') {
-            // Força atualizar a aba ativa ou volta para publicadas
-            toggleListaRespondidas("publicadas", true);
-          } else if (typeof carregarCotacoes === 'function') {
-            carregarCotacoes();
-          } else {
-            window.location.reload();
-          }
-
-        } catch (e) {
-          console.error(e);
-          alert("Erro ao excluir cotação: " + e.message);
         }
       };
 
-      // Helper function
-      function atualizarDecisaoVencedor(numeroCotacao, produto, emailFornecedor) {
-        if (!window.decisoesAnalise) window.decisoesAnalise = {};
-        if (!window.decisoesAnalise[numeroCotacao]) window.decisoesAnalise[numeroCotacao] = {};
-        window.decisoesAnalise[numeroCotacao][produto] = emailFornecedor;
-      }
-
-
-      /* ======================================================
-      🧩 FUNÇÕES ADICIONAIS FALTANTES (CRIAÇÃO)
-      ====================================================== */
-      if (!window.decisoesAnalise) window.decisoesAnalise = {}; // Cache temporário
+      window.fecharModalAnalise = function () {
+        if (window.timerAnaliseInterval) {
+          clearInterval(window.timerAnaliseInterval);
+          window.timerAnaliseInterval = null;
+        }
+        const modal = document.getElementById('modalAnaliseCotacao');
+        if (modal) modal.style.display = 'none';
+        document.body.style.overflow = 'auto';
+      };
 
       /* ======================================================
-         🔒 FUNÇÕES DE CONTROLE DE COTAÇÃO (REDAÇÃO FINAL)
+         ✔ APROVAR COTAÇÃO DIRETAMENTE (APROVADOR)
       ====================================================== */
-      window.encerrarCotacaoManualmente = function (numero) {
-        if (!confirm(`Deseja encerrar a COT-${numero} e movê-la para análise?`)) return;
+      window.aprovarCotacaoDireto = function (numero) {
+        if (!numero) return alert("Número da cotação inválido.");
 
         const cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
-        const index = cotacoes.findIndex(c => c.numero === numero);
+        const index = cotacoes.findIndex(c => c.numero === numero || c.id === numero);
 
-        if (index !== -1) {
-          cotacoes[index].status = "respondida";
-          localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
-          alert("✅ Cotação encerrada com sucesso!");
-          if (typeof toggleListaRespondidas === "function") toggleListaRespondidas("publicadas", true);
-        }
-      };
+        if (index === -1) return alert("Cotação não encontrada.");
 
-      window.reabrirCotacao = function (numero) {
-        if (!confirm(`Deseja reabrir a COT-${numero} para novas respostas?`)) return;
+        const cotacao = cotacoes[index];
+        if (cotacao.status !== "aprovacao") return alert("Esta cotação não está aguardando aprovação.");
 
-        const cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
-        const index = cotacoes.findIndex(c => c.numero === numero);
-
-        if (index !== -1) {
-          cotacoes[index].status = "aberta";
-          localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
-          alert("✅ Cotação reaberta com sucesso!");
-          if (typeof toggleListaRespondidas === "function") toggleListaRespondidas("publicadas", true);
-        }
-      };
-
-      /* ======================================================
-         🏆 ATUALIZAR DECISÃO DE VENCEDOR
-      ====================================================== */
-      window.atualizarDecisaoVencedor = function (numeroCotacao, produto, emailFornecedor) {
-        if (!window.decisoesAnalise) window.decisoesAnalise = {};
-        if (!window.decisoesAnalise[numeroCotacao]) window.decisoesAnalise[numeroCotacao] = {};
-
-        // Salva a decisão
-        window.decisoesAnalise[numeroCotacao][produto] = emailFornecedor;
-
-        // Re-renderiza a tabela para atualizar visual
-        renderizarTabelaAnalise(numeroCotacao);
-      };
-
-      function salvarAnaliseAdjudicacao(numeroCotacao) {
-        const cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
-        const cotacao = cotacoes.find(c => c.numero === numeroCotacao);
-
-        if (!cotacao) {
-          alert("Cotação não encontrada.");
-          return;
-        }
-
-        const decisoes = window.decisoesAnalise[numeroCotacao];
-        if (!decisoes || Object.keys(decisoes).length === 0) {
-          alert("Selecione pelo menos um fornecedor vencedor.");
-          return;
-        }
-
-        /* Recalcula adjudicação com base nas escolhas */
-        const novaAdjudicacao = [];
-
-        // Consolida respostas novamente para pegar os preços
-        const respostas = [...(cotacao.respostasFornecedores || [])];
-
-        // Busca backup do localstorage também, igual ao render (para garantir)
-        const normalizarEmail = (e) => (e || "").toLowerCase().trim();
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i); if
-            (key.startsWith(`resposta_${cotacao.numero} _`)) {
-            try {
-              const r = JSON.parse(localStorage.getItem(key)); if
-                (!respostas.some(x => normalizarEmail(x.email) === normalizarEmail(r.email))) {
-                respostas.push(r);
-              }
-            } catch (e) { }
-          }
-        }
-
-        // Para cada decisão tomada (Produto -> Email)
-        for (const [prodNome, emailVencedor] of Object.entries(decisoes)) {
-          if (!emailVencedor) continue; // ignorar seleção vazia
-
-          const respForn = respostas.find(r => normalizarEmail(r.email) === normalizarEmail(emailVencedor));
-          if (respForn) {
-            // achar o preço do item
-            const itemDados = (respForn.itens || []).find(i => i.produto === prodNome || i.nome === prodNome);
-            const preco = itemDados ? (Number(itemDados.preco) || Number(itemDados.valor) || 0) : 0;
-
-            // Acha qtd original
-            const prodOriginal = (cotacao.produtos || []).find(p => (p.nome || p.descricao) === prodNome);
-            const qtd = prodOriginal ? (Number(prodOriginal.quantidade) || 0) : 0;
-
-            novaAdjudicacao.push({
-              produto: prodNome,
-              marca: prodOriginal ? (prodOriginal.marca || "-") : "-",
-              quantidade: qtd,
-              fornecedor: respForn.fornecedor || respForn.fornecedorNome,
-              email: respForn.email,
-              preco: preco,
-              total: preco * qtd
-            });
-          }
-        }
-
-        if (novaAdjudicacao.length === 0) {
-          alert("Nenhum item válido selecionado.");
-          return;
-        }
-
-        cotacao.adjudicacao = novaAdjudicacao;
-        cotacao.status = "aprovacao"; // Avança status para aprovação
-
-        localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
-
-        alert("✅ Cotação analisada e enviada para aprovação!");
-        fecharModalAnalise();
-
-        // Atualiza lista se possível
-        if (typeof carregarCotacoes === 'function') carregarCotacoes('analise');
-      }
-
-      /* ======================================================
-      📤 ENVIAR PARA APROVAÇÃO (BOTÃO DO MODAL DE ANÁLISE)
-      ====================================================== */
-      function enviarParaAprovacao() {
-        // Pega o número da cotação atual do modal
-        const numeroElement = document.getElementById("analiseNumero");
-        if (!numeroElement) {
-          alert("Erro: Cotação não identificada.");
-          return;
-        }
-
-        const numeroCotacao = numeroElement.textContent.trim();
-
-        // Chama a função que já existe para salvar a análise
-        salvarAnaliseAdjudicacao(numeroCotacao);
-      }
-
-      // Torna a função global
-      window.enviarParaAprovacao = enviarParaAprovacao;
-
-
-      /* ======================================================
-      ✔ APROVAR COTAÇÃO DIRETAMENTE (APROVADOR)
-      ====================================================== */
-      function aprovarCotacaoDireto(numero) {
-        if (!numero) {
-          alert("Número da cotação inválido.");
-          return;
-        }
-
-        const cotacoes = getCotacoes();
-        const cotacao = cotacoes.find(c => c.numero === numero);
-
-        if (!cotacao) {
-          alert("Cotação não encontrada.");
-          return;
-        }
-
-        // 🔒 valida se realmente está em aprovação
-        if (cotacao.status !== "aprovacao") {
-          alert("Esta cotação não está aguardando aprovação.");
-          return;
-        }
-
-        // ✅ aprova
         cotacao.status = "fechada";
         cotacao.dataAprovacao = new Date().toLocaleString();
 
-        salvarCotacoes(cotacoes);
-
+        localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
         alert("✅ Cotação aprovada com sucesso!");
 
-        // 🔄 atualiza tela de aprovações
-        if (typeof carregarPendentesAprovacao === "function") {
-          carregarPendentesAprovacao();
-        }
+        if (typeof carregarPendentesAprovacao === "function") carregarPendentesAprovacao();
 
-        // 🔒 fecha modal se existir
-        const modal = document.getElementById("modalAprovacao");
+        const modal = document.getElementById("modalAprovacao") || document.getElementById("modalAnaliseCotacao");
         if (modal) modal.style.display = "none";
-      }
-
-      /* 🔑 garante acesso global */
-      window.aprovarCotacaoDireto = aprovarCotacaoDireto;
-
-
-
-      /* ======================================================
-      📊 CALCULAR RANKING DE PREÇOS POR ITEM
-      ====================================================== */
-      function calcularRankingPrecos(lista) {
-        return lista
-          .map((item, index) => ({ ...item, indexOriginal: index }))
-          .sort((a, b) => a.preco - b.preco)
-          .map((item, rank) => ({
-            ...item,
-            rank: rank + 1
-          }));
-      }
-
+        document.body.style.overflow = "auto";
+      };
     </script>
 
     <script>
@@ -11613,6 +10850,161 @@
         } else {
           console.error("Erro: Modal de rejeição não encontrado (V3).");
         }
+      };
+
+
+      /* ======================================================
+         📎 GESTÃO DE DOCUMENTOS E ANEXOS (FIREBASE + LOCAL)
+      ====================================================== */
+      window.visualizarDocumentos = function (numero, fornecedor = "") {
+        console.log(`📂 Abrindo documentos para COT-${numero} ${fornecedor ? `(${fornecedor})` : "(Todos)"}`);
+
+        const modal = document.getElementById("modalListaDocumentos");
+        const lista = document.getElementById("corpoListaDocumentos");
+        if (!modal || !lista) return alert("Erro: Estrutura de documentos não disponível.");
+
+        lista.innerHTML = "<li style='padding:15px; color:#3ab9b6;'>⌛ Buscando arquivos...</li>";
+        modal.style.display = "flex";
+
+        let arquivos = [];
+        const chave = `docs_${numero}`;
+        const raw = localStorage.getItem(chave);
+
+        try {
+          arquivos = raw ? JSON.parse(raw) : [];
+        } catch (e) {
+          console.error("Erro ao ler anexos:", e);
+          arquivos = [];
+        }
+
+        lista.innerHTML = "";
+        if (arquivos.length === 0) {
+          lista.innerHTML = "<li style='padding:20px; text-align:center; color:#666;'>Nenhum anexo encontrado.</li>";
+        } else {
+          const filtrados = fornecedor
+            ? arquivos.filter(a => (a.usuario || "").toLowerCase() === fornecedor.toLowerCase())
+            : arquivos;
+
+          if (filtrados.length === 0) {
+            lista.innerHTML = "<li style='padding:20px; text-align:center; color:#666;'>Sem anexos deste fornecedor.</li>";
+          } else {
+            filtrados.forEach((arq) => {
+              const li = document.createElement("li");
+              li.style.cssText = "display:flex; justify-content:space-between; align-items:center; background:#111; border:1px solid #333; padding:12px; border-radius:8px; margin-bottom:10px;";
+              li.innerHTML = `
+                <div>
+                  <strong style="color:#3ab9b6; display:block; font-size:14px;">${arq.nome}</strong>
+                  <small style="color:#555; font-size:11px;">Enviado por: ${arq.usuario || "Admin"} em ${arq.data || "-"}</small>
+                </div>
+                <button onclick="abrirArquivoAnexo('${arq.url}')" 
+                        style="background:#661155; color:white; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:12px; transition:0.2s;">
+                  <i class="fa-solid fa-eye" style="margin-right:5px;"></i> Ver
+                </button>
+              `;
+              lista.appendChild(li);
+            });
+          }
+        }
+      };
+
+      window.abrirArquivoAnexo = function (url) {
+        if (!url) return alert("URL do arquivo inválida.");
+        window.open(url, "_blank");
+      };
+
+      window.fecharModalDocumentos = function () {
+        document.getElementById("modalListaDocumentos").style.display = "none";
+      };
+
+      /* ======================================================
+         🛡️ SISTEMA DE APROVAÇÃO (ENGINE PREMIUM)
+      ====================================================== */
+      window.carregarPendentesAprovacao = function () {
+        const container = document.getElementById("listaPendentesAprovacao");
+        if (!container) return;
+
+        const cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
+        const pendentes = cotacoes.filter(c => c.status === "aprovacao");
+
+        if (pendentes.length === 0) {
+          container.innerHTML = `<div style="text-align:center; padding:80px 20px; color:#444;">
+             <i class="fa-solid fa-clipboard-check" style="font-size:50px; margin-bottom:20px; opacity:0.1; display:block;"></i>
+             <p style="font-size:16px;">Tudo limpo! Nenhuma compra pendente de aprovação.</p>
+          </div>`;
+          return;
+        }
+
+        container.innerHTML = "";
+        pendentes.reverse().forEach(c => {
+          const total = (c.adjudicacao || []).reduce((acc, it) => acc + (Number(it.total) || 0), 0);
+
+          const card = document.createElement("div");
+          card.style.cssText = "background:#111; border:1px solid #222; padding:25px; border-radius:15px; display:block; margin-bottom:20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);";
+
+          card.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px;">
+              <div>
+                <h3 style="margin:0; color:#fff; font-size:20px; letter-spacing:-0.5px;">#${c.numero} - <span style="color:#661155;">${c.descricao || "Solicitação de Compra"}</span></h3>
+                <div style="display:flex; align-items:center; gap:10px; margin-top:8px;">
+                   <small style="color:#555;">Enviada em ${c.dataEnvio || c.dataCriacao || "—"}</small>
+                   <span style="width:4px; height:4px; background:#333; border-radius:50%;"></span>
+                   <small style="color:#3ab9b6; font-weight:bold;">Aguardando sua decisão</small>
+                </div>
+              </div>
+              <div style="background:#66115515; color:#661155; border:1px solid #661155; padding:6px 14px; border-radius:8px; font-weight:800; font-size:10px; letter-spacing:1px; text-transform:uppercase;">
+                WORKFLOW: APROVAÇÃO
+              </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:20px;">
+              <div style="background:#0a0a0a; padding:15px; border-radius:10px; border:1px solid #1a1a1a;">
+                <span style="color:#444; font-size:11px; text-transform:uppercase; font-weight:800; display:block; margin-bottom:5px;">Volumes</span>
+                <strong style="color:#fff; font-size:18px;">${(c.adjudicacao || []).length} Itens Adjudicados</strong>
+              </div>
+              <div style="background:#0a0a0a; padding:15px; border-radius:10px; border:1px solid #1a1a1a;">
+                <span style="color:#444; font-size:11px; text-transform:uppercase; font-weight:800; display:block; margin-bottom:5px;">Investimento Total</span>
+                <strong style="color:#3ab9b6; font-size:20px;">R$ ${total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>
+              </div>
+            </div>
+
+            <div style="display:flex; gap:12px; flex-wrap:wrap; border-top:1px solid #1a1a1a; padding-top:20px;">
+              <button onclick="visualizarDocumentos('${c.numero}')" 
+                      style="background:#3ab9b6; color:white; border:none; padding:12px 20px; border-radius:10px; cursor:pointer; font-weight:bold; display:flex; align-items:center; gap:10px; font-size:14px; transition:0.3s;"
+                      onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+                <i class="fa-solid fa-paperclip" style="color:#ffd700;"></i> Anexos
+              </button>
+              
+              <button onclick="abrirMapaPrecos('${c.numero}')" 
+                      style="background:#222; color:#ccc; border:1px solid #333; padding:12px 20px; border-radius:10px; cursor:pointer; font-weight:bold; display:flex; align-items:center; gap:10px; font-size:14px; transition:0.3s;"
+                      onmouseover="this.style.background='#333'" onmouseout="this.style.background='#222'">
+                <i class="fa-solid fa-rectangle-list"></i> Mapa de Preços
+              </button>
+
+              <button onclick="aprovarCotacaoDireto('${c.numero}')" 
+                      style="background:#10b981; color:white; border:none; padding:12px 25px; border-radius:10px; cursor:pointer; font-weight:900; display:flex; align-items:center; gap:10px; font-size:14px; box-shadow: 0 4px 0 #065f46; transition:0.2s;"
+                      onmousedown="this.style.transform='translateY(2px)'; this.style.boxShadow='none'" onmouseup="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 0 #065f46'">
+                <i class="fa-solid fa-check"></i> APROVAR
+              </button>
+
+              <button onclick="abrirRejeicaoCotacao('${c.numero}')" 
+                      style="background:#440a0a; color:#f87171; border:1px solid #7f1d1d; padding:12px 20px; border-radius:10px; cursor:pointer; font-weight:bold; display:flex; align-items:center; gap:10px; font-size:14px; transition:0.3s;"
+                      onmouseover="this.style.background='#7f1d1d'; this.style.color='#fff'" onmouseout="this.style.background='#440a0a'; this.style.color='#f87171'">
+                <i class="fa-solid fa-xmark"></i> REJEITAR
+              </button>
+            </div>
+          `;
+          container.appendChild(card);
+        });
+      };
+
+      window.abrirAprovarCompras = function () {
+        console.log("👑 Acessando Central de Aprovações Premium");
+        abrirTela("aprovarCompras");
+        carregarPendentesAprovacao();
+      };
+
+      window.abrirMapaPrecos = function (numero) {
+        window.analisarCotacao(numero);
       };
 
       /**
