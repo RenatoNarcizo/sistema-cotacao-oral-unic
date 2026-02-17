@@ -10,12 +10,6 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-  <!-- 🔥 FIREBASE SDK (VERSÃO 8 COMPATIBILITY PARA MÁXIMA COMPATIBILIDADE) -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
-
   <style>
     :root {
       --primaria: #661155;
@@ -1988,62 +1982,6 @@
       z-index: 0;
       transition: width 0.5s;
     }
-
-    /* ======================================================
-       🔐 MODAL TROCA DE SENHA OBRIGATÓRIA (OVERLAY)
-    ====================================================== */
-    #modalTrocaSenha {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.95);
-      z-index: 2000000;
-      /* Acima de tudo */
-      align-items: center;
-      justify-content: center;
-      backdrop-filter: blur(10px);
-    }
-
-    .troca-senha-box {
-      background: #111;
-      border: 1px solid var(--primaria);
-      box-shadow: 0 0 30px rgba(102, 17, 85, 0.8);
-      border-radius: 12px;
-      width: 90%;
-      max-width: 400px;
-      padding: 30px;
-      text-align: center;
-      animation: fadeIn 0.5s ease;
-    }
-
-    @keyframes fadeIn {
-      from {
-        opacity: 0;
-        transform: translateY(-20px);
-      }
-
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    .troca-senha-box h2 {
-      color: var(--primaria);
-      margin-bottom: 20px;
-      font-size: 1.5rem;
-    }
-
-    .troca-senha-box p {
-      font-size: 14px;
-      color: #ccc;
-      margin-bottom: 25px;
-      line-height: 1.5;
-    }
-
-    .troca-senha-box .input-group {
-      margin-bottom: 20px;
-    }
   </style>
 </head>
 
@@ -2084,36 +2022,6 @@
       <footer>© 2026 Sistema de Cotação • Todos os direitos reservados</footer>
     </div>
   </section>
-
-  <!-- 🔐 MODAL TROCA DE SENHA OBRIGATÓRIA -->
-  <div id="modalTrocaSenha" style="display:none;">
-    <div class="troca-senha-box">
-      <i class="fa-solid fa-lock" style="font-size: 40px; color: var(--primaria); margin-bottom: 15px;"></i>
-      <h2>Troca de Senha Obrigatória</h2>
-      <p>Para sua segurança, identicamos que esta é uma senha temporária. Por favor, cadastre uma nova senha para
-        continuar.</p>
-
-      <form onsubmit="confirmarTrocaSenha(); return false;">
-        <div class="input-group">
-          <label>Nova Senha</label>
-          <div class="input-wrapper">
-            <input type="password" id="novaSenha" placeholder="Digite a nova senha" required minlength="6">
-          </div>
-        </div>
-
-        <div class="input-group">
-          <label>Confirmação de Senha</label>
-          <div class="input-wrapper">
-            <input type="password" id="confirmarNovaSenha" placeholder="Confirme a nova senha" required minlength="6">
-          </div>
-        </div>
-
-        <div id="msgTrocaSenha" class="alerta"></div>
-
-        <button type="submit" style="margin-top: 15px;">Atualizar e Acessar</button>
-      </form>
-    </div>
-  </div>
 
   <!-- TRABALHE CONOSCO (AUTOCADASTRO) -->
   <section id="trabalhe-conosco" style="display:none;">
@@ -3887,42 +3795,8 @@
       </div>
 
     </div>
-    <!-- ⏳ LOADING OVERLAY GLOBAL -->
-    <div id="loadingOverlay" style="
-    display:none; 
-    position:fixed; 
-    top:0; left:0; 
-    width:100%; height:100%; 
-    background:rgba(0,0,0,0.8); 
-    z-index:9999999; 
-    flex-direction:column; 
-    align-items:center; 
-    justify-content:center; 
-    color:white; 
-    font-family:sans-serif;
-  ">
-      <div style="
-      width:50px; height:50px; 
-      border:5px solid #333; 
-      border-top:5px solid #661155; 
-      border-radius:50%; 
-      animation: spin 1s linear infinite;
-      margin-bottom:15px;
-    "></div>
-      <span id="loadingText">Processando...</span>
-    </div>
+  </div>
 
-    <style>
-      @keyframes spin {
-        0% {
-          transform: rotate(0deg);
-        }
-
-        100% {
-          transform: rotate(360deg);
-        }
-      }
-    </style>
 
 </body>
 
@@ -3934,31 +3808,14 @@
   ====================================================== */
   const MODO_DESENVOLVIMENTO = true;
 
-
-
-
-  /* ======================================================
-     🔥 CONFIGURAÇÃO E INICIALIZAÇÃO FIREBASE
-  ====================================================== */
-  const firebaseConfig = {
-    apiKey: "AIzaSyCz7BqYiwX4ojRTMBkWwvaB01-Ac71D8No",
-    authDomain: "cotacao-oral-unic.firebaseapp.com",
-    projectId: "cotacao-oral-unic",
-    storageBucket: "cotacao-oral-unic.firebasestorage.app",
-    messagingSenderId: "648085968917",
-    appId: "1:648085968917:web:26029a08b8dd363c9c961c"
-  };
-
-  // Inicializa Firebase
-  if (!firebase.apps.length) {
-    firebase.initializeApp(firebaseConfig);
-  }
-
-  const db = firebase.firestore();
-  const auth = firebase.auth();
-  const storage = firebase.storage();
-
-  console.log("🔥 Firebase inicializado com sucesso!");
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") {
+      const loginVisivel = document.getElementById("login-container");
+      if (loginVisivel && loginVisivel.style.display !== "none") {
+        login();
+      }
+    }
+  });
 
 
   /* ======================================================
@@ -4013,36 +3870,6 @@
 
   function salvarCotacoes(lista) {
     localStorage.setItem("cotacoes", JSON.stringify(lista));
-    // Sincroniza com Firebase se o usuário estiver logado
-    const usuario = getUsuarioLogado();
-    if (usuario) {
-      lista.forEach(c => {
-        db.collection("cotacoes").doc(String(c.numero || c.id)).set(c);
-      });
-    }
-  }
-
-  async function migrarDadosParaCloud() {
-    console.log("🏁 Iniciando migração de dados locais para Firestore...");
-    const collections = {
-      "fornecedores": "fornecedores",
-      "materiais": "materiais",
-      "cotacoes": "cotacoes",
-      "servicos": "servicos",
-      "pre_cadastros_fornecedores": "pre_cadastros"
-    };
-
-    for (const [key, collection] of Object.entries(collections)) {
-      const data = JSON.parse(localStorage.getItem(key)) || [];
-      if (data.length > 0) {
-        console.log(`📦 Migrando ${data.length} itens de ${key} para coleção ${collection}...`);
-        for (const item of data) {
-          const id = String(item.id || item.numero || item.email || Date.now());
-          await db.collection(collection).doc(id).set(item);
-        }
-      }
-    }
-    console.log("✅ Migração finalizada.");
   }
 
   function getUsuarioLogado() {
@@ -4152,7 +3979,7 @@
     document.getElementById("login-container").style.display = "flex";
   };
 
-  window.enviarAutoCadastro = async function () {
+  window.enviarAutoCadastro = function () {
     const nome = document.getElementById("autoFornNome").value.trim();
     const cnpj = document.getElementById("autoFornCnpj").value.trim();
     const email = document.getElementById("autoFornEmail").value.trim();
@@ -4165,7 +3992,9 @@
       return;
     }
 
-    const novoPreCadastro = {
+    const preCadastros = JSON.parse(localStorage.getItem("pre_cadastros_fornecedores")) || [];
+
+    preCadastros.push({
       id: Date.now(),
       nome,
       cnpj,
@@ -4175,20 +4004,9 @@
       banco,
       data: new Date().toLocaleString(),
       status: "pendente"
-    };
+    });
 
-    // 1. Salva no LocalStorage (Redundância)
-    const preCadastros = JSON.parse(localStorage.getItem("pre_cadastros_fornecedores")) || [];
-    preCadastros.push(novoPreCadastro);
     localStorage.setItem("pre_cadastros_fornecedores", JSON.stringify(preCadastros));
-
-    // 2. Salva no Firebase (Sincronização Multi-Máquina)
-    try {
-      await db.collection("pre_cadastros_fornecedores").doc(String(novoPreCadastro.id)).set(novoPreCadastro);
-      console.log("✅ Pré-cadastro salvo no Firestore");
-    } catch (e) {
-      console.warn("⚠️ Falha ao salvar no Firestore (Salvou Localmente):", e);
-    }
 
     alert("✅ Proposta enviada! Nossa equipe analisará seus dados em breve.");
 
@@ -4204,70 +4022,35 @@
   };
 
   /* ======================================================
-      🔐 LOGIN (COMENTADO PARA REFERÊNCIA - AGORA USANDO FIREBASE)
+      🔐 LOGIN (VERSÃO CORRIGIDA)
   ====================================================== */
-  async function login() {
-    const email = document.getElementById("email").value.trim().toLowerCase();
+  function login() {
+    const email = document.getElementById("email").value.trim();
     const senha = document.getElementById("senha").value.trim();
-    const msg = document.getElementById("msgLogin");
 
-    msg.innerText = "⌛ Verificando...";
+    const usuarios = JSON.parse(localStorage.getItem("usuarios_teste")) || [];
 
-    try {
-      // 1. TENTA BUSCAR NO FIRESTORE PRIMEIRO
-      const userRef = db.collection("usuarios").doc(email);
-      const doc = await userRef.get();
+    const usuario = usuarios.find(
+      u =>
+        u.email.toLowerCase().trim() === email.toLowerCase().trim() &&
+        u.senha === senha
+    );
 
-      let usuario = null;
-
-      if (doc.exists) {
-        usuario = doc.data();
-        if (usuario.senha !== senha) {
-          msg.innerText = "❌ Senha incorreta";
-          return;
-        }
-      } else {
-        // 2. FALLBACK: BUSCA NO LOCALSTORAGE (MIGRAÇÃO)
-        const usuariosLS = JSON.parse(localStorage.getItem("usuarios_teste")) || [];
-        usuario = usuariosLS.find(u => u.email.toLowerCase().trim() === email && u.senha === senha);
-
-        if (usuario) {
-          console.log("🚀 Migrando usuário para Firestore:", email);
-          await userRef.set(usuario);
-        }
-      }
-
-      if (!usuario) {
-        msg.innerText = "❌ Usuário não encontrado";
-        return;
-      }
-
-      // 🔥 LIMPA ESTADOS ANTERIORES
-      localStorage.removeItem("cotacaoRespostaAtual");
-      localStorage.removeItem("cotacaoEmEdicao");
-      localStorage.removeItem("respostaEmEdicao");
-
-      // 🔐 SALVA SESSÃO TEMPORÁRIA
-      window.usuarioLogando = usuario;
-
-      // 🛡️ VALIDAÇÃO DE SENHA PADRÃO (123456)
-      if (senha === "123456") {
-        document.getElementById("modalTrocaSenha").style.display = "flex";
-        document.getElementById("novaSenha").focus();
-        msg.innerText = "";
-        return;
-      }
-
-      finalizarLogin(usuario);
-    } catch (error) {
-      console.error("Erro no login:", error);
-      msg.innerText = "❌ Erro ao conectar ao servidor";
+    if (!usuario) {
+      document.getElementById("mensagem").innerText = "Usuário ou senha inválidos";
+      return;
     }
-  }
 
-  function finalizarLogin(usuario) {
-    // 🔐 SALVA SESSÃO DEFINITIVA (MANTEMOS LS/SS PARA COMPATIBILIDADE SÍNCRONA DO RESTO DO APP)
+    // 🔥 LIMPA ESTADOS ANTERIORES
+    localStorage.removeItem("cotacaoRespostaAtual");
+    localStorage.removeItem("cotacaoEmEdicao");
+    localStorage.removeItem("respostaEmEdicao");
+
+    // 🔐 SALVA SESSÃO (USANDO OS DOIS PADRÕES PARA NÃO DAR ERRO)
+    // O seu script de detalhes busca 'usuarioLogado', então vamos garantir ele aqui:
     localStorage.setItem("usuarioLogado", JSON.stringify(usuario));
+
+    // Mantém o seu padrão original caso outras partes do código usem:
     sessionStorage.setItem("usuario_logado", JSON.stringify(usuario));
     localStorage.setItem("logado", "true");
 
@@ -4280,63 +4063,8 @@
       aplicarPermissoes(usuario.tipo);
     }
 
-    // 🔄 Tenta migrar materiais e cotações em background se for admin
-    if (usuario.tipo === "administrador" || usuario.tipo === "comprador") {
-      setTimeout(migrarDadosParaCloud, 1000);
-    }
-
     console.log("✅ Login realizado com sucesso para:", usuario.email);
   }
-
-  /* ======================================================
-      🔐 FUNÇÃO: CONFIRMAR TROCA DE SENHA (FIREBASE)
-  ====================================================== */
-  window.confirmarTrocaSenha = async function () {
-    const nova = document.getElementById("novaSenha").value;
-    const confirma = document.getElementById("confirmarNovaSenha").value;
-    const msg = document.getElementById("msgTrocaSenha");
-
-    if (nova !== confirma) {
-      msg.innerText = "❌ As senhas não coincidem!";
-      return;
-    }
-
-    if (nova === "123456") {
-      msg.innerText = "❌ Por favor, escolha uma senha diferente de 123456";
-      return;
-    }
-
-    const usuario = window.usuarioLogando;
-    if (!usuario) {
-      alert("Erro de sessão. Faça login novamente.");
-      window.location.reload();
-      return;
-    }
-
-    try {
-      msg.innerText = "⌛ Salvando na nuvem...";
-      usuario.senha = nova;
-
-      // 💾 ATUALIZA NO FIRESTORE
-      await db.collection("usuarios").doc(usuario.email.toLowerCase().trim()).set(usuario);
-
-      // 💾 ATUALIZA NO LOCALSTORAGE (LEGACY)
-      let usuarios = JSON.parse(localStorage.getItem("usuarios_teste")) || [];
-      const index = usuarios.findIndex(u => u.email.toLowerCase().trim() === usuario.email.toLowerCase().trim());
-      if (index !== -1) {
-        usuarios[index].senha = nova;
-        localStorage.setItem("usuarios_teste", JSON.stringify(usuarios));
-      }
-
-      // 🏁 FINALIZA O LOGIN
-      document.getElementById("modalTrocaSenha").style.display = "none";
-      finalizarLogin(usuario);
-      alert("✅ Senha atualizada na nuvem com sucesso!");
-    } catch (error) {
-      console.error("Erro ao trocar senha:", error);
-      msg.innerText = "❌ Erro ao salvar nova senha";
-    }
-  };
 
 
   function toggleSenha() {
@@ -4391,33 +4119,26 @@
     return JSON.parse(localStorage.getItem("usuarios_local")) || [];
   }
 
-  async function carregarUsuarios() {
+  function carregarUsuarios() {
     try {
+      const usuarios = JSON.parse(localStorage.getItem("usuarios_teste")) || [];
       const listaEmpresa = document.getElementById("listaUsuariosEmpresa");
       const listaFornecedores = document.getElementById("listaUsuariosFornecedores");
 
+      // Verifica se os elementos existem no HTML para não dar erro de null
       if (!listaEmpresa || !listaFornecedores) {
         console.warn("Containers de lista não encontrados no HTML.");
         return;
-      }
-
-      // 🔄 BUSCA NO FIRESTORE (TEMPO REAL)
-      let usuarios = [];
-      try {
-        const snapshot = await db.collection("usuarios").get();
-        usuarios = snapshot.docs.map(doc => doc.data());
-        localStorage.setItem("usuarios_teste", JSON.stringify(usuarios));
-      } catch (e) {
-        console.warn("Erro ao buscar usuários do Firebase, usando local:", e);
-        usuarios = JSON.parse(localStorage.getItem("usuarios_teste")) || [];
       }
 
       listaEmpresa.innerHTML = "";
       listaFornecedores.innerHTML = "";
 
       usuarios.forEach((u, index) => {
+        // Pula se o usuário estiver corrompido
         if (!u) return;
 
+        // Garante que variáveis existam para não quebrar o HTML
         const nome = u.nome || "Sem Nome";
         const email = u.email || "Sem E-mail";
         const tipo = (u.tipo || "empresa").toLowerCase();
@@ -4432,7 +4153,7 @@
                 </div>
                 <div class="acoes">
                     <button onclick="editarUsuario(${index})">✏️</button>
-                    <button onclick='window.excluirUsuarioFirestore("${email}")'>🗑️</button>
+                    <button onclick="excluirUsuario(${index})">🗑️</button>
                 </div>
             `;
 
@@ -4443,7 +4164,7 @@
         }
       });
     } catch (erro) {
-      console.error("Erro ao carregar usuários:", erro);
+      console.error("Erro ao carregar usuários, mas a tela não vai ficar preta:", erro);
     }
   }
 
@@ -4553,37 +4274,21 @@
     });
   }
 
-  async function criarUsuario() {
+  function criarUsuario() {
     const nome = document.getElementById("userNome").value.trim();
     const email = document.getElementById("userEmail").value.trim();
     const senha = document.getElementById("userSenha").value.trim();
     const tipo = document.getElementById("userTipo").value;
 
     if (!nome || !email || !senha || !tipo) {
-      alert("⚠️ Preencha todos os campos");
+      alert("Preencha todos os campos");
       return;
     }
 
-    const normalizedEmail = email.toLowerCase().trim();
-    const novoUsuario = {
-      nome,
-      email: normalizedEmail,
-      senha,
-      tipo
-    };
-
-    // 1. Salva no LocalStorage (Legacy)
     const usuarios = JSON.parse(localStorage.getItem("usuarios_teste")) || [];
-    usuarios.push(novoUsuario);
-    localStorage.setItem("usuarios_teste", JSON.stringify(usuarios));
 
-    // 2. Salva no Firestore (Cloud)
-    try {
-      await db.collection("usuarios").doc(normalizedEmail).set(novoUsuario);
-      console.log("✅ Usuário salvo no Firestore");
-    } catch (e) {
-      console.error("❌ Erro ao salvar usuário no Firestore:", e);
-    }
+    usuarios.push({ nome, email, senha, tipo });
+    localStorage.setItem("usuarios_teste", JSON.stringify(usuarios));
 
     // limpa formulário
     document.getElementById("userNome").value = "";
@@ -4593,8 +4298,13 @@
 
     alert("✅ Usuário criado com sucesso!");
 
-    // 🔑 recarrega listas se abertas
-    carregarUsuarios();
+    // 🔑 só recarrega se alguma lista estiver aberta
+    if (
+      document.getElementById("listaUsuariosEmpresa")?.style.display === "block" ||
+      document.getElementById("listaUsuariosFornecedores")?.style.display === "block"
+    ) {
+      carregarUsuarios();
+    }
   }
 
 
@@ -4704,121 +4414,28 @@
     return false;
   }
 
-  async function excluirUsuarioFirestore(email) {
-    if (!confirm(`Deseja realmente excluir o usuário ${email}?`)) return;
-
-    try {
-      const emailCaminho = email.toLowerCase().trim();
-
-      // 1. Remove da coleção de Usuários
-      await db.collection("usuarios").doc(emailCaminho).delete();
-
-      // 🔥 2. BUSCA E REMOVE NA COLEÇÃO DE FORNECEDORES (BUSCA MULTI-TIPO)
-      try {
-        // Query 1: E-mail minúsculo no campo 'email'
-        const snapshot1 = await db.collection("fornecedores").where("email", "==", emailCaminho).get();
-        // Query 2: E-mail original no campo 'email'
-        const snapshot2 = await db.collection("fornecedores").where("email", "==", email.trim()).get();
-        // Query 3: E-mail minúsculo no campo 'emails' (plural)
-        const snapshot3 = await db.collection("fornecedores").where("emails", "==", emailCaminho).get();
-        // Query 4: E-mail original no campo 'emails'
-        const snapshot4 = await db.collection("fornecedores").where("emails", "==", email.trim()).get();
-
-        const batch = db.batch();
-        [snapshot1, snapshot2, snapshot3, snapshot4].forEach(snap => {
-          snap.docs.forEach(doc => batch.delete(doc.ref));
-        });
-
-        // Tenta também pelo ID direto (caso o ID do doc seja o email)
-        batch.delete(db.collection("fornecedores").doc(emailCaminho));
-        batch.delete(db.collection("fornecedores").doc(email.trim()));
-
-        await batch.commit();
-        console.log(`✅ Fornecedores vinculados removidos via busca multivariada.`);
-
-      } catch (fErr) {
-        console.warn("Aviso ao buscar/remover fornecedor vinculado:", fErr);
-      }
-
-      // 3. Local Cleanup Total (Limpa todas as chaves possíveis)
-      const chavesLimpar = ["usuarios_teste", "usuarios_local", "usuario_logado"];
-      chavesLimpar.forEach(key => {
-        let raw = localStorage.getItem(key) || sessionStorage.getItem(key);
-        if (raw) {
-          try {
-            let dados = JSON.parse(raw);
-            if (Array.isArray(dados)) {
-              dados = dados.filter(u => (u.email || "").toLowerCase().trim() !== emailCaminho);
-              localStorage.setItem(key, JSON.stringify(dados));
-            } else if (dados.email && dados.email.toLowerCase().trim() === emailCaminho) {
-              localStorage.removeItem(key);
-              sessionStorage.removeItem(key);
-            }
-          } catch (e) { }
-        }
-      });
-
-      // 4. Limpa também o fornecedor local
-      let fornecedoresLocal = JSON.parse(localStorage.getItem("fornecedores")) || [];
-      fornecedoresLocal = fornecedoresLocal.filter(f =>
-        (f.email || "").toLowerCase().trim() !== emailCaminho &&
-        (f.emails || "").toLowerCase().trim() !== emailCaminho
-      );
-      localStorage.setItem("fornecedores", JSON.stringify(fornecedoresLocal));
-
-      alert("✅ Usuário e todos os registros vinculados foram eliminados definitivamente!");
-      carregarUsuarios();
-      if (typeof mostrarListaFornecedores === "function") mostrarListaFornecedores();
-    } catch (e) {
-      console.error("Erro ao excluir usuário:", e);
-      alert("❌ Erro ao excluir usuário do Firebase.");
-    }
-  }
-  window.excluirUsuarioFirestore = excluirUsuarioFirestore;
-
   function excluirUsuario(index) {
-    // Mantido por compatibilidade se algo chamar via index, mas redireciona para o novo fluxo
-    const usuarios = JSON.parse(localStorage.getItem("usuarios_teste")) || [];
-    const u = usuarios[index];
-    if (u && u.email) {
-      excluirUsuarioFirestore(u.email);
-    } else {
-      // Se não tem email, remove só local
-      usuarios.splice(index, 1);
-      localStorage.setItem("usuarios_teste", JSON.stringify(usuarios));
-      carregarUsuarios();
-    }
+    if (!confirm("Deseja realmente excluir este usuário?")) return;
+
+    let usuarios = JSON.parse(localStorage.getItem("usuarios_teste")) || [];
+    usuarios.splice(index, 1);
+
+    localStorage.setItem("usuarios_teste", JSON.stringify(usuarios));
+    carregarUsuarios();
   }
 
   function editarUsuario(index) {
-    const usuarios = JSON.parse(localStorage.getItem("usuarios_teste")) || [];
+    let usuarios = JSON.parse(localStorage.getItem("usuarios_teste")) || [];
     const u = usuarios[index];
     if (!u) return;
 
-    // Popula o formulário de cadastro
-    const inputNome = document.getElementById("userNome");
-    const inputEmail = document.getElementById("userEmail");
-    const inputSenha = document.getElementById("userSenha");
-    const inputTipo = document.getElementById("userTipo");
+    document.getElementById("userNome").value = u.nome;
+    document.getElementById("userEmail").value = u.email;
+    document.getElementById("userSenha").value = u.senha;
+    document.getElementById("userTipo").value = u.tipo;
 
-    if (inputNome) inputNome.value = u.nome || "";
-    if (inputEmail) {
-      inputEmail.value = u.email || "";
-      // Atribui ao atributo customizado para controle de alteração de e-mail se necessário
-      inputEmail.dataset.oldEmail = u.email || "";
-    }
-    if (inputSenha) inputSenha.value = u.senha || "";
-    if (inputTipo) inputTipo.value = u.tipo || "";
-
-    // Rola para o topo do card de gestão de usuários (onde está o form)
-    const card = document.getElementById("cardGerenciarUsuarios");
-    if (card) {
-      card.scrollIntoView({ behavior: "smooth" });
-    } else {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
-
-    console.log(`✏️ Editando usuário: ${u.email}. O salvamento na nuvem ocorrerá ao clicar em "Criar Usuário" (Upsert).`);
+    usuarios.splice(index, 1);
+    localStorage.setItem("usuarios_teste", JSON.stringify(usuarios));
   }
 
   function sair() {
@@ -4891,20 +4508,6 @@
   /* ======================================================
      NAVEGAÇÃO (ÚNICA)
   ====================================================== */
-
-  function fecharTodasAsSecoes() {
-    // Esconde todas as seções
-    document.querySelectorAll("section").forEach(sec => {
-      sec.style.display = "none";
-    });
-    // Esconde todos os modais
-    document.querySelectorAll(".modal").forEach(m => {
-      m.style.display = "none";
-    });
-    // Garante que o scroll do corpo seja liberado
-    document.body.style.overflow = "auto";
-  }
-  window.fecharTodasAsSecoes = fecharTodasAsSecoes;
 
   function voltarMenu() {
     fecharTodasAsSecoes();
@@ -5240,17 +4843,9 @@
     carregarMateriaisParaCotacao();
   }
 
-  async function carregarMateriaisParaCotacao() {
+  function carregarMateriaisParaCotacao() {
     const lista = document.getElementById("listaMateriaisCotacao");
-
-    let materiais = [];
-    try {
-      const snapshot = await db.collection("materiais").get();
-      materiais = snapshot.docs.map(doc => doc.data());
-      localStorage.setItem("materiais", JSON.stringify(materiais));
-    } catch (e) {
-      materiais = JSON.parse(localStorage.getItem("materiais")) || [];
-    }
+    const materiais = JSON.parse(localStorage.getItem("materiais")) || [];
 
     lista.innerHTML = "";
 
@@ -5301,17 +4896,9 @@
     carregarServicosParaCotacao();
   }
 
-  async function carregarServicosParaCotacao() {
+  function carregarServicosParaCotacao() {
     const lista = document.getElementById("listaServicosCotacao");
-
-    let servicos = [];
-    try {
-      const snapshot = await db.collection("servicos").get();
-      servicos = snapshot.docs.map(doc => doc.data());
-      localStorage.setItem("servicos", JSON.stringify(servicos));
-    } catch (e) {
-      servicos = JSON.parse(localStorage.getItem("servicos")) || [];
-    }
+    const servicos = JSON.parse(localStorage.getItem("servicos")) || [];
 
     lista.innerHTML = "";
 
@@ -5385,45 +4972,10 @@
   `).join("");
   }
 
-  // carrega todos os fornecedores (FIREBASE)
-  async function carregarFornecedoresModal() {
-    try {
-      const snapshot = await db.collection("fornecedores").get();
-      // 🔥 MAPEIA COM O ID DO DOCUMENTO (DOCID)
-      let listaCrua = snapshot.docs.map(doc => ({
-        docId: doc.id,
-        ...doc.data()
-      }));
-
-      // 🔥 DEDUPLICAÇÃO AGRESSIVA (NOME + EMAIL) - Case Insensitive
-      const mapaDeduplicado = new Map();
-      listaCrua.forEach(f => {
-        const emailKey = (f.email || f.emails || "").toLowerCase().trim();
-        const nomeKey = (f.nome || "").toLowerCase().trim();
-
-        if (emailKey && !mapaDeduplicado.has(emailKey)) {
-          mapaDeduplicado.set(emailKey, f);
-        } else if (nomeKey && !mapaDeduplicado.has(nomeKey)) {
-          // Se já tem um pelo e-mail, não adiciona pelo nome se o nome for igual
-          const jaExistePorNome = Array.from(mapaDeduplicado.values()).some(existing =>
-            (existing.nome || "").toLowerCase().trim() === nomeKey
-          );
-          if (!jaExistePorNome) {
-            mapaDeduplicado.set(nomeKey, f);
-          }
-        }
-      });
-      const listaForn = Array.from(mapaDeduplicado.values());
-
-      // Sincroniza LS
-      localStorage.setItem("fornecedores", JSON.stringify(listaForn));
-
-      renderizarFornecedoresModal(listaForn);
-    } catch (e) {
-      console.warn("Erro ao buscar fornecedores do Firebase, usando local:", e);
-      const fornecedores = JSON.parse(localStorage.getItem("fornecedores")) || [];
-      renderizarFornecedoresModal(fornecedores);
-    }
+  // carrega todos os fornecedores
+  function carregarFornecedoresModal() {
+    const fornecedores = JSON.parse(localStorage.getItem("fornecedores")) || [];
+    renderizarFornecedoresModal(fornecedores);
   }
 
   // confirma seleção
@@ -5551,39 +5103,23 @@
     input.multiple = true;
     input.accept = ".pdf,.jpg,.png,.xml";
 
-    input.onchange = async function (e) {
+    input.onchange = function (e) {
       if (e.target.files.length > 0) {
         const idDoc = `docs_${numeroCotacao}`;
-        const usuario = getUsuarioLogado();
+        const arquivosAtuais = JSON.parse(localStorage.getItem(idDoc)) || [];
 
-        for (const file of Array.from(e.target.files)) {
-          try {
-            console.log(`📤 Enviando ${file.name} para Storage...`);
-            const storageRef = storage.ref(`financeiro/${numeroCotacao}/${Date.now()}_${file.name}`);
-            const uploadTask = await storageRef.put(file);
-            const downloadURL = await uploadTask.ref.getDownloadURL();
+        Array.from(e.target.files).forEach(file => {
+          // Simulação de upload (apenas nome e data por limitações do browser/localStorage)
+          arquivosAtuais.push({
+            nome: file.name,
+            tipo: tipoDoc, // Salva o tipo (Nota ou Boleto)
+            data: new Date().toLocaleString(),
+            tamanho: (file.size / 1024).toFixed(2) + " KB"
+          });
+        });
 
-            const novoDoc = {
-              nome: file.name,
-              tipo: tipoDoc,
-              data: new Date().toLocaleString(),
-              tamanho: (file.size / 1024).toFixed(2) + " KB",
-              url: downloadURL,
-              usuario: usuario.nome
-            };
-
-            // Salva referência no Firestore
-            const docRef = db.collection("documentos_cotacao").doc(idDoc);
-            const currentDocs = (await docRef.get()).data()?.arquivos || [];
-            currentDocs.push(novoDoc);
-            await docRef.set({ arquivos: currentDocs });
-
-          } catch (error) {
-            console.error("Erro no upload financeiro:", error);
-            alert(`Falha ao subir o arquivo ${file.name}`);
-          }
-        }
-        alert(`✅ ${tipoDoc} anexado(a) com sucesso na nuvem!`);
+        localStorage.setItem(idDoc, JSON.stringify(arquivosAtuais));
+        alert(`✅ ${tipoDoc} anexado(a) com sucesso!`);
       }
     };
 
@@ -5602,131 +5138,103 @@
     const idDoc = `docs_${numClean}`;
     let arquivos = [];
 
-    // 1. Busca documentos (FLEXÍVEL: FIRESTORE + LOCAL)
+    // 1. Busca documentos MANUAIS (Financeiro/Upload)
     try {
-      // Tenta Firestore primeiro
-      const snapshot = await db.collection("documentos_cotacao").doc(idDoc).get();
-      if (snapshot.exists) {
-        arquivos = snapshot.data().arquivos || [];
-      } else {
-        // Fallback local (IDB ou LS)
-        arquivos = await dbDocs.buscar(idDoc);
-        if (!arquivos) {
-          arquivos = JSON.parse(localStorage.getItem(idDoc)) || [];
+      arquivos = await dbDocs.buscar(idDoc);
+    } catch (e) { console.warn("Erro DB", e); }
+
+    if (!arquivos) {
+      arquivos = JSON.parse(localStorage.getItem(idDoc)) || [];
+    }
+
+    // 2. Busca documentos da COTAÇÃO (se existirem nos dados da cotação)
+    const cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
+    const cotacao = cotacoes.find(c => c.numero === numClean || c.id === numClean || c.numero === numeroCotacao); // Tenta match robusto
+
+    if (cotacao && Array.isArray(cotacao.anexos)) {
+      cotacao.anexos.forEach(anexo => {
+        // Evita duplicatas (se já vieram do manual)
+        const jaExiste = arquivos.some(a => a.nome === anexo.nome && a.tamanho === anexo.tamanho);
+        if (!jaExiste) {
+          arquivos.push({
+            nome: anexo.nome,
+            tipo: "Anexo Cotação",
+            data: cotacao.dataCriacao || new Date().toLocaleDateString(),
+            tamanho: anexo.tamanho || "desc.",
+            usuario: "Comprador (Origem)", // Identifica que veio da cotação
+            base64: anexo.base64
+          });
         }
-      }
+      });
+    }
 
-      // 2. Busca documentos da COTAÇÃO (se existirem nos dados da cotação)
-      const cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
-      const cotacao = cotacoes.find(c => c.numero === numClean || c.id === numClean || c.numero === numeroCotacao); // Tenta match robusto
+    // Filter by user if filtered
+    const arquivosExibir = filtroUsuario
+      ? arquivos.filter(a => (a.usuario || "").toLowerCase() === filtroUsuario.toLowerCase())
+      : arquivos;
 
-      if (cotacao && Array.isArray(cotacao.anexos)) {
-        cotacao.anexos.forEach(anexo => {
-          // Evita duplicatas (se já vieram do manual)
-          const jaExiste = arquivos.some(a => a.nome === anexo.nome && a.tamanho === anexo.tamanho);
-          if (!jaExiste) {
-            arquivos.push({
-              nome: anexo.nome,
-              tipo: "Anexo Cotação",
-              data: cotacao.dataCriacao || new Date().toLocaleDateString(),
-              tamanho: anexo.tamanho || "desc.",
-              usuario: "Comprador (Origem)", // Identifica que veio da cotação
-              base64: anexo.base64
-            });
-          }
-        });
-      }
+    if (arquivosExibir.length === 0) {
+      alert("📭 Nenhum documento encontrado" + (filtroUsuario ? " para este fornecedor." : "."));
+      return;
+    }
 
-      // Filter by user if filtered
-      const arquivosExibir = filtroUsuario
-        ? arquivos.filter(a => (a.usuario || "").toLowerCase() === filtroUsuario.toLowerCase())
-        : arquivos;
+    // Cria/Reutiliza um modal dinâmico simples
+    let modalDocs = document.getElementById('modalDocsFinanceiro');
 
-      if (arquivosExibir.length === 0) {
-        alert("📭 Nenhum documento encontrado" + (filtroUsuario ? " para este fornecedor." : "."));
-        return;
-      }
-
-      // Cria/Reutiliza um modal dinâmico simples
-      let modalDocs = document.getElementById('modalDocsFinanceiro');
-
-      if (!modalDocs) {
-        modalDocs = document.createElement('div');
-        modalDocs.id = 'modalDocsFinanceiro';
-        modalDocs.className = 'modal';
-        modalDocs.style.zIndex = '2147483647'; // 🔥 GARANTE TOPO ABSOLUTO
-        modalDocs.style.display = 'none'; // garante start
-        modalDocs.innerHTML = `
+    if (!modalDocs) {
+      modalDocs = document.createElement('div');
+      modalDocs.id = 'modalDocsFinanceiro';
+      modalDocs.className = 'modal';
+      modalDocs.style.zIndex = '2147483647'; // 🔥 GARANTE TOPO ABSOLUTO
+      modalDocs.style.display = 'none'; // garante start
+      modalDocs.innerHTML = `
         <div class="modal-content" style="max-width:500px;">
            <span class="close-btn" onclick="document.getElementById('modalDocsFinanceiro').style.display='none'">&times;</span>
            <h3 style="color:#661155; margin-bottom:15px;">📂 Documentos da Cotação</h3>
            <div id="listaDocsContent" style="max-height:300px; overflow-y:auto;"></div>
         </div>
       `;
-        document.body.appendChild(modalDocs);
-      }
+      document.body.appendChild(modalDocs);
+    }
 
-      const listaDiv = modalDocs.querySelector('#listaDocsContent');
-      listaDiv.innerHTML = arquivosExibir.map((a, i) => `
+    const listaDiv = modalDocs.querySelector('#listaDocsContent');
+    listaDiv.innerHTML = arquivosExibir.map((a, i) => `
       <div style="background:#1a1a1a; padding:10px; margin-bottom:8px; border-radius:5px; border:1px solid #333; display:flex; justify-content:space-between; align-items:center;">
          <div>
             <strong style="color:white; display:block;">${a.nome}</strong>
             <small style="color:#aaa;">${a.tipo} • ${a.tamanho} • ${a.data}</small><br>
             ${a.usuario ? `<small style="color:#0dcaf0;">👤 Enviado por: ${a.usuario}</small>` : ''}
-            ${a.url ? `<br><small style="color:#00ff99;">☁️ Arquivo em Nuvem</small>` : ''}
          </div>
-         <button onclick="abrirArquivoAnexo('${numeroCotacao}', ${i})" style="background:#661155; color:white; border:none; border-radius:4px; padding:6px 12px; cursor:pointer; font-weight:bold;">
-            ${a.url ? '👁️ Abrir' : '⬇️ Baixar'}
+         <button onclick="baixarDocumentoBase64('${numeroCotacao}', ${i})" style="background:#661155; color:white; border:none; border-radius:4px; padding:5px 10px; cursor:pointer;">
+            ⬇️ Baixar
          </button>
       </div>
     `).join('');
 
-      modalDocs.style.display = 'flex';
-    } catch (e) {
-      console.error("Erro visualizarDocumentos:", e);
-      alert("Erro ao carregar documentos.");
-    }
+    modalDocs.style.display = 'flex';
   };
 
-  window.abrirArquivoAnexo = async function (numeroCotacao, index) {
+  window.baixarDocumentoBase64 = async function (numeroCotacao, index) {
     const idDoc = `docs_${numeroCotacao}`;
-    let arquivos = [];
 
-    // Tenta Firestore
-    try {
-      const snapshot = await db.collection("documentos_cotacao").doc(idDoc).get();
-      if (snapshot.exists) {
-        arquivos = snapshot.data().arquivos || [];
-      }
-    } catch (e) { }
-
-    // Fallback local se não achou no firestore e o index for inválido lá
-    if (!arquivos[index]) {
-      arquivos = await dbDocs.buscar(idDoc);
-      if (!arquivos) {
-        arquivos = JSON.parse(localStorage.getItem(idDoc)) || [];
-      }
+    // Tenta IndexedDB primeiro, depois localStorage (legado)
+    let arquivos = await dbDocs.buscar(idDoc);
+    if (!arquivos) {
+      arquivos = JSON.parse(localStorage.getItem(idDoc)) || [];
     }
-
     const arquivo = arquivos[index];
-    if (!arquivo) return alert("Arquivo não encontrado.");
 
-    // SE TEM URL (FIREBASE STORAGE)
-    if (arquivo.url) {
-      window.open(arquivo.url, '_blank');
+    if (!arquivo || !arquivo.base64) {
+      alert("⚠️ O conteúdo deste arquivo não foi salvo (versão antiga).");
       return;
     }
 
-    // SE TEM BASE64 (LEGADO)
-    if (arquivo.base64) {
-      const win = window.open();
-      if (win) {
-        win.document.write(`<iframe src="${arquivo.base64}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`);
-      } else {
-        alert('🚫 Pop-up bloqueado! Permita pop-ups para visualizar o arquivo.');
-      }
+    // Abre em nova aba
+    const win = window.open();
+    if (win) {
+      win.document.write(`<iframe src="${arquivo.base64}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`);
     } else {
-      alert("⚠️ O conteúdo deste arquivo não está disponível na nuvem nem localmente.");
+      alert('🚫 Pop-up bloqueado! Permita pop-ups para visualizar o arquivo.');
     }
   };
 
@@ -5945,49 +5453,55 @@
     input.click();
   };
 
-  window.enviarArquivoManual = async function () {
+  window.enviarArquivoManual = function () {
     if (!arquivoSelecionadoTemp) return;
 
     const { files, numeroCotacao, tipo } = arquivoSelecionadoTemp;
 
-    // Processa todos os arquivos (CLOUD STORAGE)
-    const uploadPromises = files.map(async file => {
-      try {
-        const storageRef = storage.ref(`financeiro/${numeroCotacao}/${Date.now()}_${file.name}`);
-        const uploadTask = await storageRef.put(file);
-        const downloadURL = await uploadTask.ref.getDownloadURL();
-
-        return {
-          nome: file.name,
-          tipo: tipo,
-          data: new Date().toLocaleString(),
-          tamanho: (file.size / 1024).toFixed(2) + " KB",
-          url: downloadURL,
-          usuario: getUsuarioLogado()?.nome || "Desconhecido"
-        };
-      } catch (e) {
-        console.error("Erro upload ind:", e);
-        return null;
-      }
+    // Helper Promise para ler arquivo
+    const lerArquivo = (file) => new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve({
+        nome: file.name,
+        tipo: tipo, // Nota ou Boleto
+        data: new Date().toLocaleString(),
+        tamanho: (file.size / 1024).toFixed(2) + " KB",
+        base64: reader.result
+      });
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
     });
 
-    try {
-      let novosArquivos = await Promise.all(uploadPromises);
-      novosArquivos = novosArquivos.filter(a => a !== null);
-
+    // Processa todos os arquivos
+    Promise.all(files.map(lerArquivo)).then(async arquivosLidos => {
       const idDoc = `docs_${numeroCotacao}`;
-      const docRef = db.collection("documentos_cotacao").doc(idDoc);
-      const snap = await docRef.get();
-      const atuais = snap.exists ? (snap.data().arquivos || []) : [];
 
-      await docRef.set({ arquivos: [...atuais, ...novosArquivos] });
+      // Tenta IndexedDB primeiro, depois localStorage (legado)
+      let arquivosAtuais = await dbDocs.buscar(idDoc);
+      if (!arquivosAtuais) {
+        arquivosAtuais = JSON.parse(localStorage.getItem(idDoc)) || [];
+      }
 
-      alert(`✅ ${novosArquivos.length} arquivo(s) enviados com sucesso para a nuvem!`);
+      // Pega usuário logado
+      const usuarioLogado = getUsuarioLogado();
+      const nomeUsuario = usuarioLogado ? usuarioLogado.nome : "Desconhecido";
+
+      arquivosLidos.forEach(arq => {
+        arq.usuario = nomeUsuario; // Adiciona usuário
+        arquivosAtuais.push(arq);
+      });
+
+      await dbDocs.salvar(idDoc, arquivosAtuais);
+
+      alert(`✅ ${arquivosLidos.length} arquivo(s) enviados com sucesso para a cotação ${numeroCotacao} (IndexedDB)!`);
       cancelarUploadManual();
-    } catch (err) {
+
+      // Se estiver na tela de lista do admin, poderia recarregar se quisesse, 
+      // mas o foco aqui é o fornecedor enviando.
+    }).catch(err => {
       console.error(err);
-      alert("❌ Erro ao enviar arquivos para o Firebase.");
-    }
+      alert("❌ Erro ao processar arquivos.");
+    });
   };
 
   window.cancelarUploadManual = function () {
@@ -6080,7 +5594,7 @@
     `).join("");
   };
 
-  window.aprovarPreCadastro = async function (index) {
+  window.aprovarPreCadastro = function (index) {
     const pendentes = JSON.parse(localStorage.getItem("pre_cadastros_fornecedores")) || [];
     const fornecedores = JSON.parse(localStorage.getItem("fornecedores")) || [];
 
@@ -6104,17 +5618,7 @@
     fornecedores.push(novoOficial);
     localStorage.setItem("fornecedores", JSON.stringify(fornecedores));
 
-    // 🔥 SINCRONIZA COM FIRESTORE
-    try {
-      await db.collection("fornecedores").doc(novoOficial.email.toLowerCase().trim()).set(novoOficial);
-      // Remove da coleção de pré-cadastros também
-      await db.collection("pre_cadastros_fornecedores").doc(String(aprovado.id)).delete();
-      console.log("✅ Fornecedor aprovado e sincronizado com Firestore");
-    } catch (e) {
-      console.warn("⚠️ Falha ao sincronizar aprovação com Firestore (Salvou Localmente):", e);
-    }
-
-    // Remove da lista pendente local
+    // Remove da lista pendente
     pendentes.splice(index, 1);
     localStorage.setItem("pre_cadastros_fornecedores", JSON.stringify(pendentes));
 
@@ -6135,7 +5639,7 @@
     carregarFornecedoresPendentes();
   };
 
-  async function salvarFornecedor() {
+  function salvarFornecedor() {
     const nome = document.getElementById("fornNome")?.value.trim();
     const cnpj = document.getElementById("fornCnpj")?.value.trim();
     const endereco = `${document.getElementById("fornLogradouro")?.value || ""} ${document.getElementById("fornNumero")?.value || ""}`.trim();
@@ -6151,46 +5655,27 @@
       return;
     }
 
-    const normalizedEmail = email.toLowerCase().trim();
-    const novoFornecedor = {
+    const fornecedores = JSON.parse(localStorage.getItem("fornecedores")) || [];
+
+    fornecedores.push({
       nome,
       cnpj,
       endereco,
       telefone,
       whats,
-      email: normalizedEmail,
+      email,
       responsavel,
-      tipo,
-      status: "ativo",
-      dataCriacao: new Date().toLocaleString()
-    };
+      tipo
+    });
 
-    const fornecedores = JSON.parse(localStorage.getItem("fornecedores")) || [];
-
-    // Se estiver editando, remove o antigo antes de inserir o novo (ou atualiza se for o mesmo email)
-    if (fornecedorEditando !== null) {
-      fornecedores.splice(fornecedorEditando, 1);
-      fornecedorEditando = null;
-    }
-
-    fornecedores.push(novoFornecedor);
     fornecedores.sort((a, b) => a.nome.localeCompare(b.nome));
     localStorage.setItem("fornecedores", JSON.stringify(fornecedores));
-
-    // 🔥 SINCRONIZA COM FIRESTORE
-    try {
-      await db.collection("fornecedores").doc(email.toLowerCase().trim()).set(novoFornecedor);
-      console.log("✅ Fornecedor sincronizado com Firestore");
-    } catch (e) {
-      console.warn("⚠️ Falha ao sincronizar com Firestore (Salvou Localmente):", e);
-    }
 
     alert("✅ Fornecedor salvo com sucesso!");
 
     // limpa formulário
     [
       "fornNome", "fornCnpj", "fornLogradouro", "fornNumero",
-      "fornBairro", "fornCidade", "fornCep",
       "fornTelefone", "fornWhats", "fornEmails",
       "fornResponsavel", "fornTipo"
     ].forEach(id => {
@@ -6201,14 +5686,13 @@
     // atualiza lista se estiver aberta
     if (document.getElementById("listaFornecedoresCadastrados")?.style.display === "block") {
       mostrarListaFornecedores();
-      // Oculta e mostra novamente para forçar atualização completa se necessário
       mostrarListaFornecedores();
     }
   }
   /* ======================================================
       📢 PUBLICAR COTAÇÃO (VERSÃO COMPLETA E CORRIGIDA)
   ====================================================== */
-  async function publicarCotacao(tipo = "manual") {
+  function publicarCotacao(tipo = "manual") {
     let fechamento = "";
     let produtos = [];
     let descricao = "";
@@ -6317,14 +5801,8 @@
       cotacoes.push(novaCotacao);
       localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
 
-      // 🔥 SINCRONIZA COM FIRESTORE
-      await db.collection("cotacoes").doc(String(novaCotacao.numero)).set(novaCotacao);
-      console.log("✅ Cotação salva no Firestore");
-
       // 🔔 NOTIFICAÇÃO PARA FORNECEDORES
-      if (typeof dispararNotificacaoFornecedores === "function") {
-        dispararNotificacaoFornecedores(novaCotacao);
-      }
+      dispararNotificacaoFornecedores(novaCotacao);
 
       window.fornecedoresSelecionadosTemp = [];
       numeroCotacaoAtual = null;
@@ -6340,8 +5818,7 @@
       }, 100);
 
     } catch (e) {
-      console.error("Erro ao salvar:", e);
-      alert("⚠️ Erro ao publicar cotação. Verifique sua conexão.");
+      console.error("Erro ao salvar no LocalStorage:", e);
     }
   }
 
@@ -6439,28 +5916,16 @@
     if (listaAtiva) listaAtiva.style.display = "block";
     if (btnAtivo) btnAtivo.style.background = "#661155";
 
-    carregarCotacoes(tipo).catch(console.error);
+    carregarCotacoes(tipo);
   }
 
 
 
-  async function carregarCotacoes(tipo = "abertas") {
+  function carregarCotacoes(tipo = "abertas") {
     verificarEncerradas();
 
     const usuario = getUsuarioLogado();
-    if (!usuario) return;
-
-    // 🔍 BUSCA NO FIRESTORE (TEMPO REAL)
-    let cotacoes = [];
-    try {
-      const snapshot = await db.collection("cotacoes").get();
-      cotacoes = snapshot.docs.map(doc => doc.data());
-      // Mantém LS atualizado para compatibilidade
-      localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
-    } catch (e) {
-      console.warn("Erro ao buscar do Firebase, usando local:", e);
-      cotacoes = getCotacoes();
-    }
+    const cotacoes = getCotacoes();
 
     const div = document.getElementById(
       "lista" + tipo.charAt(0).toUpperCase() + tipo.slice(1)
@@ -7029,7 +6494,25 @@
   }
 
 
-  /* function abrirTela movida para consolidação no final do script */
+  function abrirTela(id) {
+    // Fecha todas as sections
+    document.querySelectorAll("section").forEach(sec => {
+      sec.style.display = "none";
+    });
+
+    // Fecha todos os modais
+    document.querySelectorAll(".modal").forEach(m => {
+      m.style.display = "none";
+    });
+
+    const tela = document.getElementById(id);
+    if (!tela) {
+      console.error("Tela não encontrada:", id);
+      return;
+    }
+
+    tela.style.display = "block";
+  }
 
   /* ======================================================
      📤 ENVIAR RESPOSTA — DEFINITIVO (SEM VAZAMENTO)
@@ -7037,7 +6520,7 @@
   /* ======================================================
      📤 ENVIAR RESPOSTA — COM UPLOAD DE ARQUIVO (ASYNC)
   ====================================================== */
-  window.salvarRespostaComAnexo = async function (anexoArg = null) {
+  window.salvarRespostaComAnexo = function (anexoArg = null) {
     const fileInput = document.getElementById("respAnexo");
 
     // 🕵️ DEBUG PARA O USUÁRIO (REMOVIDO PARA PRODUÇÃO)
@@ -7096,34 +6579,28 @@
       });
 
       /* ======================
-         📎 SALVA ANEXO NOS DOCS DA COTAÇÃO (CLOUD)
-      ===================== */
+         📎 SALVA ANEXO NOS DOCS DA COTAÇÃO (INDEXEDDB)
+      ====================== */
       if (anexoFinal) {
         const docsKey = `docs_${cotacao.numero}`;
 
-        // Agora salvamos a referência do anexo no Firestore também para histórico
-        try {
-          const docRef = db.collection("documentos_cotacao").doc(docsKey);
-          const currentDocs = (await docRef.get()).data()?.arquivos || [];
-          currentDocs.push(anexoFinal);
-          await docRef.set({ arquivos: currentDocs });
-
-          console.log("✅ Referência do arquivo salva no Firestore");
-        } catch (e) {
-          console.warn("Falha ao salvar referência no Firestore, tentando Local:", e);
-          let docs = await dbDocs.buscar(docsKey) || [];
-          docs.push(anexoFinal);
-          await dbDocs.salvar(docsKey, docs);
+        // Tenta buscar o array atual (IDB ou Legado)
+        let docs = await dbDocs.buscar(docsKey);
+        if (!docs) {
+          docs = JSON.parse(localStorage.getItem(docsKey)) || [];
         }
-      } else {
-        alert("⚠️ AVISO: A resposta foi enviada SEM nenhum anexo!");
-      }
 
-      /* ======================
-         🔒 SINCRONIZA COTAÇÃO NO FIRESTORE
-      ====================== */
-      // Atualiza a cotação no Firestore com a nova resposta
-      await db.collection("cotacoes").doc(String(cotacao.numero)).set(cotacao);
+        // Garante que o anexo tenha o usuário correto
+        anexoFinal.usuario = usuario.nome;
+
+        docs.push(anexoFinal);
+
+        // Salva no IndexedDB
+        await dbDocs.salvar(docsKey, docs);
+        alert(`Arquivo "${anexoFinal.nome}" salvo com sucesso (IndexedDB)!`);
+      } else {
+        alert("⚠️ AVISO: A resposta foi enviada SEM nenhum anexo!\nSe você anexou um arquivo, ele não foi detectado.");
+      }
 
       /* ======================
          🔒 ATUALIZA RESPOSTAS
@@ -7188,37 +6665,29 @@
       }
     };
 
-    // 3. Processamento do Arquivo (FÍSICO NO STORAGE)
-    const file = (!anexoArg && fileInput && fileInput.files.length > 0) ? fileInput.files[0] : null;
+    // 3. Leitura do Arquivo (Se houver)
+    let file = null;
+    if (!anexoArg && fileInput && fileInput.files.length > 0) {
+      file = fileInput.files[0];
+    }
 
     if (file) {
-      try {
-        const msg = document.getElementById("msgSalvarResposta") || { innerText: "" };
-        msg.innerText = "⌛ Fazendo upload do arquivo para nuvem...";
-
-        // Caminho no Storage: cotacoes/NUMERO/EMAIL_NOMEARQUIVO
-        const usuario = getUsuarioLogado();
-        const storageRef = storage.ref(`cotacoes/${cotacaoRespostaAtual}/${usuario.email}_${file.name}`);
-
-        const uploadTask = await storageRef.put(file);
-        const downloadURL = await uploadTask.ref.getDownloadURL();
-
+      const reader = new FileReader();
+      reader.onload = function (e) {
         const novoAnexo = {
           nome: file.name,
           tipo: "Orçamento",
           data: new Date().toLocaleString(),
           tamanho: (file.size / 1024).toFixed(2) + " KB",
-          url: downloadURL, // Link real da nuvem
-          usuario: usuario.nome
+          base64: e.target.result,
+          usuario: getUsuarioLogado().nome
         };
-
-        await processarSalvamento(novoAnexo);
-      } catch (error) {
-        console.error("Erro no upload:", error);
-        alert("❌ Falha ao enviar arquivo para o servidor. Verifique sua conexão.");
-      }
+        processarSalvamento(novoAnexo);
+      };
+      reader.readAsDataURL(file);
     } else {
-      await processarSalvamento(anexoArg);
+      // Se não tem arquivo novo, usa o arg (pode ser null)
+      processarSalvamento(anexoArg);
     }
   };
 
@@ -7494,19 +6963,9 @@
   /* ======================================================
      TOGGLE LISTA RESPONDIDAS (FILTRO)
   ====================================================== */
-  window.toggleListaRespondidas = async function (modo) {
+  window.toggleListaRespondidas = function (modo) {
     const usuario = getUsuarioLogado();
     if (!usuario) return;
-
-    // 🔥 SINCRONIZA COTAÇÕES COM FIRESTORE ANTES DE RENDERIZAR
-    try {
-      const snapshot = await db.collection("cotacoes").get();
-      const listaCotacoes = snapshot.docs.map(doc => doc.data());
-      localStorage.setItem("cotacoes", JSON.stringify(listaCotacoes));
-      console.log("✅ Cotações sincronizadas para listagem");
-    } catch (e) {
-      console.warn("⚠️ Usando dados locais para listagem:", e);
-    }
 
     // 1. Reset buttons
     document.querySelectorAll('.btn-status').forEach(btn => btn.classList.remove('ativo'));
@@ -8011,7 +7470,7 @@
   =============================== */
 
   if (typeof window.mostrarListaFornecedores !== "function") {
-    window.mostrarListaFornecedores = async function () {
+    window.mostrarListaFornecedores = function () {
       const listaDiv = document.getElementById("listaFornecedoresCadastrados");
       const tbody = document.getElementById("tabelaFornecedores");
       if (!listaDiv || !tbody) return;
@@ -8023,43 +7482,9 @@
       }
 
       listaDiv.style.display = "block";
-      tbody.innerHTML = "<tr><td colspan='5' style='text-align:center;'>⌛ Carregando fornecedores da nuvem...</td></tr>";
-
-      // 🔥 BUSCA NO FIRESTORE (TEMPO REAL)
-      let fornecedores = [];
-      try {
-        const snapshot = await db.collection("fornecedores").get();
-        // 🔥 MAPEIA COM O ID DO DOCUMENTO (DOCID)
-        const listaCrua = snapshot.docs.map(doc => ({
-          docId: doc.id,
-          ...doc.data()
-        }));
-
-        // 🔥 DEDUPLICAÇÃO AGRESSIVA (Sincronizada com Modal)
-        const mapaDeduplicado = new Map();
-        listaCrua.forEach(f => {
-          const emailKey = (f.email || f.emails || "").toLowerCase().trim();
-          const nomeKey = (f.nome || "").toLowerCase().trim();
-
-          if (emailKey && !mapaDeduplicado.has(emailKey)) {
-            mapaDeduplicado.set(emailKey, f);
-          } else if (nomeKey && !mapaDeduplicado.has(nomeKey)) {
-            const jaExistePorNome = Array.from(mapaDeduplicado.values()).some(existing =>
-              (existing.nome || "").toLowerCase().trim() === nomeKey
-            );
-            if (!jaExistePorNome) mapaDeduplicado.set(nomeKey, f);
-          }
-        });
-        fornecedores = Array.from(mapaDeduplicado.values());
-
-        localStorage.setItem("fornecedores", JSON.stringify(fornecedores));
-        console.log("✅ Fornecedores sincronizados para listagem (Deduplicados)");
-      } catch (e) {
-        console.warn("Erro ao buscar fornecedores do Firebase, usando local:", e);
-        fornecedores = JSON.parse(localStorage.getItem("fornecedores")) || [];
-      }
-
       tbody.innerHTML = "";
+
+      const fornecedores = JSON.parse(localStorage.getItem("fornecedores")) || [];
       fornecedores.sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
 
       if (fornecedores.length === 0) {
@@ -8078,14 +7503,14 @@
 
         tr.innerHTML = `
         <td>${f.nome || "-"}</td>
-        <td>${f.endereco || f.logradouro || ""} ${f.numero || ""}</td>
-        <td>${f.whats || f.whatsapp || "-"}</td>
+        <td>${f.logradouro || ""} ${f.numero || ""}</td>
+        <td>${f.whats || "-"}</td>
         <td>${f.responsavel || "-"}</td>
         <td style="text-align:center;">
           <div style="display:flex; justify-content:center; gap:8px;">
             <button onclick="verFichaFornecedor(${index})" title="Ver ficha">👁️</button>
             <button onclick="editarFornecedor(${index})" title="Editar">✏️</button>
-            <button onclick='window.excluirFornecedor(${index})' title="Excluir">🗑️</button>
+            <button onclick="excluirFornecedor(${index})" title="Excluir">🗑️</button>
           </div>
         </td>
       `;
@@ -8129,56 +7554,16 @@
   =============================== */
 
   if (typeof window.excluirFornecedor !== "function") {
-    window.excluirFornecedor = async function (index) {
+    window.excluirFornecedor = function (index) {
+      if (!confirm("Excluir fornecedor?")) return;
+
       const fornecedores = JSON.parse(localStorage.getItem("fornecedores")) || [];
-      const fornecedor = fornecedores[index];
-
-      if (!fornecedor) return;
-
-      const docIdForn = fornecedor.docId;
-      const emailForn = (fornecedor.email || fornecedor.emails || "").toLowerCase().trim();
-      if (!confirm(`Deseja realmente excluir o fornecedor ${fornecedor.nome}?`)) return;
-
-      // 🔥 1. REMOVE NO FIRESTORE (ID DIRETO + QUERY P/ DUPLICADOS)
-      try {
-        const batch = db.batch();
-
-        // A. Remove pelo ID Único do Documento (MAIS SEGURO)
-        if (docIdForn) {
-          batch.delete(db.collection("fornecedores").doc(docIdForn));
-        }
-
-        // B. Remove duplicatas pelo e-mail
-        if (emailForn) {
-          const snap1 = await db.collection("fornecedores").where("email", "==", emailForn).get();
-          const snap2 = await db.collection("fornecedores").where("emails", "==", emailForn).get();
-          snap1.docs.forEach(doc => batch.delete(doc.ref));
-          snap2.docs.forEach(doc => batch.delete(doc.ref));
-
-          // Tenta também pelo e-mail como ID caso tenha sido criado assim
-          batch.delete(db.collection("fornecedores").doc(emailForn));
-        }
-
-        await batch.commit();
-        console.log("✅ Fornecedor eliminado totalmente do Firestore.");
-      } catch (e) {
-        console.error("❌ Erro ao excluir do Firestore:", e);
-      }
-
-      // 2. Local Cleanup
-      const novaLista = fornecedores.filter(f =>
-        (f.email || "").toLowerCase().trim() !== emailForn &&
-        (f.emails || "").toLowerCase().trim() !== emailForn
-      );
-      localStorage.setItem("fornecedores", JSON.stringify(novaLista));
-
-      alert("✅ Fornecedor removido com sucesso!");
+      fornecedores.splice(index, 1);
+      localStorage.setItem("fornecedores", JSON.stringify(fornecedores));
 
       // 🔁 reabre lista atualizada
       mostrarListaFornecedores();
-      if (document.getElementById("listaFornecedoresCadastrados")?.style.display === "block") {
-        mostrarListaFornecedores(); // Toggle Off/On
-      }
+      mostrarListaFornecedores();
     };
   }
 
@@ -8333,48 +7718,6 @@
   }
 
   /* ===============================
-     📦 MATERIAIS – EDITAR / EXCLUIR
-  =============================== */
-
-  function editarMaterial(index) {
-    const materiais = JSON.parse(localStorage.getItem("materiais")) || [];
-    const m = materiais[index];
-    if (!m) return;
-
-    // Preenche formulário
-    document.getElementById("matNome").value = m.nome || "";
-    document.getElementById("matCodigo").value = m.codigo || "";
-    document.getElementById("matEmbalagem").value = m.embalagem || "";
-    document.getElementById("matQtdEmb").value = m.qtdEmb || "";
-
-    // Remove para salvar novamente (edição)
-    materiais.splice(index, 1);
-    localStorage.setItem("materiais", JSON.stringify(materiais));
-
-    // Atualiza lista se aberta
-    const lista = document.getElementById("listaMateriais");
-    if (lista && lista.style.display === "block") {
-      mostrarListaMateriais();
-    }
-
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }
-
-  function excluirMaterial(index) {
-    if (!confirm("❌ Deseja realmente excluir este material?")) return;
-
-    const materiais = JSON.parse(localStorage.getItem("materiais")) || [];
-    materiais.splice(index, 1);
-    localStorage.setItem("materiais", JSON.stringify(materiais));
-
-    // Atualiza lista se aberta
-    const lista = document.getElementById("listaMateriais");
-    if (lista && lista.style.display === "block") {
-      mostrarListaMateriais();
-    }
-  }
-
-  /* ===============================
      🛠️ SERVIÇOS – ABERTURA
   =============================== */
 
@@ -8422,11 +7765,11 @@
 
     if (servicos.length === 0) {
       tabela.innerHTML = `
-        <tr>
+        < tr >
         <td colspan="5" style="text-align:center; padding:10px;">
           Nenhum serviço cadastrado ainda.
         </td>
-        </tr>
+      </tr >
         `;
       return;
     }
@@ -10010,7 +9353,7 @@
     abrirTela("solicitacaoCompra");
   }
 
-  async function enviarSolicitacaoCompra() {
+  function enviarSolicitacaoCompra() {
     const solicitante = document.getElementById("solSolicitante").value.trim();
     const setor = document.getElementById("solSetor").value.trim();
     const tipo = document.getElementById("solTipo").value;
@@ -10018,7 +9361,7 @@
     const anexosInput = document.getElementById("solAnexos");
 
     if (!solicitante || !setor || !tipo) {
-      alert("⚠️ Preencha os dados principais (Solicitante, Setor e Tipo).");
+      alert("Preencha os dados principais da solicitação.");
       return;
     }
 
@@ -10036,16 +9379,9 @@
       }
     });
 
-    // ⏳ EXIBIR LOADING
-    const overlay = document.getElementById("loadingOverlay");
-    const label = document.getElementById("loadingText");
-    if (overlay) {
-      overlay.style.display = "flex";
-      label.innerText = "Preparando envio...";
-    }
-
     /* 📎 ANEXOS */
     const anexos = [];
+
     const novaSolicitacao = {
       id: "SC-" + Date.now(),
       solicitante,
@@ -10059,73 +9395,62 @@
     };
 
     if (anexosInput && anexosInput.files.length > 0) {
+      let lidos = 0;
       const totalFiles = anexosInput.files.length;
 
       for (let i = 0; i < totalFiles; i++) {
         const file = anexosInput.files[i];
-        if (label) label.innerText = `Enviando anexo (${i + 1}/${totalFiles}): ${file.name}`;
+        const reader = new FileReader();
 
-        try {
-          const path = `solicitacoes/${novaSolicitacao.id}/${Date.now()}_${file.name}`;
-          const storageRef = storage.ref(path);
-          const uploadTask = await storageRef.put(file);
-          const downloadURL = await uploadTask.ref.getDownloadURL();
-
-          anexos.push({
+        reader.onload = async e => {
+          const content = e.target.result;
+          const meta = {
             nome: file.name,
             tipo: file.type,
-            tamanho: (file.size / 1024).toFixed(2) + " KB",
-            url: downloadURL
-          });
+            tamanho: file.size,
+            fileKey: `solanexo_${novaSolicitacao.id}_${i}` // Chave única para IndexedDB
+          };
 
-          console.log(`✅ Upload concluído: ${file.name}`);
-        } catch (err) {
-          console.error("❌ Erro no upload:", err);
-          alert(`⚠️ Falha ao enviar o arquivo: ${file.name}. Ele não ficará disponível na nuvem.`);
-        }
+          anexos.push(meta);
+
+          // Salva o conteúdo pesado no IndexedDB
+          try {
+            await dbDocs.salvar(meta.fileKey, content);
+          } catch (err) {
+            console.error("Erro ao salvar anexo no IndexedDB:", err);
+          }
+
+          lidos++;
+          if (lidos === totalFiles) {
+            salvarSolicitacaoFinal(novaSolicitacao);
+          }
+        };
+        reader.readAsDataURL(file);
       }
+    } else {
+      salvarSolicitacaoFinal(novaSolicitacao);
     }
-
-    // 🔥 SALVAMENTO FINAL
-    if (label) label.innerText = "Sincronizando com a nuvem...";
-    await salvarSolicitacaoFinal(novaSolicitacao);
   }
 
 
 
 
-  async function salvarSolicitacaoFinal(novaSolicitacao) {
-    const overlay = document.getElementById("loadingOverlay");
+  function salvarSolicitacaoFinal(novaSolicitacao) {
+    const solicitacoes =
+      JSON.parse(localStorage.getItem("solicitacoes_compra")) || [];
 
-    try {
-      // 1. SALVA NO LOCALSTORAGE (Sempre faz, para redundância rápida)
-      const solicitacoes = JSON.parse(localStorage.getItem("solicitacoes_compra")) || [];
-      solicitacoes.push(novaSolicitacao);
-      localStorage.setItem("solicitacoes_compra", JSON.stringify(solicitacoes));
+    solicitacoes.push(novaSolicitacao);
+    localStorage.setItem("solicitacoes_compra", JSON.stringify(solicitacoes));
 
-      // 2. SALVA NO FIRESTORE (A nuvem que todos veem)
-      if (typeof db !== "undefined") {
-        await db.collection("solicitacoes_compra").doc(novaSolicitacao.id).set(novaSolicitacao);
-        console.log("✅ Solicitação sincronizada com Firebase!");
-      }
+    // 🔔 NOTIFICAÇÃO DE SUCESSO
+    notificarSolicitante(
+      "Requisição Recebida 📝",
+      `Olá ${novaSolicitacao.solicitante}, sua requisição de ${novaSolicitacao.tipo} foi criada com sucesso e já está na fila do departamento de compras.`
+    );
 
-      // 3. NOTIFICAÇÃO E SUCESSO
-      notificarSolicitante(
-        "Requisição Recebida 📝",
-        `Olá ${novaSolicitacao.solicitante}, sua requisição foi criada e já está disponível para o comprador.`
-      );
-
-      if (overlay) overlay.style.display = "none";
-      alert("✅ Solicitação enviada com sucesso para a nuvem!");
-
-      voltarMenu();
-      limparFormularioSolicitacao();
-
-    } catch (err) {
-      console.error("❌ Erro crítico ao salvar:", err);
-      if (overlay) overlay.style.display = "none";
-      alert("❌ ERRO AO ENVIAR: A solicitação não pôde ser salva na nuvem. Verifique sua conexão ou tente novamente.");
-    }
+    alert("✅ Solicitação enviada com sucesso!");
+    voltarMenu();
+    limparFormularioSolicitacao(); // 🧹 Limpa os campos para o próximo
   }
 
   function limparFormularioSolicitacao() {
@@ -10224,23 +9549,12 @@
 
 
 
-  async function carregarSolicitacoesCompra() {
+  function carregarSolicitacoesCompra() {
     const lista = document.getElementById("listaSolicitacoesCompra");
     if (!lista) return;
 
-    // 🔍 BUSCA NO FIRESTORE
-    let solicitacoes = [];
-    try {
-      if (typeof db !== "undefined") {
-        const snapshot = await db.collection("solicitacoes_compra").get();
-        solicitacoes = snapshot.docs.map(doc => doc.data());
-        // Sincroniza local para compatibilidade síncrona se necessário
-        localStorage.setItem("solicitacoes_compra", JSON.stringify(solicitacoes));
-      }
-    } catch (e) {
-      console.warn("Erro ao buscar solicitações do Firebase, usando local:", e);
-      solicitacoes = JSON.parse(localStorage.getItem("solicitacoes_compra")) || [];
-    }
+    const solicitacoes =
+      JSON.parse(localStorage.getItem("solicitacoes_compra")) || [];
 
     lista.innerHTML = "";
 
@@ -10501,14 +9815,6 @@
     }
 
     const anexo = sol.anexos[index];
-
-    // ☁️ PRIORIDADE: Firebase Storage URL
-    if (anexo.url) {
-      window.open(anexo.url, '_blank');
-      return;
-    }
-
-    // 📂 FALLBACK: LocalStorage / IndexedDB
     let base64 = anexo.base64;
 
     // Se não estiver no localStorage, busca no IndexedDB
@@ -10528,7 +9834,7 @@
       return;
     }
 
-    // Exibe o arquivo Base64
+    // Exibe o arquivo
     const win = window.open();
     if (win) {
       win.document.write(`<iframe src="${base64}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`);
@@ -10921,7 +10227,7 @@
     });
   };
 
-  window.aprovarPreCadastro = async function (id) {
+  window.aprovarPreCadastro = function (id) {
     if (!confirm("Confirmar aprovação deste fornecedor?")) return;
 
     let preCadastros = JSON.parse(localStorage.getItem("pre_cadastros_fornecedores")) || [];
@@ -10932,8 +10238,7 @@
 
     // 1. Move para a lista oficial de fornecedores
     let fornecedores = JSON.parse(localStorage.getItem("fornecedores")) || [];
-    const novoForn = {
-      id: Date.now(),
+    fornecedores.push({
       nome: p.nome,
       cnpj: p.cnpj,
       emails: p.email,
@@ -10942,37 +10247,24 @@
       banco: p.banco,
       origem: "autocadastro",
       dataAprovacao: new Date().toLocaleString()
-    };
-    fornecedores.push(novoForn);
+    });
     localStorage.setItem("fornecedores", JSON.stringify(fornecedores));
 
     // 2. Cria usuário de login para o fornecedor
-    const novoUsuario = {
+    let usuarios = JSON.parse(localStorage.getItem("usuarios_teste")) || [];
+    usuarios.push({
       nome: p.nome,
       email: p.email,
       senha: "123", // Senha padrão inicial
       tipo: "fornecedor"
-    };
-    let usuarios = JSON.parse(localStorage.getItem("usuarios_teste")) || [];
-    usuarios.push(novoUsuario);
+    });
     localStorage.setItem("usuarios_teste", JSON.stringify(usuarios));
-
-    // --- FIREBASE SYNC ---
-    try {
-      await db.collection("fornecedores").doc(String(novoForn.id)).set(novoForn);
-      await db.collection("usuarios").doc(p.email.toLowerCase().trim()).set(novoUsuario);
-
-      // Atualiza status no Firebase também
-      await db.collection("pre_cadastros_fornecedores").doc(String(id)).update({ status: "aprovado" });
-    } catch (e) {
-      console.warn("Erro ao sincronizar aprovação no Firebase:", e);
-    }
 
     // 3. Atualiza status do pré-cadastro
     preCadastros[index].status = "aprovado";
     localStorage.setItem("pre_cadastros_fornecedores", JSON.stringify(preCadastros));
 
-    alert("✅ Fornecedor aprovado! Usuário criado com sucesso na nuvem (E-mail: " + p.email + " / Senha: 123)");
+    alert("✅ Fornecedor aprovado! Usuário criado com sucesso (E-mail: " + p.email + " / Senha: 123)");
     carregarPreCadastros();
   };
 
@@ -11157,113 +10449,48 @@
   };
 
   /**
-   * 🚀 MOTOR DE MIGRAÇÃO PROFUNDA (FIREBASE CLOUD)
-   * Migra dados do LocalStorage para Firestore e Storage (anexos).
+   * 🛠️ Utilitário para migrar anexos pesados do LocalStorage para IndexedDB
+   * Isso evita o erro QuotaExceededError. 
    */
-  async function migrarParaFirebaseCompleto() {
-    console.log("🚀 Iniciando migração para Firebase Cloud...");
-    const statusDiv = document.createElement("div");
-    statusDiv.style = "position:fixed; bottom:10px; right:10px; background:rgba(0,0,0,0.8); color:#00ff99; padding:10px; border-radius:5px; z-index:999999; font-size:12px; border:1px solid #00ff99;";
-    statusDiv.innerHTML = "📡 Sincronizando com a nuvem...";
-    document.body.appendChild(statusDiv);
+  async function migrarSolicitacoesParaIndexedDB() {
+    console.log("🔍 Verificando necessidade de migração de armazenamento...");
+    const solicitacoes = JSON.parse(localStorage.getItem("solicitacoes_compra")) || [];
+    let houveMudanca = false;
 
-    const colecoes = ["fornecedores", "materiais", "servicos", "cotacoes", "solicitacoes_compra", "usuarios", "pre_cadastros_fornecedores"];
-
-    // 1. Sincronizar Tabelas Estruturais
-    for (const col of colecoes) {
-      try {
-        // Mapeia chaves do LS para coleções do Firebase (se diferente)
-        let lsKey = col;
-        if (col === "usuarios") lsKey = "usuarios_teste";
-
-        const dados = JSON.parse(localStorage.getItem(lsKey)) || [];
-        if (dados.length > 0) {
-          statusDiv.innerText = `📦 Sincronizando ${col}...`;
-          for (const item of dados) {
-            const id = item.email || item.id || item.numero || `sync_${Date.now()}_${Math.random()}`;
-
-            // 📎 TRATAMENTO DE ANEXOS (Cotações e Solicitações)
-            if ((col === "cotacoes" || col === "solicitacoes_compra") && item.anexos) {
-              for (let anexo of item.anexos) {
-                if (!anexo.url) {
-                  let blob = null;
-
-                  // Tenta Base64
-                  if (anexo.base64) {
-                    statusDiv.innerText = `☁️ Subindo anexo: ${anexo.nome}...`;
-                    blob = await fetch(anexo.base64).then(res => res.blob());
-                    delete anexo.base64;
-                  }
-                  // Tenta IndexedDB (para Solicitações)
-                  else if (anexo.fileKey) {
-                    statusDiv.innerText = `📦 Buscando anexo local: ${anexo.nome}...`;
-                    const data = await dbDocs.buscar(anexo.fileKey);
-                    if (data) {
-                      blob = await fetch(data).then(res => res.blob());
-                    }
-                  }
-
-                  if (blob) {
-                    const path = col === "cotacoes" ? `cotacoes/${item.numero}/${anexo.nome}` : `solicitacoes/${item.id}/${anexo.nome}`;
-                    const ref = storage.ref(path);
-                    await ref.put(blob);
-                    anexo.url = await ref.getDownloadURL();
-                  }
-                }
-              }
+    for (let sol of solicitacoes) {
+      if (Array.isArray(sol.anexos)) {
+        for (let i = 0; i < sol.anexos.length; i++) {
+          const anexo = sol.anexos[i];
+          // Se ainda tem o base64 no localStorage, move para o IndexedDB
+          if (anexo.base64 && typeof anexo.base64 === 'string' && anexo.base64.length > 1000) {
+            const key = `solanexo_${sol.id}_${i}`;
+            try {
+              await dbDocs.salvar(key, anexo.base64);
+              delete anexo.base64; // Remove do objeto leve
+              anexo.fileKey = key;  // Aponta para o IndexedDB
+              houveMudanca = true;
+            } catch (err) {
+              console.error("Erro na migração do anexo:", key, err);
             }
-            // Usa e-mail como ID para usuários para facilitar login
-            const docId = col === "usuarios" ? String(item.email).toLowerCase().trim() : String(id);
-            await db.collection(col).doc(docId).set(item);
           }
-          localStorage.setItem(lsKey, JSON.stringify(dados)); // Salva com as novas URLs
-          console.log(`✅ Coleção ${col} sincronizada.`);
         }
-      } catch (e) {
-        console.warn(`Erro ao sincronizar ${col}:`, e);
       }
     }
 
-    // 2. Migrar Documentos Financeiros (docs_...)
-    try {
-      statusDiv.innerText = "📂 Migrando documentos financeiros...";
-      const chaves = Object.keys(localStorage);
-      for (const key of chaves) {
-        if (key.startsWith("docs_")) {
-          const arquivos = JSON.parse(localStorage.getItem(key)) || [];
-          const numeroCotacao = key.replace("docs_", "");
-
-          for (let arq of arquivos) {
-            if (arq.base64 && !arq.url) {
-              statusDiv.innerText = `☁️ Subindo doc: ${arq.nome}...`;
-              try {
-                const blob = await fetch(arq.base64).then(res => res.blob());
-                const ref = storage.ref(`financeiro/${numeroCotacao}/${Date.now()}_${arq.nome}`);
-                await ref.put(blob);
-                arq.url = await ref.getDownloadURL();
-                delete arq.base64;
-              } catch (e) { console.error("Erro upload doc manual", e); }
-            }
-          }
-          await db.collection("documentos_cotacao").doc(key).set({ arquivos });
-        }
+    if (houveMudanca) {
+      try {
+        localStorage.setItem("solicitacoes_compra", JSON.stringify(solicitacoes));
+        console.log("✅ Migração de anexos concluída com sucesso! Espaço liberado.");
+      } catch (err) {
+        console.error("Erro ao salvar cotações após migração:", err);
       }
-    } catch (e) { console.warn("Erro documentos financeiros:", e); }
-
-    statusDiv.innerHTML = "✅ Nuvem Sincronizada!";
-    setTimeout(() => statusDiv.remove(), 5000);
-    console.log("🏁 Migração Firebase concluída.");
+    } else {
+      console.log("✅ Armazenamento já está otimizado.");
+    }
   }
 
-  // ⚠️ DESATIVADO: Migração automática removida para evitar que dados deletados localmente reapareçam no Firestore.
-  // A migração agora só deve ser feita via comando manual se estritamente necessário.
-  /*
-  setTimeout(() => {
-    if (typeof db !== "undefined" && getUsuarioLogado()) {
-      migrarParaFirebaseCompleto();
-    }
-  }, 5000);
-  */
+  // Executa migração após um pequeno delay para não travar o carregamento inicial
+  setTimeout(migrarSolicitacoesParaIndexedDB, 2000);
 </script>
 
 <script src="premium_render.js?v=10013"></script>
