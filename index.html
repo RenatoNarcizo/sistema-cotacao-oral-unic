@@ -11966,6 +11966,42 @@
     }).join('');
   }
 
+  /* ======================================================
+     📊 ABRIR MODAL DE ANÁLISE - FUNÇÃO CRÍTICA
+  ====================================================== */
+  window.abrirModalAnalise = function (numero) {
+    const modal = document.getElementById("modalAnaliseCotacao");
+    if (!modal) {
+      console.error("❌ Modal de análise não encontrado!");
+      return;
+    }
+
+    // Abre o modal
+    modal.style.display = "flex";
+    document.body.style.overflow = "hidden";
+
+    // Renderiza a tabela de análise
+    if (typeof renderizarTabelaAnalise === 'function') {
+      renderizarTabelaAnalise(numero);
+    } else {
+      console.error("❌ Função renderizarTabelaAnalise não encontrada!");
+    }
+  };
+
+  window.fecharModalAnalise = function () {
+    const modal = document.getElementById("modalAnaliseCotacao");
+    if (modal) {
+      modal.style.display = "none";
+      document.body.style.overflow = "auto";
+    }
+
+    // Limpa timer se existir
+    if (window.timerAnaliseInterval) {
+      clearInterval(window.timerAnaliseInterval);
+      window.timerAnaliseInterval = null;
+    }
+  };
+
 
 </script>
 
