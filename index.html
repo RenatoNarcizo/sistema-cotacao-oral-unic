@@ -7019,6 +7019,20 @@
         </button>`;
           } else {
             // 🛒 COMPRADOR / ADMIN
+            if (c.status === "respondida" || c.status === "analise" || c.status === "reanalise" || c.status === "aberta") {
+              const btnAnalisar = document.createElement("button");
+              btnAnalisar.innerText = "Analisar Resposta";
+              btnAnalisar.style.cssText = "background:#ffcc00; color:#000; border:none; padding:12px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:14px; width:100%; margin-bottom:4px;";
+              btnAnalisar.onclick = () => analisarCotacao(c.numero);
+              // acoesDiv não está definido no innerHTML antigo aqui, mas o dashboard usa uma lógica diferente
+              // No dashboard (carregarCotacoes), o 'botao' é injetado.
+              botao = `
+                <button onclick="analisarCotacao('${c.numero}')" style="background:#ffcc00; color:#000; border:none; padding:12px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:14px; width:100%; margin-bottom:4px;">
+                   Analisar Resposta
+                </button>
+              `;
+            }
+
             if (c.status === "aberta" || c.status === "respondida" || c.status === "reanalise") {
               botao = `
                 <button onclick="encerrarCotacaoManualmente('${c.numero}')" style="background:#cc0000; color:white; border:none; padding:12px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:14px; width:100%;">
@@ -7056,7 +7070,7 @@
               ${c.descricao || "Sem descrição"}
             </div>
             <div style="font-size:13px; color:#ccc; margin-bottom:8px; display:flex; align-items:center;">
-              Cotação #COT-${c.numero} ${statusBadge}
+              Cotação #${c.numero.startsWith('COT-') ? c.numero : 'COT-' + c.numero} ${statusBadge}
             </div>
             <div style="font-size:13px; color:#ccc; line-height:1.6;">
               <span style="color:#a855f7;">👤</span> Com fornecedores (${qtdConvidados} convidados)<br>
@@ -7474,7 +7488,7 @@
               ${c.descricao || "Sem descrição"}
             </div>
             <div style="font-size:13px; color:#ccc; margin-bottom:8px; display:flex; align-items:center;">
-              Cotação #COT-${c.numero} ${statusBadge}
+              Cotação #${c.numero.startsWith('COT-') ? c.numero : 'COT-' + c.numero} ${statusBadge}
             </div>
             <div style="font-size:13px; color:#ccc; line-height:1.6;">
               <span style="color:#a855f7;">👤</span> Com fornecedores (${qtdConvidados} convidados)<br>
@@ -7489,6 +7503,15 @@
           acoesDiv.style.cssText = "display:flex; flex-direction:column; gap:8px; min-width:250px;";
 
           if (usuario.tipo !== "fornecedor") {
+            // 📊 ANALISAR (Novo/Restaurado) — Apenas se tiver respostas ou em estados de análise
+            if (c.status === "respondida" || c.status === "analise" || c.status === "reanalise" || c.status === "aberta") {
+              const btnAnalisar = document.createElement("button");
+              btnAnalisar.innerText = "Analisar Resposta";
+              btnAnalisar.style.cssText = "background:#ffcc00; color:#000; border:none; padding:12px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:14px; width:100%; margin-bottom:4px;";
+              btnAnalisar.onclick = () => analisarCotacao(c.numero);
+              acoesDiv.appendChild(btnAnalisar);
+            }
+
             // 🔒 ENCERRAR (Vermelho)
             if (c.status === "aberta" || c.status === "respondida" || c.status === "reanalise") {
               const btnEncerrar = document.createElement("button");
