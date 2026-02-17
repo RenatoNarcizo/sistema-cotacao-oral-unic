@@ -7654,53 +7654,55 @@
 
 
 
+      // Função órfã restaurada - parece ser parte de enviarRespostaCotacao
+      function processarRespostaCotacaoLegacy(numeroCotacao) {
+        try {
+          const itensRespondidos = [];
 
-      const itensRespondidos = [];
+          linhas.forEach(linha => {
+            const produto = linha.cells[0]?.innerText?.trim();
+            const inputPreco = linha.querySelector('input[type="number"]');
 
-      linhas.forEach(linha => {
-        const produto = linha.cells[0]?.innerText?.trim();
-        const inputPreco = linha.querySelector('input[type="number"]');
-
-        if (produto && inputPreco) {
-          const valor = parseFloat(inputPreco.value);
-          itensRespondidos.push({
-            produto: produto,
-            preco: isNaN(valor) ? 0 : valor
+            if (produto && inputPreco) {
+              const valor = parseFloat(inputPreco.value);
+              itensRespondidos.push({
+                produto: produto,
+                preco: isNaN(valor) ? 0 : valor
+              });
+            }
           });
+
+          if (itensRespondidos.length === 0) {
+            alert("⚠️ Informe pelo menos um valor antes de enviar.");
+            return;
+          }
+
+          // 🔐 Chave única por cotação + fornecedor
+          const chaveUnica = `res_${numeroCotacao}_${usuario.email.toLowerCase().trim()} `;
+
+          const dadosResposta = {
+            numeroCotacao: numeroCotacao,
+            fornecedor: usuario.nome,
+            email: usuario.email,
+            itens: itensRespondidos,
+            dataEnvio: new Date().toISOString()
+          };
+
+          // 💾 Salva resposta
+          localStorage.setItem(chaveUnica, JSON.stringify(dadosResposta));
+
+          alert("✅ Resposta enviada e salva com sucesso!");
+
+          // 🔙 Volta para o menu
+          if (typeof voltarMenu === "function") {
+            voltarMenu();
+          }
+
+        } catch (erro) {
+          console.error("Erro ao enviar resposta da cotação:", erro);
+          alert("❌ Ocorreu um erro ao salvar sua resposta.");
         }
-      });
-
-      if (itensRespondidos.length === 0) {
-        alert("⚠️ Informe pelo menos um valor antes de enviar.");
-        return;
       }
-
-      // 🔐 Chave única por cotação + fornecedor
-      const chaveUnica = `res_${numeroCotacao}_${usuario.email.toLowerCase().trim()} `;
-
-      const dadosResposta = {
-        numeroCotacao: numeroCotacao,
-        fornecedor: usuario.nome,
-        email: usuario.email,
-        itens: itensRespondidos,
-        dataEnvio: new Date().toISOString()
-      };
-
-      // 💾 Salva resposta
-      localStorage.setItem(chaveUnica, JSON.stringify(dadosResposta));
-
-      alert("✅ Resposta enviada e salva com sucesso!");
-
-      // 🔙 Volta para o menu
-      if (typeof voltarMenu === "function") {
-        voltarMenu();
-      }
-
-} catch (erro) {
-        console.error("Erro ao enviar resposta da cotação:", erro);
-        alert("❌ Ocorreu um erro ao salvar sua resposta.");
-      }
-}
 
 
 
@@ -7731,54 +7733,54 @@
   tela de Responder Cotação - Permite editar se prazo válido - Bloqueia se
   fechada======================================================*/ window.abrirDetalhesRespostaFornecedor = function
         (numeroCotacao) {
-          const usuario = getUsuarioLogado(); if (!usuario || !usuario.email) {
-            alert("Usuário não
+        const usuario = getUsuarioLogado(); if (!usuario || !usuario.email) {
+          alert("Usuário não
   identificado."); return; } if (!numeroCotacao) { alert("Erro interno: número da cotação inválido."); return; } const
   email = usuario.email.toLowerCase().trim(); // 🔍 compatibilidade total de chaves const chavesPossiveis=[
-            `resposta_${numeroCotacao}_${email} `, `RESPOSTA_${numeroCotacao}_${email} `, `res_${numeroCotacao}_${email} ` ]; let
-              resposta = null; for (const chave of chavesPossiveis) {
-                const raw = localStorage.getItem(chave); if (raw) {
-                  resposta = JSON.parse(raw); break;
-                }
-              } if (!resposta) { alert("Resposta do fornecedor não encontrada."); return; } const
-                cotacoes = getCotacoes(); const cotacao = cotacoes.find(c => c.numero === numeroCotacao);
-            if (!cotacao) {
-              alert("Cotação não encontrada.");
-              return;
+          `resposta_${numeroCotacao}_${email} `, `RESPOSTA_${numeroCotacao}_${email} `, `res_${numeroCotacao}_${email} ` ]; let
+            resposta = null; for (const chave of chavesPossiveis) {
+              const raw = localStorage.getItem(chave); if (raw) {
+                resposta = JSON.parse(raw); break;
+              }
+            } if (!resposta) { alert("Resposta do fornecedor não encontrada."); return; } const
+              cotacoes = getCotacoes(); const cotacao = cotacoes.find(c => c.numero === numeroCotacao);
+          if (!cotacao) {
+            alert("Cotação não encontrada.");
+            return;
+          }
+
+          // 🔑 guarda escopo global
+          window.cotacaoEmEdicao = cotacao;
+          window.respostaEmEdicao = resposta;
+          cotacaoRespostaAtual = numeroCotacao;
+
+          // 🔄 abre a tela padrão de responder
+          abrirResponderCotacao(numeroCotacao);
+
+          // ⏳ preenche valores após render
+          setTimeout(() => {
+            (resposta.itens || []).forEach((item, i) => {
+              const input = document.getElementById("preco_" + i);
+              if (input) input.value = item.preco ?? 0;
+            });
+
+            // 🔒 controle de edição
+            const podeEditar =
+              validarPrazo(cotacao) &&
+              cotacao.status !== "fechada" &&
+              cotacao.status !== "aprovacao";
+
+            document
+              .querySelectorAll("#tabelaResponderCorpo input")
+              .forEach(inp => inp.disabled = !podeEditar);
+
+            const btnEnviar = document.getElementById("btnEnviarResposta");
+            if (btnEnviar) {
+              btnEnviar.style.display = podeEditar ? "inline-block" : "none";
             }
 
-            // 🔑 guarda escopo global
-            window.cotacaoEmEdicao = cotacao;
-            window.respostaEmEdicao = resposta;
-            cotacaoRespostaAtual = numeroCotacao;
-
-            // 🔄 abre a tela padrão de responder
-            abrirResponderCotacao(numeroCotacao);
-
-            // ⏳ preenche valores após render
-            setTimeout(() => {
-              (resposta.itens || []).forEach((item, i) => {
-                const input = document.getElementById("preco_" + i);
-                if (input) input.value = item.preco ?? 0;
-              });
-
-              // 🔒 controle de edição
-              const podeEditar =
-                validarPrazo(cotacao) &&
-                cotacao.status !== "fechada" &&
-                cotacao.status !== "aprovacao";
-
-              document
-                .querySelectorAll("#tabelaResponderCorpo input")
-                .forEach(inp => inp.disabled = !podeEditar);
-
-              const btnEnviar = document.getElementById("btnEnviarResposta");
-              if (btnEnviar) {
-                btnEnviar.style.display = podeEditar ? "inline-block" : "none";
-              }
-
-            }, 300);
-          };
+          }, 300);
+        };
 
 
         /* ======================================================
@@ -7905,33 +7907,33 @@
           for (let i = 0; i < localStorage.length; i++) {
             const chave = localStorage.key(i); if
               (chave.startsWith(`resposta_${idCotacao} _`)) {
-                respostasEncontradas.push(JSON.parse(localStorage.getItem(chave)));
+              respostasEncontradas.push(JSON.parse(localStorage.getItem(chave)));
             }
           } // Agora monte a sua tabela usando o array 'respostasEncontradas' // Cada item do array é um fornecedor
     diferente com seus respectivos preços. } /* --- FUNÇÕES ESSENCIAIS DE FORMATAÇÃO --- */ function
           formatarDataHoraBR(dataISO) {
-            if (!dataISO) return "-"; const d = new Date(dataISO); // Verifica se a data é válida
+          if (!dataISO) return "-"; const d = new Date(dataISO); // Verifica se a data é válida
           if (isNaN(d.getTime())) return dataISO; return d.toLocaleString("pt-BR", {
             day: "2-digit", month: "2-digit",
             year: "numeric", hour: "2-digit", minute: "2-digit"
           });
         } function formatarParaReal(valor) {
           const
-          v = parseFloat(valor) || 0; return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+            v = parseFloat(valor) || 0; return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
         } function
           preencherDadosParaEdicao(idCotacao) {
-            const usuario = getUsuarioLogado(); const
-              chave = `resposta_${idCotacao}_${usuario.email.toLowerCase().trim()} `; const
-                respostaExistente = JSON.parse(localStorage.getItem(chave)); if (respostaExistente) { // Se já existe, percorre a
+          const usuario = getUsuarioLogado(); const
+            chave = `resposta_${idCotacao}_${usuario.email.toLowerCase().trim()} `; const
+              respostaExistente = JSON.parse(localStorage.getItem(chave)); if (respostaExistente) { // Se já existe, percorre a
     tabela e preenche os inputs const linhas = document.querySelectorAll('#tabelaResponderCorpo tr');
-                  linhas.forEach(linha => {
-                    const nomeProduto = linha.cells[0].innerText;
-                    const itemSalvo = respostaExistente.itens.find(i => i.produto === nomeProduto);
-                    if (itemSalvo) {
-                      linha.querySelector('input').value = itemSalvo.preco;
-                    }
-                  });
-                }
+                linhas.forEach(linha => {
+                  const nomeProduto = linha.cells[0].innerText;
+                  const itemSalvo = respostaExistente.itens.find(i => i.produto === nomeProduto);
+                  if (itemSalvo) {
+                    linha.querySelector('input').value = itemSalvo.preco;
+                  }
+                });
+              }
         }
 
         /* ===============================
