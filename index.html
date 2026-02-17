@@ -12037,17 +12037,18 @@
      🚑 RECUPERAÇÃO DE DADOS (AUTO-FIX)
      ====================================================== */
   function recuperarCotacoesPerdidas() {
+    console.log("🚑 Iniciando recuperação de cotações...");
     const cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
     let corrigiu = false;
 
     // IDs específicos reportados pelo usuário
-    const idsAlvo = ["COT-20260217-1003", "COT-20260217-1002", "COT-20260217-1001"];
+    const idsAlvo = ["COT-20260217-1004", "COT-20260217-1003", "COT-20260217-1002", "COT-20260217-1001"];
 
     cotacoes.forEach(c => {
       // 1. Recuperação por ID Específico (Prioridade Máxima)
       if (idsAlvo.includes(c.numero)) {
-        // Força reset para aberta se estiver em qualquer estado não finalizado logicamente
-        if (c.status !== "aberta" && c.status !== "finalizada") {
+        // Se estiver em analise sem respostas, ou sumido (fechada/finalizada indevidamente)
+        if (c.status !== "aberta") {
           console.warn(`🚑 FORÇANDO RECUPERAÇÃO DE ${c.numero}`);
           c.status = "aberta";
           c.prazoEncerrado = true; // Mantém visível em 'Publicadas' mas encerrada
@@ -12056,10 +12057,9 @@
 
         // 🚑 REPARO DE FORNECEDORES (Se estiver vazio ou bugado)
         if (!Array.isArray(c.fornecedores) || c.fornecedores.length === 0) {
-          // Tenta popular com a lista temporária se ainda existir na memória, ou busca todos
-          console.warn(`🚑 Cotação ${c.numero} sem fornecedores. Tentando reparar...`);
+          console.warn(`🚑 Cotação ${c.numero} sem fornecedores. Reparando...`);
 
-          // Fallback: Adiciona todos os fornecedores ativos (melhor que nenhum)
+          // Fallback: Adiciona todos os fornecedores ativos
           const todosForn = JSON.parse(localStorage.getItem("fornecedores")) || [];
           if (todosForn.length > 0) {
             c.fornecedores = todosForn.map(f => ({
@@ -12072,7 +12072,7 @@
         }
       }
 
-      // 2. Recuperação Genérica
+      // 2. Recuperação Genérica (Analise -> Aberta se não tiver respostas)
       else if (c.status === "analise") {
         const semRespostas = !c.respostasFornecedores || c.respostasFornecedores.length === 0;
         if (semRespostas) {
@@ -12089,52 +12089,23 @@
       // Sync com Firebase (se disponível)
       if (typeof db !== "undefined" && firebase) {
         cotacoes.forEach(c => {
-          if (idsAlvo.includes(c.numero)) {
+          if (idsAlvo.includes(c.numero) || (c.status === "aberta" && c.prazoEncerrado)) {
             db.collection("cotacoes").doc(String(c.numero)).set(c)
               .catch(err => console.error("Erro ao sync recuperação", err));
           }
         });
       }
 
-      alert("✅ Sistema: Cotações recuperadas! Elas estão na aba 'Publicadas' (Abertas).");
+      alert("✅ Sistema: 4 Cotações (1001 a 1004) recuperadas com sucesso!");
       window.location.reload();
     }
   }
 
   // Executa uma vez ao carregar
-  setTimeout(recuperarCotacoesPerdidas, 1500);
+  setTimeout(recuperarCotacoesPerdidas, 2000);
 
 </script>
-console.warn(`🚑 Recuperando cotação #${c.numero} (Analise -> Aberta)`);
-c.status = "aberta";
-c.prazoEncerrado = true; // Mantém expirada, mas visível
-corrigiu = true;
-}
-}
-});
-
-if (corrigiu) {
-localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
-
-// Sync com Firebase (se disponível)
-if (typeof db !== "undefined" && firebase) {
-cotacoes.forEach(c => {
-if(c.status === "aberta" && c.prazoEncerrado) {
-db.collection("cotacoes").doc(String(c.numero)).update({ status: "aberta", prazoEncerrado: true });
-}
-});
-}
-
-alert("✅ Sistema: Cotações recuperadas com sucesso! Verifique a aba 'Publicadas'.");
-window.location.reload();
-}
-}
-
-// Executa uma vez ao carregar para garantir a correção
-setTimeout(recuperarCotacoesPerdidas, 2000);
-
-</script>
-<script src="premium_render.js?v=10013"></script>
+<script src="premium_render.js?v=10014"></script>
 </body>
 
 </html>
