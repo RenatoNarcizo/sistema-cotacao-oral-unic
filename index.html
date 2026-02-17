@@ -3603,6 +3603,11 @@
         <button onclick="toggleUsuariosFornecedores()">🚚 Lista de Usuários Fornecedores</button>
       </div>
       <div id="listaUsuariosFornecedores" style="display:none; margin-top:15px;"></div>
+
+      <hr style="margin:40px 0; border-color:#333;">
+
+
+
     </div>
   </section>
 
@@ -4060,6 +4065,8 @@
       // Não marca como completa para tentar novamente depois, mas o erro não deve travar o login
     }
   }
+
+
 
   function getUsuarioLogado() {
     return JSON.parse(sessionStorage.getItem("usuario_logado"));
@@ -6596,12 +6603,43 @@
      STATUS / LISTAGEM / RESPOSTA — DEFINITIVO (CORRIGIDO)
   ====================================================== */
 
+  /* ======================================================
+     🧹 LIMPEZA DE FORMULÁRIOS (FUNÇÃO FALTANTE)
+     ====================================================== */
+  function limparFormulariosCotacao() {
+    // Limpa inputs gerais do formulário de cotação
+    const inputs = document.querySelectorAll('#formCotacao input, #formCotacao textarea, #formCotacao select');
+    inputs.forEach(el => el.value = "");
+
+    // Reseta variável global de fornecedores selecionados
+    window.fornecedoresSelecionadosTemp = [];
+
+    // Limpa a lista visual de produtos (se houver containers específicos)
+    const listaMateriais = document.getElementById("listaMateriaisCotacao");
+    if (listaMateriais) listaMateriais.innerHTML = "";
+
+    const listaServicos = document.getElementById("listaServicosCotacao");
+    if (listaServicos) listaServicos.innerHTML = "";
+
+    // Atualiza contador visual de fornecedores
+    const countEl = document.getElementById("countFornecedores");
+    if (countEl) countEl.innerText = "0";
+
+    console.log("🧹 Formulários e variáveis temporárias limpos.");
+  }
+
+  /* ======================================================
+     STATUS / LISTAGEM / RESPOSTA — DEFINITIVO (CORRIGIDO)
+  ====================================================== */
+
   function verificarEncerradas() {
     const agora = new Date();
     const cotacoes = getCotacoes();
     let alterou = false;
 
     cotacoes.forEach(c => {
+      // Ignora se já estiver fechada ou finalizada
+      if (["fechada", "finalizada", "cancelada"].includes(c.status)) return;
 
       if (!c.dataFechamento) return;
 
@@ -6611,20 +6649,22 @@
       // ⏰ PRAZO ACABOU
       if (fechamento <= agora && !c.prazoEncerrado) {
 
-        // 🔒 fornecedor: encerra prazo
+        // Marca que o prazo encerrou (importante para travar respostas de fornecedores)
         c.prazoEncerrado = true;
         alterou = true;
 
-        // 📊 comprador: entra em análise automaticamente SOMENTE SE TIVER RESPOSTAS
+        // 📊 Lógica de Movimentação de Status
         if (c.status === "aberta") {
-          // Verifica se tem respostas válidas
+          // Só move para 'analise' se tiver respostas!
           const temRespostas = Array.isArray(c.respostasFornecedores) && c.respostasFornecedores.length > 0;
 
           if (temRespostas) {
             c.status = "analise";
+            console.log(`🔄 Cotação ${c.numero} movida para Análise (Prazo expirado com respostas).`);
+          } else {
+            console.log(`ℹ️ Cotação ${c.numero} expirou mas continua Aberta (Sem respostas).`);
+            // Mantém "aberta" para continuar visível em Publicadas
           }
-          // Se não tiver respostas, mantém como "aberta" (com prazoEncerrado=true)
-          // Assim o comprador vê na lista de Publicadas e pode decidir (Reabrir ou Excluir)
         }
       }
     });
