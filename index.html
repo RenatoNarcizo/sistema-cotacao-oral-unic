@@ -11502,7 +11502,7 @@
   console.log("🚀 PATCH V2 APLICADO: Funcionalidade de publicação otimizada.");
 
   /* ======================================================
-     📤 SALVAR RESPOSTA DO FORNECEDOR (MISSING FUNCTION RESTORED)
+     📤 SALVAR RESPOSTA DO FORNECEDOR (CORRIGIDO V3)
      ====================================================== */
   async function salvarRespostaComAnexo() {
     console.log("🚀 Iniciando envio de resposta...");
@@ -11521,8 +11521,9 @@
       return;
     }
 
-    const todasCotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
-    const cotacao = todasCotacoes.find(c => String(c.numero) === String(numCotacao) || String(c.id) === String(numCotacao));
+    let todasCotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
+    let cotacaoIndex = todasCotacoes.findIndex(c => String(c.numero) === String(numCotacao) || String(c.id) === String(numCotacao));
+    let cotacao = todasCotacoes[cotacaoIndex];
 
     if (!cotacao) {
       alert("Cotação não encontrada na base local.");
@@ -11534,7 +11535,6 @@
     let itensRespondidos = [];
 
     linhas.forEach(tr => {
-      // Layout da tabela gerado em abrirModalResponder
       const cells = tr.querySelectorAll("td");
       if (cells.length >= 3) {
         const produto = cells[0].innerText.trim();
@@ -11557,29 +11557,36 @@
       return;
     }
 
-    // 4. Upload de Anexo (Best Effort)
+    // 4. Upload de Anexo (Best Effort - Async)
     const fileInput = document.getElementById("respAnexo");
     let anexoDados = { nome: "", url: "" };
+
+    // Upload separado para não travar o fluxo caso demore
+    let uploadPromise = Promise.resolve(null);
 
     if (fileInput && fileInput.files.length > 0) {
       const arquivo = fileInput.files[0];
       anexoDados.nome = arquivo.name;
 
       if (typeof storage !== "undefined") {
-        try {
-          const path = `respostas/${cotacao.numero}/${Date.now()}_${arquivo.name}`;
-          const ref = storage.ref(path);
-          const uploadTask = await ref.put(arquivo);
-          const url = await uploadTask.ref.getDownloadURL();
-          anexoDados.url = url;
-          console.log("✅ Upload de anexo concluído:", url);
-        } catch (errUpload) {
-          console.warn("⚠️ Upload falhou (Quota?), salvando sem anexo na nuvem.", errUpload);
-        }
+        const path = `respostas/${cotacao.numero}/${Date.now()}_${arquivo.name}`;
+        const ref = storage.ref(path);
+        uploadPromise = ref.put(arquivo)
+          .then(task => task.ref.getDownloadURL())
+          .then(url => {
+            anexoDados.url = url;
+            console.log("✅ Anexo enviado:", url);
+            return url;
+          })
+          .catch(err => {
+            console.warn("⚠️ Falha upload anexo (Quota?):", err);
+            return "";
+          });
       }
     }
 
-    // 5. Montar Objeto e Salvar Localmente
+    // O objeto de resposta base (sem URL de anexo ainda se o upload estiver rodando)
+    // Mas para UX imediata, salvamos assim mesmo. O anexo pode atualizar depois na nuvem.
     const resposta = {
       fornecedor: usuario.nome || usuario.razaoSocial || usuario.email.split('@')[0],
       fornecedorNome: usuario.nome || usuario.razaoSocial,
@@ -11587,52 +11594,63 @@
       emailFornecedor: usuario.email,
       data: new Date().toLocaleString(),
       itens: itensRespondidos,
-      anexo: anexoDados,
+      anexo: anexoDados, // URL será vazia se não esperar
       anexos: [anexoDados]
     };
 
-    // Salva no localStorage do Fornecedor (Cache)
+    // 5. ATUALIZAÇÃO LOCAL ROBUSTA (CRÍTICO PARA MUDAR DE ABA)
+    // Salva caches individuais
     const chave = `res_${cotacao.id}_${usuario.email.toLowerCase().trim()}`;
     const chave2 = `resposta_${cotacao.numero}_${usuario.email.toLowerCase().trim()}`;
-
     localStorage.setItem(chave, JSON.stringify(resposta));
-    localStorage.setItem(chave2, JSON.stringify(resposta)); // Redundância para garantir leitura
+    localStorage.setItem(chave2, JSON.stringify(resposta));
 
-    console.log("✅ Resposta salva localmente.");
-
-    // 6. Atualizar Firestore (Cloud) - Com Tratamento de Erro de Cota
-    let sucessoCloud = false;
-    if (typeof db !== "undefined" && firebase) {
-      try {
-        const docRef = db.collection("cotacoes").doc(String(cotacao.numero));
-        // Tenta update normal
-        await docRef.update({
-          respostasFornecedores: firebase.firestore.FieldValue.arrayUnion(resposta)
-        });
-        sucessoCloud = true;
-        console.log("✅ Resposta sincronizada com Firestore!");
-
-      } catch (errDb) {
-        console.error("⚠️ Erro ao salvar no Firestore (possível cota excedida):", errDb);
-        // O erro agora é 'silent' no console, mas capturamos aqui.
-      }
+    // ATUALIZA ARRAY NA COTAÇÃO VIVA (Fundamental para carregarCotacoes funcionar)
+    if (!Array.isArray(cotacao.respostasFornecedores)) {
+      cotacao.respostasFornecedores = [];
     }
+    // Remove resposta anterior do mesmo user se houver (para update)
+    cotacao.respostasFornecedores = cotacao.respostasFornecedores.filter(r =>
+      normalizarEmail(r.email) !== normalizarEmail(usuario.email)
+    );
+    cotacao.respostasFornecedores.push(resposta);
 
-    // 7. Feedback Final
-    if (sucessoCloud) {
-      alert("✅ Resposta enviada com sucesso ao comprador!");
-    } else {
-      // Mensagem positiva mesmo com falha na nuvem (evitar pânico)
-      alert("✅ Resposta registrada com sucesso! (Modo Offline/Local)");
-    }
+    // Salva cotação atualizada no LS
+    todasCotacoes[cotacaoIndex] = cotacao;
+    localStorage.setItem("cotacoes", JSON.stringify(todasCotacoes));
 
-    // Fecha modal
+    console.log("✅ Resposta salva e vinculada localmente.");
+
+    // 6. UI FEEDBACK IMEDIATO (Otimista)
+    alert("✅ Resposta enviada com sucesso!");
+
+    // Fecha modal e atualiza tela
     const modal = document.getElementById("modalResponder");
     if (modal) modal.style.display = 'none';
     document.body.style.overflow = "auto";
 
-    // Recarrega listas se existirem
-    if (typeof mostrarAbaCotacao === 'function') mostrarAbaCotacao('respondidas');
+    // Força atualização da listagem
+    if (typeof mostrarAbaCotacao === 'function') {
+      mostrarAbaCotacao('respondidas');
+    }
+
+    // 7. SYNC CLOUD (BACKGROUND PROMISES)
+    // Não usamos AWAIT aqui para não travar a UI
+    // Primeiro tenta o upload (se houver), depois o firestore
+    uploadPromise.then(urlAnexo => {
+      if (urlAnexo) resposta.anexo.url = urlAnexo; // Atualiza URL se sucesso
+
+      if (typeof db !== "undefined" && firebase) {
+        const docRef = db.collection("cotacoes").doc(String(cotacao.numero));
+
+        // Tenta update no array
+        docRef.update({
+          respostasFornecedores: firebase.firestore.FieldValue.arrayUnion(resposta)
+        })
+          .then(() => console.log("☁️ Sync Cloud: Sucesso"))
+          .catch(err => console.warn("☁️ Sync Cloud: Falha silenciosa (Quota/Rede)", err));
+      }
+    });
   }
 
   // Torna global explicitamente
@@ -11653,8 +11671,6 @@
 
     const fileInput = document.getElementById("respAnexo");
     if (fileInput) fileInput.disabled = false;
-
-    // alert("✏️ Modo de edição ativado."); // Removido para ser menos intrusivo
   }
   window.habilitarEdicaoResposta = habilitarEdicaoResposta;
 
