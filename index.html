@@ -4024,41 +4024,40 @@
 
   async function migrarDadosParaCloud() {
     console.log("🏁 Iniciando migração de dados locais para Firestore...");
+    // Verificação de segurança para não estourar cota do Firestore
+    if (localStorage.getItem("migration_complete") === "true") {
+      console.log("✅ Migração já realizada anteriormente. Pulando para economizar cota.");
+      return;
+    }
+
     const collections = {
       "fornecedores": "fornecedores",
       "materiais": "materiais",
-      // Verificação de segurança para não estourar cota do Firestore
-      if(localStorage.getItem("migration_complete") === "true") {
-        console.log("✅ Migração já realizada anteriormente. Pulando para economizar cota.");
-    return;
-  }
+      "cotacoes": "cotacoes",
+      "servicos": "servicos",
+      "pre_cadastros_fornecedores": "pre_cadastros"
+    };
 
-  const collections = {
-    "cotacoes": "cotacoes",
-    "servicos": "servicos",
-    "pre_cadastros_fornecedores": "pre_cadastros"
-  };
-
-  try {
-    for (const [key, collection] of Object.entries(collections)) {
-      const data = JSON.parse(localStorage.getItem(key)) || [];
-      if (data.length > 0) {
-        console.log(`📦 Migrando ${data.length} itens de ${key} para coleção ${collection}...`);
-        // Limita a 50 itens por vez para evitar bloqueio
-        const batch = data.slice(0, 50);
-        for (const item of batch) {
-          const id = String(item.id || item.numero || item.email || Date.now());
-          // Usa merge para não sobrescrever dados existentes e economizar se não mudou
-          await db.collection(collection).doc(id).set(item, { merge: true });
+    try {
+      for (const [key, collection] of Object.entries(collections)) {
+        const data = JSON.parse(localStorage.getItem(key)) || [];
+        if (data.length > 0) {
+          console.log(`📦 Migrando ${data.length} itens de ${key} para coleção ${collection}...`);
+          // Limita a 50 itens por vez para evitar bloqueio
+          const batch = data.slice(0, 50);
+          for (const item of batch) {
+            const id = String(item.id || item.numero || item.email || Date.now());
+            // Usa merge para não sobrescrever dados existentes e economizar se não mudou
+            await db.collection(collection).doc(id).set(item, { merge: true });
+          }
         }
       }
+      localStorage.setItem("migration_complete", "true");
+      console.log("✅ Migração finalizada e marcada como completa.");
+    } catch (error) {
+      console.error("⚠️ Erro parcial na migração (quota ou rede):", error);
+      // Não marca como completa para tentar novamente depois, mas o erro não deve travar o login
     }
-    localStorage.setItem("migration_complete", "true");
-    console.log("✅ Migração finalizada e marcada como completa.");
-  } catch (error) {
-    console.error("⚠️ Erro parcial na migração (quota ou rede):", error);
-    // Não marca como completa para tentar novamente depois, mas o erro não deve travar o login
-  }
   }
 
   function getUsuarioLogado() {
