@@ -11732,26 +11732,40 @@
       localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
       console.log("✅ V2: Backup local salvo.");
 
-      // ☁️ 2. CLOUD (RACE WITH TIMEOUT)
-      let nuvemOk = false;
+      // ☁️ 2. CLOUD (BLOQUEIO TOTAL - AGUARDA CONFIRMAÇÃO)
+      console.log("🔄 Iniciando upload para Firestore...");
+
       if (typeof db !== "undefined") {
-        // Timeout de 5 segundos para não travar
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error("Timeout de Rede (5s)")), 5000);
-        });
-
-        const uploadPromise = db.collection("cotacoes").doc(String(novaCotacao.numero)).set(novaCotacao);
-
         try {
-          await Promise.race([uploadPromise, timeoutPromise]);
+          console.log(`📤 Enviando cotação ${novaCotacao.numero} para Firestore...`);
+          await db.collection("cotacoes").doc(String(novaCotacao.numero)).set(novaCotacao);
           console.log("✅ V2: Sincronização Nuvem CONFIRMADA.");
-          nuvemOk = true;
+
+          alert("✅ Cotação publicada com sucesso!\n\nOs fornecedores podem visualizar agora.");
         } catch (errSync) {
-          console.warn("⚠️ V2: Falha/Timeout no Sync Cloud:", errSync);
-          // Segue o fluxo para salvar localmente e avisar o usuário
+          console.error("❌ ERRO CRÍTICO AO ENVIAR PARA FIRESTORE:", errSync);
+          console.error("Código do erro:", errSync.code);
+          console.error("Mensagem:", errSync.message);
+          console.error("Stack:", errSync.stack);
+
+          alert(`❌ ERRO ao enviar para a nuvem:\n\n${errSync.message}\n\nA cotação foi salva APENAS localmente.\nOs fornecedores NÃO receberão.\n\nContate o suporte técnico.`);
+
+          // Desbloqueia botão para tentar novamente
+          if (btnSalvar && btnSalvar.tagName === "BUTTON") {
+            btnSalvar.disabled = false;
+            btnSalvar.innerText = textoOriginal;
+          }
+          return; // Para aqui, não recarrega
         }
       } else {
-        console.warn("⚠️ V2: Firebase não definido. Operando offline.");
+        console.error("❌ FIREBASE NÃO INICIALIZADO!");
+        alert("❌ ERRO: Firebase não está inicializado.\n\nVerifique a configuração do sistema.");
+
+        if (btnSalvar && btnSalvar.tagName === "BUTTON") {
+          btnSalvar.disabled = false;
+          btnSalvar.innerText = textoOriginal;
+        }
+        return;
       }
 
       // 🔔 3. NOTIFICAÇÃO (Tentativa)
@@ -11766,12 +11780,6 @@
       // 4. LIMPEZA E UI
       window.fornecedoresSelecionadosTemp = [];
       numeroCotacaoAtual = null;
-
-      if (nuvemOk) {
-        alert("✅ Cotação publicada com sucesso!\n\nOs fornecedores devem receber a atualização em instantes.");
-      } else {
-        alert("⚠️ ATENÇÃO: Salvo APENAS LOCALMENTE.\n\nOcorreu uma falha de conexão com a nuvem (Timeout).\nSua cotação está salva EXCLUSIVAMENTE neste computador por enquanto.\nOs fornecedores NÃO receberão até que a conexão volte.");
-      }
 
       limparFormulariosCotacao();
       window.location.reload();
@@ -11807,119 +11815,6 @@
   };
   console.log("🚀 PATCH V2 APLICADO: Funcionalidade de publicação otimizada.");
 
-  /* ======================================================
-     🔄 FORÇAR SINCRONIZAÇÃO DE TODAS AS COTAÇÕES
-     ====================================================== */
-  window.forceSyncAll = async function () {
-    const cotacoesLocal = JSON.parse(localStorage.getItem("cotacoes")) || [];
-
-    if (cotacoesLocal.length === 0) {
-      alert("✅ Nenhuma cotação pendente para sincronizar.");
-      return;
-    }
-
-    if (!confirm(`🔄 Deseja forçar o envio de ${cotacoesLocal.length} cotação(ões) para a nuvem?\n\nIsso pode demorar alguns segundos.`)) {
-      return;
-    }
-
-    let sucesso = 0;
-    let falha = 0;
-    const falhados = [];
-
-    // Modal de progresso
-    const modal = document.createElement('div');
-    modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);display:flex;align-items:center;justify-content:center;z-index:99999;';
-    modal.innerHTML = `
-      <div style="background:#1a1a1a;padding:30px;border-radius:10px;border:2px solid #661155;min-width:400px;text-align:center;">
-        <h2 style="color:#fff;margin-bottom:20px;">☁️ Sincronizando...</h2>
-        <p id="syncProgress" style="color:#3ab9b6;font-size:18px;margin-bottom:20px;">0 / ${cotacoesLocal.length}</p>
-        <div style="background:#333;height:20px;border-radius:10px;overflow:hidden;">
-          <div id="syncBar" style="background:linear-gradient(90deg, #661155, #3ab9b6);height:100%;width:0%;transition:width 0.3s;"></div>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(modal);
-
-    const progressText = modal.querySelector('#syncProgress');
-    const progressBar = modal.querySelector('#syncBar');
-
-    for (let i = 0; i < cotacoesLocal.length; i++) {
-      const cot = cotacoesLocal[i];
-
-      try {
-        if (typeof db !== "undefined") {
-          await db.collection("cotacoes").doc(String(cot.numero || cot.id)).set(cot);
-          sucesso++;
-          console.log(`✅ Sync OK: ${cot.numero}`);
-        } else {
-          throw new Error("Firebase não conectado");
-        }
-      } catch (err) {
-        falha++;
-        falhados.push(cot.numero || cot.id);
-        // 🚨 MOSTRA ERRO DETALHADO
-        console.error(`❌ ERRO DETALHADO em ${cot.numero}:`, err);
-        console.error("Código do erro:", err.code);
-        console.error("Mensagem completa:", err.message);
-      }
-
-      // Atualiza progresso
-      const progress = Math.round(((i + 1) / cotacoesLocal.length) * 100);
-      progressText.innerText = `${i + 1} / ${cotacoesLocal.length}`;
-      progressBar.style.width = progress + '%';
-    }
-
-    // Remove modal
-    document.body.removeChild(modal);
-
-    // Relatório final
-    let msg = `✅ Sincronização concluída!\n\n`;
-    msg += `✔️ Sucesso: ${sucesso}\n`;
-    if (falha > 0) {
-      msg += `❌ Falha: ${falha}\n\nCotações que falharam:\n${falhados.join(", ")}`;
-    }
-
-    alert(msg);
-
-    // Recarrega para atualizar a UI
-    if (sucesso > 0) {
-      window.location.reload();
-    }
-  };
-
-  // 🔘 INJETA BOTÃO NO MENU PRINCIPAL (Auto-Inject)
-  setTimeout(() => {
-    const menuPrincipal = document.querySelector('[onclick*="voltarMenu"]')?.parentElement || document.body;
-
-    // Verifica se já existe
-    if (document.getElementById('btnSyncAll')) return;
-
-    const btnSync = document.createElement('button');
-    btnSync.id = 'btnSyncAll';
-    btnSync.innerHTML = '🔄 Sincronizar Tudo';
-    btnSync.style.cssText = `
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      z-index: 9998;
-      background: linear-gradient(135deg, #661155, #3ab9b6);
-      color: white;
-      border: none;
-      padding: 12px 20px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: bold;
-      font-size: 14px;
-      box-shadow: 0 4px 15px rgba(102, 17, 85, 0.4);
-      transition: all 0.3s;
-    `;
-    btnSync.onmouseover = () => btnSync.style.transform = 'scale(1.05)';
-    btnSync.onmouseout = () => btnSync.style.transform = 'scale(1)';
-    btnSync.onclick = () => forceSyncAll();
-
-    document.body.appendChild(btnSync);
-    console.log("🔘 Botão 'Sincronizar Tudo' injetado com sucesso.");
-  }, 2000);
 
 
   /* ======================================================
