@@ -5163,7 +5163,7 @@
      GERAR NÚMERO DE COTAÇÃO (ÚNICO)
   ====================================================== */
 
-  let contadorCotacoes = Number(localStorage.getItem("contadorCotacao")) || 1000;
+  contadorCotacoes = Number(localStorage.getItem("contadorCotacao")) || 1000;
 
   function gerarNumeroCotacao() {
     const agora = new Date();
