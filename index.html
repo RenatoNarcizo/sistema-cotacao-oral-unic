@@ -3338,25 +3338,41 @@
         <h2 style="margin:0; font-size:20px; color:#661155;">Análise de Cotação</h2>
       </div>
 
-      <!-- 📌 CABEÇALHO DA COTAÇÃO -->
       <div class="cabecalho-cotacao"
-        style="background:#111; padding:15px; border-radius:8px; margin-top:20px; border:1px solid #333;">
+        style="background:#111; padding:15px; border-radius:8px; margin-top:20px; border:1px solid #333; display:flex; justify-content:space-between; align-items:center;">
 
-        <div class="linha-principal" style="margin-bottom:8px;">
-          <span class="numero-cotacao" id="analiseNumero"
-            style="display:block; font-size:18px; font-weight:bold; color:#a6acb8; margin-bottom:5px;"></span>
-          <div class="descricao-cotacao" id="analiseDescricao" style="font-size:14px; color:#ccc;"></div>
+        <div class="info-principal" style="flex:1;">
+          <div class="linha-principal" style="margin-bottom:8px;">
+            <span class="numero-cotacao" id="analiseNumero"
+              style="display:block; font-size:18px; font-weight:bold; color:#a6acb8; margin-bottom:5px;"></span>
+            <div class="descricao-cotacao" id="analiseDescricao" style="font-size:14px; color:#ccc;"></div>
+          </div>
+
+          <div class="linha-datas" style="display:flex; gap:30px; font-size:12px; color:#888; margin-top:10px;">
+            <div>
+              <strong style="color:#fff;">Abertura:</strong>
+              <span id="analiseDataCriacao"></span>
+            </div>
+            <div>
+              <strong style="color:#fff;">Fechamento:</strong>
+              <span id="analiseDataFechamento"></span>
+            </div>
+          </div>
         </div>
 
-        <div class="linha-datas" style="display:flex; gap:30px; font-size:12px; color:#888; margin-top:10px;">
-          <div>
-            <strong style="color:#fff;">Abertura:</strong>
-            <span id="analiseDataCriacao"></span>
-          </div>
-          <div>
-            <strong style="color:#fff;">Fechamento:</strong>
-            <span id="analiseDataFechamento"></span>
-          </div>
+        <!-- ⏳ TIMER RELÓGIO (MODAL ANÁLISE) -->
+        <div id="analiseTimer" style="
+            background: #222;
+            border: 1px solid #661155;
+            padding: 10px 20px;
+            border-radius: 8px;
+            text-align: center;
+            min-width: 180px;
+            box-shadow: 0 0 10px rgba(102, 17, 85, 0.3);
+            margin-left: 20px;
+        ">
+          <div style="font-size:10px; color:#aaa; margin-bottom:4px; text-transform: uppercase;">Tempo Restante</div>
+          <div id="analiseTimerDisplay" style="font-size:20px; font-weight:bold; color:#00ff99;">--d --h --m --s</div>
         </div>
 
       </div>
@@ -6366,7 +6382,7 @@
                         border-radius:6px;
                     ">
                         <div style="flex:1;">
-                           <strong style="color:white; font-size:15px; display:block;">${item.cotacao.descricao || "Cotação #" + item.cotacao.numero}</strong>
+                           <strong style="color:white; font-size:15px; display:block;">${item.cotacao.descricao || "COT-" + item.cotacao.numero}</strong>
                            <span style="color:#888; font-size:12px;">#${item.cotacao.numero} • Data: ${item.cotacao.dataCriacao}</span>
                            ${item.fornecedores ? `<div style="margin-top:2px; color:#aaa; font-size:12px;">👤 Fornecedor(es): <strong>${item.fornecedores}</strong></div>` : ''}
                         </div>
@@ -7284,7 +7300,7 @@
          - Suporta: respondida / reanalise / aprovacao / fechada
       ====================================================== */
       window.encerrarCotacaoManualmente = function (numero) {
-        if (!confirm(`Deseja realmente encerrar a cotação #${numero} agora? Ela será movida para Análise.`)) return;
+        if (!confirm(`Deseja realmente encerrar a COT-${numero} agora? Ela será movida para Análise.`)) return;
 
         const cotacoes = getCotacoes();
         const cot = cotacoes.find(c => c.numero === numero);
@@ -9468,7 +9484,7 @@
          🔒 FUNÇÕES DE CONTROLE DE COTAÇÃO (REDAÇÃO FINAL)
       ====================================================== */
       window.encerrarCotacaoManualmente = function (numero) {
-        if (!confirm(`Deseja encerrar a cotação #${numero} e movê-la para análise?`)) return;
+        if (!confirm(`Deseja encerrar a COT-${numero} e movê-la para análise?`)) return;
 
         const cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
         const index = cotacoes.findIndex(c => c.numero === numero);
@@ -9482,7 +9498,7 @@
       };
 
       window.reabrirCotacao = function (numero) {
-        if (!confirm(`Deseja reabrir a cotação #${numero} para novas respostas?`)) return;
+        if (!confirm(`Deseja reabrir a COT-${numero} para novas respostas?`)) return;
 
         const cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
         const index = cotacoes.findIndex(c => c.numero === numero);
@@ -9830,7 +9846,7 @@
         </div>
 
         <div style="font-size:13px;color:#ccc;margin:4px 0 8px;">
-          <strong>Cotação #${c.numero}</strong>
+          <strong>COT-${c.numero}</strong>
         </div>
 
         <div style="font-size:13px;">
@@ -11163,6 +11179,10 @@
       }
 
       window.fecharModalAnalise = function () {
+        if (window.timerAnaliseInterval) {
+          clearInterval(window.timerAnaliseInterval);
+          window.timerAnaliseInterval = null;
+        }
         document.getElementById("modalAnaliseCotacao").style.display = "none";
         document.body.style.overflow = "auto"; // Restore scrolling
       };
