@@ -7013,59 +7013,56 @@
             Responder
           </button>`;
             }
-            botao = `
-        <button onclick="verDetalhesCotacao('${c.numero}')">
-          🔍 Detalhes
-        </button>`;
-          } else {
-            // 🛒 COMPRADOR / ADMIN
-            if (c.status === "respondida" || c.status === "analise" || c.status === "reanalise" || c.status === "aberta") {
-              const btnAnalisar = document.createElement("button");
-              btnAnalisar.innerText = "Analisar Resposta";
-              btnAnalisar.style.cssText = "background:#ffcc00; color:#000; border:none; padding:12px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:14px; width:100%; margin-bottom:4px;";
-              btnAnalisar.onclick = () => analisarCotacao(c.numero);
-              // acoesDiv não está definido no innerHTML antigo aqui, mas o dashboard usa uma lógica diferente
-              // No dashboard (carregarCotacoes), o 'botao' é injetado.
-              botao = `
+          }
+        } else {
+          // 🛒 COMPRADOR / ADMIN
+          if(c.status === "respondida" || c.status === "analise" || c.status === "reanalise" || c.status === "aberta") {
+          const btnAnalisar = document.createElement("button");
+          btnAnalisar.innerText = "Analisar Resposta";
+          btnAnalisar.style.cssText = "background:#ffcc00; color:#000; border:none; padding:12px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:14px; width:100%; margin-bottom:4px;";
+          btnAnalisar.onclick = () => analisarCotacao(c.numero);
+          // acoesDiv não está definido no innerHTML antigo aqui, mas o dashboard usa uma lógica diferente
+          // No dashboard (carregarCotacoes), o 'botao' é injetado.
+          botao = `
                 <button onclick="analisarCotacao('${c.numero}')" style="background:#ffcc00; color:#000; border:none; padding:12px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:14px; width:100%; margin-bottom:4px;">
                    Analisar Resposta
                 </button>
               `;
-            }
+        }
 
-            if (c.status === "aberta" || c.status === "respondida" || c.status === "reanalise") {
-              botao = `
+        if (c.status === "aberta" || c.status === "respondida" || c.status === "reanalise") {
+          botao = `
                 <button onclick="encerrarCotacaoManualmente('${c.numero}')" style="background:#cc0000; color:white; border:none; padding:12px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:14px; width:100%;">
                   <i class="fa-solid fa-lock" style="color:#ffcc00;"></i> Encerrar
                 </button>`;
-            } else {
-              botao = "";
-            }
-          }
+        } else {
+          botao = "";
+        }
+      }
 
-          // --- ℹ️ INFO SECTION (RESTAURADA) ---
-          let statusBadge = "";
-          if (c.status === "aberta") {
-            statusBadge = '<span style="background:#555; padding:2px 8px; border-radius:10px; font-size:11px; margin-left:8px; color:white; border: 1px solid #777;"><i class="fa-solid fa-bullhorn" style="font-size:10px; color:#ff66cc;"></i> Publicada</span>';
-          }
+      // --- ℹ️ INFO SECTION (RESTAURADA) ---
+      let statusBadge = "";
+      if (c.status === "aberta") {
+        statusBadge = '<span style="background:#555; padding:2px 8px; border-radius:10px; font-size:11px; margin-left:8px; color:white; border: 1px solid #777;"><i class="fa-solid fa-bullhorn" style="font-size:10px; color:#ff66cc;"></i> Publicada</span>';
+      }
 
-          let tempoRestanteHTML = "";
-          const agora = new Date();
-          const fim = new Date(c.dataFechamento);
-          const diffMs = fim - agora;
-          let tempoTexto = "Expirado";
-          if (diffMs > 0) {
-            const dias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-            const horas = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            const minutos = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-            tempoTexto = `${dias}d ${horas}h ${minutos}m`;
-          }
-          tempoRestanteHTML = `<span style="color:#3ab9b6;">⏳ Tempo restante: <b>${tempoTexto}</b></span>`;
+      let tempoRestanteHTML = "";
+      const agora = new Date();
+      const fim = new Date(c.dataFechamento);
+      const diffMs = fim - agora;
+      let tempoTexto = "Expirado";
+      if (diffMs > 0) {
+        const dias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        const horas = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutos = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+        tempoTexto = `${dias}d ${horas}h ${minutos}m`;
+      }
+      tempoRestanteHTML = `<span style="color:#3ab9b6;">⏳ Tempo restante: <b>${tempoTexto}</b></span>`;
 
-          const qtdConvidados = Array.isArray(c.fornecedores) ? c.fornecedores.length : 0;
-          const qtdRespostas = Array.isArray(c.respostasFornecedores) ? c.respostasFornecedores.length : 0;
+      const qtdConvidados = Array.isArray(c.fornecedores) ? c.fornecedores.length : 0;
+      const qtdRespostas = Array.isArray(c.respostasFornecedores) ? c.respostasFornecedores.length : 0;
 
-          const infoHTML = `
+      const infoHTML = `
             <div style="font-weight:bold; font-size:18px; color:#fff; margin-bottom:4px;">
               ${c.descricao || "Sem descrição"}
             </div>
@@ -7079,24 +7076,26 @@
             </div>
           `;
 
-          /* ======================================================
-             🧱 RENDER FINAL (RESTAURADO)
-          ====================================================== */
-          div.innerHTML += `
+      /* ======================================================
+         🧱 RENDER FINAL (RESTAURADO)
+      ====================================================== */
+      div.innerHTML += `
       <div class="linha-cotacao" style="display:flex; justify-content:space-between; align-items:flex-start; background: #110811; border: 1px solid #4a0c3e; padding: 15px; border-radius: 8px; margin-bottom: 12px;">
         <div class="info" style="flex:1;">
           ${infoHTML}
         </div>
         <div class="acoes" style="display:flex; flex-direction:column; gap:8px; min-width:250px;">
           ${botao}
-          <button onclick="reabrirCotacao('${c.numero}')" 
-                  style="background:#ffcc00; color:#000; border:none; padding:12px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:14px; width:100%;">
-            <span style="background:#007bff; color:white; padding:3px; border-radius:3px; font-size:10px; margin-right:5px; display:inline-flex; align-items:center; justify-content:center;"><i class="fa-solid fa-arrows-rotate"></i></span> Reabrir / Estender
-          </button>
-          <button onclick="excluirCotacao('${c.numero}')" 
-                  style="background:transparent; border:1px solid #ff4444; color:#ff4444; padding:8px; border-radius:6px; cursor:pointer; width:100%;">
-            <i class="fa-solid fa-trash"></i>
-          </button>
+          ${usuario.tipo !== "fornecedor" ? `
+            <button onclick="reabrirCotacao('${c.numero}')" 
+                    style="background:#ffcc00; color:#000; border:none; padding:12px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:14px; width:100%;">
+              <span style="background:#007bff; color:white; padding:3px; border-radius:3px; font-size:10px; margin-right:5px; display:inline-flex; align-items:center; justify-content:center;"><i class="fa-solid fa-arrows-rotate"></i></span> Reabrir / Estender
+            </button>
+            <button onclick="excluirCotacao('${c.numero}')" 
+                    style="background:transparent; border:1px solid #ff4444; color:#ff4444; padding:8px; border-radius:6px; cursor:pointer; width:100%;">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          ` : ''}
         </div>
       </div>
     `;
@@ -7462,6 +7461,9 @@
 
           const numeroExibicao = c.numero.startsWith('COT-') ? c.numero : 'COT-' + c.numero;
 
+          // 🛡️ SEGURANÇA: SE FOR FORNECEDOR, SÓ PODE VER O QUE RESPONDEU OU ESTÁ DISPONÍVEL
+          const isForn = usuario.tipo === "fornecedor";
+
           // 1️⃣ ABA "PUBLICADAS" (aberta)
           if (c.status === "aberta") {
             const infoDiv = document.createElement("div");
@@ -7491,8 +7493,8 @@
                 Cotação #${numeroExibicao} ${statusBadge}
               </div>
               <div style="font-size:13px; color:#ccc; line-height:1.6;">
-                <span style="color:#a855f7;">👤</span> Com fornecedores (${qtdConvidados} convidados)<br>
-                <span style="color:#ff66cc;">📊</span> Respostas atuais: <b>${qtdRespostas}</b><br>
+                ${!isForn ? `<span style="color:#a855f7;">👤</span> Com fornecedores (${qtdConvidados} convidados)<br>` : ''}
+                <span style="color:#ff66cc;">📊</span> ${isForn ? 'Sua resposta:' : 'Respostas atuais:'} <b>${isForn ? (fornecedorRespondeu(c, usuario.email) ? 'Enviada' : 'Pendente') : qtdRespostas}</b><br>
                 ${tempoRestanteHTML}
               </div>
             `;
@@ -7501,7 +7503,7 @@
             acoesDiv.className = "acoes";
             acoesDiv.style.cssText = "display:flex; flex-direction:column; gap:8px; min-width:250px;";
 
-            if (usuario.tipo !== "fornecedor") {
+            if (!isForn) {
               const btnEncerrar = document.createElement("button");
               btnEncerrar.innerHTML = '<i class="fa-solid fa-lock" style="color:#ffcc00;"></i> Encerrar';
               btnEncerrar.style.cssText = "background:#cc0000; color:white; border:none; padding:12px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:14px; width:100%;";
@@ -7522,9 +7524,9 @@
             } else {
               const btnForn = document.createElement("button");
               const jaRespondeu = fornecedorRespondeu(c, usuario.email);
-              btnForn.innerText = jaRespondeu ? "Editar Resposta" : "Responder";
+              btnForn.innerText = jaRespondeu ? "Editar Minha Resposta" : "Responder Cotação";
               btnForn.style.cssText = "background:#3ab9b6; color:white; border:none; padding:12px; border-radius:6px; cursor:pointer; font-weight:bold; width:100%;";
-              btnForn.onclick = () => abrirModalResponder(c.numero);
+              btnForn.onclick = () => abrirResponderCotacao(c.numero);
               acoesDiv.appendChild(btnForn);
             }
 
@@ -7535,22 +7537,34 @@
           }
           // 2️⃣ ABA "ANÁLISE DE RESPOSTAS" (respondida, reanalise, analise)
           else if (c.status === "respondida" || c.status === "reanalise" || c.status === "analise") {
+            const jaRespondeu = fornecedorRespondeu(c, usuario.email);
+            if (isForn && !jaRespondeu) return; // Fornecedor não vê cotação que não respondeu (exceto as abertas)
+
             bloco.style.cssText = "display:flex; justify-content:space-between; align-items:center; background: #110811; border: 1px solid #4a0c3e; padding: 15px; border-radius: 8px; margin-bottom: 12px;";
             bloco.innerHTML = `
               <div class="info">
                 <div style="font-weight:bold; font-size:16px; color:#fff; margin-bottom:4px;">${c.descricao || "Sem descrição"}</div>
                 <div style="font-size:13px; color:#ccc;">Cotação #${numeroExibicao}</div>
-                <div style="font-size:13px; color:#ccc; margin-top:4px;">Respostas recebidas: <b>${qtdRespostas}</b></div>
+                <div style="font-size:13px; color:#ccc; margin-top:4px;">${isForn ? 'Status: <b>Resposta Enviada</b>' : `Respostas recebidas: <b>${qtdRespostas}</b>`}</div>
               </div>
               <div class="acoes">
-                <button onclick="analisarCotacao('${c.numero}')" style="background:#661155; color:white; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; font-weight:bold; display:flex; align-items:center; gap:8px;">
-                  <i class="fa-solid fa-chart-column"></i> Analisar Respostas
-                </button>
+                ${isForn ? `
+                   <button onclick="abrirResponderCotacao('${c.numero}', 'visualizar')" style="background:#3ab9b6; color:white; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; font-weight:bold; display:flex; align-items:center; gap:8px;">
+                    <i class="fa-solid fa-eye"></i> Ver Minha Resposta
+                  </button>
+                ` : `
+                  <button onclick="analisarCotacao('${c.numero}')" style="background:#661155; color:white; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; font-weight:bold; display:flex; align-items:center; gap:8px;">
+                    <i class="fa-solid fa-chart-column"></i> Analisar Respostas
+                  </button>
+                `}
               </div>
             `;
           }
           // 3️⃣ ABA "AGUARDANDO APROVAÇÃO" (aprovacao)
           else if (c.status === "aprovacao") {
+            const jaRespondeu = fornecedorRespondeu(c, usuario.email);
+            if (isForn && !jaRespondeu) return;
+
             bloco.style.cssText = "display:flex; justify-content:space-between; align-items:center; background: #110811; border: 1px solid #4a0c3e; padding: 15px; border-radius: 8px; margin-bottom: 12px;";
             bloco.innerHTML = `
               <div class="info">
@@ -7559,14 +7573,23 @@
                 <span style="background:rgba(255,204,0,0.1); color:#ffcc00; padding:4px 10px; border-radius:15px; font-size:12px; font-weight:bold; border:1px solid #ffcc00;">⏳ Aguardando Aprovação</span>
               </div>
               <div class="acoes">
-                <button onclick="analisarCotacao('${c.numero}')" style="background:#ffcc00; color:#000; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; font-weight:bold; display:flex; align-items:center; gap:8px;">
-                  <i class="fa-solid fa-eye"></i> Ver Aprovação
-                </button>
+                ${isForn ? `
+                  <button onclick="abrirResponderCotacao('${c.numero}', 'visualizar')" style="background:#3ab9b6; color:white; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; font-weight:bold; display:flex; align-items:center; gap:8px;">
+                    <i class="fa-solid fa-eye"></i> Ver Minha Resposta
+                  </button>
+                ` : `
+                  <button onclick="analisarCotacao('${c.numero}')" style="background:#ffcc00; color:#000; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; font-weight:bold; display:flex; align-items:center; gap:8px;">
+                    <i class="fa-solid fa-eye"></i> Ver Aprovação
+                  </button>
+                `}
               </div>
             `;
           }
           // 4️⃣ ABA "FECHADAS" (fechada)
           else {
+            const jaRespondeu = fornecedorRespondeu(c, usuario.email);
+            if (isForn && !jaRespondeu) return;
+
             bloco.style.cssText = "display:flex; justify-content:space-between; align-items:center; background: #110811; border: 1px solid #4a0c3e; padding: 15px; border-radius: 8px; margin-bottom: 12px;";
             bloco.innerHTML = `
               <div class="info">
@@ -7575,15 +7598,39 @@
                 <span style="background:rgba(0,255,153,0.1); color:#00ff99; padding:4px 10px; border-radius:15px; font-size:12px; font-weight:bold; border:1px solid #00ff99;">🔒 Fechada</span>
               </div>
               <div class="acoes">
-                <button onclick="analisarCotacao('${c.numero}')" style="background:#198754; color:white; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; font-weight:bold; display:flex; align-items:center; gap:8px;">
-                  <i class="fa-solid fa-file-invoice"></i> Gerar Pedido
-                </button>
+                ${isForn ? `
+                  <button onclick="abrirResponderCotacao('${c.numero}', 'visualizar')" style="background:#3ab9b6; color:white; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; font-weight:bold; display:flex; align-items:center; gap:8px;">
+                    <i class="fa-solid fa-eye"></i> Ver Resposta
+                  </button>
+                ` : `
+                  <button onclick="analisarCotacao('${c.numero}')" style="background:#198754; color:white; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; font-weight:bold; display:flex; align-items:center; gap:8px;">
+                    <i class="fa-solid fa-file-invoice"></i> Gerar Pedido
+                  </button>
+                `}
               </div>
             `;
           }
 
           container.appendChild(bloco);
         });
+
+        // 🏁 SE FOR FORNECEDOR, ESCONDE AS ABAS ADMINISTRATIVAS NO TOPO (Pequeno hack visual de segurança)
+        const usuario = getUsuarioLogado();
+        if (usuario && usuario.tipo === "fornecedor") {
+          const btnAnalise = document.getElementById("btnAnalise");
+          const btnAprovacao = document.getElementById("btnAprovacao");
+          const btnFechadas = document.getElementById("btnFechadas");
+          if (btnAnalise) btnAnalise.style.display = "none";
+          if (btnAprovacao) btnAprovacao.style.display = "none";
+          if (btnFechadas) btnFechadas.style.display = "none";
+        } else {
+          const btnAnalise = document.getElementById("btnAnalise");
+          const btnAprovacao = document.getElementById("btnAprovacao");
+          const btnFechadas = document.getElementById("btnFechadas");
+          if (btnAnalise) btnAnalise.style.display = "inline-block";
+          if (btnAprovacao) btnAprovacao.style.display = "inline-block";
+          if (btnFechadas) btnFechadas.style.display = "inline-block";
+        }
       }
 
 
