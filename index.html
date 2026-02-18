@@ -11838,29 +11838,45 @@
         return alert("⚠️ Informe pelo menos um preço válido.");
       }
 
-      // 6. Upload de Anexo (com Timeout de 30s)
+      // 6. Upload de Anexo (com Timeout de 120s p/ conexões lentas)
       const fileInput = document.getElementById("respAnexo");
       let anexoDados = { nome: "", url: "" };
 
       if (fileInput && fileInput.files.length > 0) {
         const file = fileInput.files[0];
         anexoDados.nome = file.name;
-        console.log(`📤 Perfilando upload: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`);
+        console.log(`📤 Perfilando upload: ${file.name} (${(file.size / 1024).toFixed(1)} KB) - Tipo: ${file.type}`);
 
         if (typeof storage !== "undefined") {
           try {
             const path = `respostas/${numCotacao}/${Date.now()}_${file.name}`;
-            const uploadTask = storage.ref(path).put(file);
+            const metadata = { contentType: file.type || 'application/pdf' };
+
+            console.log("🔄 Iniciando put() no Storage...");
+            const uploadTask = storage.ref(path).put(file, metadata);
+
+            // Monitora progresso (opcional, para log)
+            uploadTask.on('state_changed',
+              (snap) => {
+                const progresto = (snap.bytesTransferred / snap.totalBytes) * 100;
+                if (progresto % 25 === 0) console.log(`📊 Upload: ${progresto.toFixed(0)}%`);
+              },
+              (err) => console.warn("❌ Erro imediato no stream do upload:", err)
+            );
+
             const url = await comTimeout(
               uploadTask.then(s => s.ref.getDownloadURL()),
-              30000,
+              120000,
               "Upload de Arquivo"
             );
             anexoDados.url = url;
             console.log("✅ Upload concluído:", url);
           } catch (e) {
             console.warn("⚠️ Falha ou timeout no upload:", e.message);
-            if (!confirm("Ocorreu uma falha no upload do anexo. Deseja enviar a resposta sem o arquivo?")) {
+            // Se o erro for do Firebase (não timeout), loga os detalhes
+            if (e.code) console.error("Firebase Error Code:", e.code);
+
+            if (!confirm("Ocorreu uma falha no upload do anexo (Tempo esgotado ou erro de rede).\n\nDeseja enviar a resposta mesmo assim (sem o arquivo)?")) {
               throw new Error("Upload cancelado pelo usuário.");
             }
           }
