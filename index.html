@@ -6748,8 +6748,8 @@
     let alterou = false;
 
     cotacoes.forEach(c => {
-      // Ignora se já estiver fechada ou finalizada
-      if (["fechada", "finalizada", "cancelada"].includes(c.status)) return;
+      // Ignora se já estiver analise, aprovacao, fechada ou finalizada (Manual Override)
+      if (["analise", "aprovacao", "fechada", "finalizada", "cancelada"].includes(c.status)) return;
 
       if (!c.dataFechamento) return;
 
@@ -6775,6 +6775,15 @@
             console.log(`ℹ️ Cotação ${c.numero} expirou mas continua Aberta (Sem respostas).`);
             // Mantém "aberta" para continuar visível em Publicadas
           }
+        }
+
+        // ☁️ SYNC RTDB (CRÍTICO PARA AUTO-EXPIRAÇÃO)
+        if (typeof rtdb !== "undefined") {
+          rtdb.ref("cotacoes/" + c.numero).update({
+            status: c.status,
+            prazoEncerrado: true
+          }).then(() => console.log(`☁️ Auto-expiração de ${c.numero} sincronizada.`))
+            .catch(e => console.error("❌ Erro sync auto:", e));
         }
       }
     });
@@ -7246,6 +7255,17 @@
     cot.dataFechamento = new Date().toLocaleString(); // Define agora como fechamento
 
     salvarCotacoes(cotacoes);
+
+    // ☁️ SYNC RTDB (CRITICO PARA MANUAL)
+    if (typeof rtdb !== "undefined") {
+      rtdb.ref("cotacoes/" + cot.numero).update({
+        status: "analise",
+        prazoEncerrado: true,
+        dataFechamento: cot.dataFechamento
+      }).then(() => console.log("☁️ Status 'analise' (manual) salvo no RTDB!"))
+        .catch(e => console.error("❌ Erro ao salvar manual no RTDB:", e));
+    }
+
     alert("✅ Cotação encerrada com sucesso!");
     toggleListaRespondidas("publicadas");
   };
@@ -10106,6 +10126,16 @@
     cotacoes[index] = cotacao;
     localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
 
+    // ☁️ SYNC RTDB (CRÍTICO PARA APROVAÇÃO)
+    if (typeof rtdb !== "undefined") {
+      rtdb.ref("cotacoes/" + cotacao.numero).update({
+        status: "fechada",
+        dataAprovacao: cotacao.dataAprovacao,
+        adjudicacao: cotacao.adjudicacao
+      }).then(() => console.log("☁️ Cotação aprovada (fechada) no RTDB!"))
+        .catch(e => console.error("❌ Erro ao aprovar no RTDB:", e));
+    }
+
     alert("✅ Cotação aprovada com sucesso!");
 
     // Atualiza lista
@@ -10198,6 +10228,16 @@
       cotacoes[index].dataRejeicao = new Date().toLocaleString(); // Adicionado data
 
       localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
+
+      // ☁️ SYNC RTDB (CRITICO PARA REJEIÇÃO)
+      if (typeof rtdb !== "undefined") {
+        rtdb.ref("cotacoes/" + cotacoes[index].numero).update({
+          status: "reanalise",
+          motivoRejeicao: motivo,
+          dataRejeicao: cotacoes[index].dataRejeicao
+        }).then(() => console.log("☁️ Rejeição sincronizada no RTDB."))
+          .catch(e => console.error("❌ Erro sync rejeicao:", e));
+      }
       alert("✅ Cotação rejeitada e devolvida para análise.");
     } else {
       alert("Erro: Cotação não encontrada para rejeição.");
