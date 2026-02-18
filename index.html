@@ -5918,103 +5918,129 @@
      📂 VISUALIZAR DOCUMENTOS (COM MODAL MELHORADO)
   ====================================================== */
   window.visualizarDocumentos = async function (numeroCotacao, filtroUsuario = null) {
-    if (!numeroCotacao) return alert("Número da cotação inválido.");
+    if (!numeroCotacao || String(numeroCotacao).trim() === "" || String(numeroCotacao).toLowerCase() === "undefined") {
+      return alert("⚠️ Número da cotação inválido para visualização.");
+    }
     const numClean = String(numeroCotacao).trim();
 
-    console.log("🔍 Visualizando docs:", numClean, "Filtro:", filtroUsuario);
+    console.log("🔍 [DOCS] Iniciando visualização:", numClean, "| Filtro Fornecedor:", filtroUsuario);
 
     const idDoc = `docs_${numClean}`;
     let arquivos = [];
 
-    // 1. Busca documentos (FLEXÍVEL: FIRESTORE + LOCAL)
     try {
-      // Tenta Firestore primeiro
+      // 1. Busca documentos na coleção 'documentos_cotacao' (UPLOAD MANUAL / FINANCEIRO)
       const snapshot = await db.collection("documentos_cotacao").doc(idDoc).get();
       if (snapshot.exists) {
         arquivos = snapshot.data().arquivos || [];
       } else {
-        // Fallback local (IDB ou LS)
-        arquivos = await dbDocs.buscar(idDoc);
-        if (!arquivos) {
-          arquivos = JSON.parse(localStorage.getItem(idDoc)) || [];
+        // Fallback local
+        const localDocs = await dbDocs.buscar(idDoc);
+        arquivos = localDocs || JSON.parse(localStorage.getItem(idDoc)) || [];
+      }
+
+      // 2. Busca documentos da COTAÇÃO (Anexos Originais do Comprador + Respostas)
+      const todasCotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
+      const cotacao = todasCotacoes.find(c => String(c.numero) === numClean || String(c.id) === numClean);
+
+      if (cotacao) {
+        // A. Anexos Diretos (Origem/Comprador)
+        if (Array.isArray(cotacao.anexos)) {
+          cotacao.anexos.forEach(anexo => {
+            const jaExiste = arquivos.some(a => a.nome === anexo.nome && a.tamanho === anexo.tamanho);
+            if (!jaExiste) {
+              arquivos.push({
+                nome: anexo.nome,
+                tipo: "Anexo Cotação",
+                data: cotacao.dataCriacao || new Date().toLocaleDateString(),
+                tamanho: anexo.tamanho || "desc.",
+                usuario: "Comprador (Origem)",
+                base64: anexo.base64,
+                url: anexo.url
+              });
+            }
+          });
+        }
+
+        // B. Anexos das Respostas de Fornecedores (Novo Fallback Base64/Direct)
+        if (Array.isArray(cotacao.respostasFornecedores)) {
+          cotacao.respostasFornecedores.forEach(resp => {
+            const anexoResp = resp.anexo || (Array.isArray(resp.anexos) ? resp.anexos[0] : null);
+            if (anexoResp && (anexoResp.url || anexoResp.base64)) {
+              const jaExiste = arquivos.some(a => (anexoResp.url && a.url === anexoResp.url) || (anexoResp.base64 && a.base64 === anexoResp.base64));
+              if (!jaExiste) {
+                arquivos.push({
+                  nome: anexoResp.nome || "Anexo Resposta",
+                  tipo: "Resposta Fornecedor",
+                  data: resp.data || new Date().toLocaleDateString(),
+                  tamanho: anexoResp.tamanho || "desc.",
+                  usuario: resp.fornecedor || resp.email,
+                  base64: anexoResp.base64,
+                  url: anexoResp.url
+                });
+              }
+            }
+          });
         }
       }
 
-      // 2. Busca documentos da COTAÇÃO (se existirem nos dados da cotação)
-      const cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
-      const cotacao = cotacoes.find(c => c.numero === numClean || c.id === numClean || c.numero === numeroCotacao); // Tenta match robusto
-
-      if (cotacao && Array.isArray(cotacao.anexos)) {
-        cotacao.anexos.forEach(anexo => {
-          // Evita duplicatas (se já vieram do manual)
-          const jaExiste = arquivos.some(a => a.nome === anexo.nome && a.tamanho === anexo.tamanho);
-          if (!jaExiste) {
-            arquivos.push({
-              nome: anexo.nome,
-              tipo: "Anexo Cotação",
-              data: cotacao.dataCriacao || new Date().toLocaleDateString(),
-              tamanho: anexo.tamanho || "desc.",
-              usuario: "Comprador (Origem)", // Identifica que veio da cotação
-              base64: anexo.base64
-            });
-          }
+      // 3. FILTRAGEM RIGOROSA (Isolamento de Dados)
+      let arquivosExibir = [...arquivos];
+      if (filtroUsuario) {
+        const filtroClean = String(filtroUsuario).toLowerCase().trim();
+        arquivosExibir = arquivos.filter(a => {
+          const usuarioDoc = String(a.usuario || "").toLowerCase().trim();
+          // Se for anexo do comprador (Origem), todos veem. Se for de fornecedor, filtra pelo nome/email.
+          return usuarioDoc.includes("comprador") || usuarioDoc === filtroClean || (a.tipo === "Anexo Cotação");
         });
       }
-
-      // Filter by user if filtered
-      const arquivosExibir = filtroUsuario
-        ? arquivos.filter(a => (a.usuario || "").toLowerCase() === filtroUsuario.toLowerCase())
-        : arquivos;
 
       if (arquivosExibir.length === 0) {
         alert("📭 Nenhum documento encontrado" + (filtroUsuario ? " para este fornecedor." : "."));
         return;
       }
 
-      // Cria/Reutiliza um modal dinâmico simples
+      // 4. Interface (Modal Dinâmico)
       let modalDocs = document.getElementById('modalDocsFinanceiro');
-
       if (!modalDocs) {
         modalDocs = document.createElement('div');
         modalDocs.id = 'modalDocsFinanceiro';
         modalDocs.className = 'modal';
-        modalDocs.style.zIndex = '2147483647'; // 🔥 GARANTE TOPO ABSOLUTO
-        modalDocs.style.display = 'none'; // garante start
+        modalDocs.style.zIndex = '2147483647';
         modalDocs.innerHTML = `
-        <div class="modal-content" style="max-width:500px;">
-           <span class="close-btn" onclick="document.getElementById('modalDocsFinanceiro').style.display='none'">&times;</span>
-           <h3 style="color:#661155; margin-bottom:15px;">📂 Documentos da Cotação</h3>
-           <div id="listaDocsContent" style="max-height:300px; overflow-y:auto;"></div>
-        </div>
-      `;
+          <div class="modal-content" style="max-width:500px;">
+             <span class="close-btn" onclick="document.getElementById('modalDocsFinanceiro').style.display='none'">&times;</span>
+             <h3 style="color:#661155; margin-bottom:15px;">📂 Documentos da Cotação</h3>
+             <div id="listaDocsContent" style="max-height:400px; overflow-y:auto;"></div>
+          </div>
+        `;
         document.body.appendChild(modalDocs);
       }
 
       const listaDiv = modalDocs.querySelector('#listaDocsContent');
       listaDiv.innerHTML = arquivosExibir.map((a) => {
-        // Encontra o índice original para evitar vazamento ao abrir
-        const originalIndex = arquivos.indexOf(a);
-
+        const idxOriginal = arquivos.indexOf(a);
         return `
-      <div style="background:#1a1a1a; padding:10px; margin-bottom:8px; border-radius:5px; border:1px solid #333; display:flex; justify-content:space-between; align-items:center;">
-         <div>
-            <strong style="color:white; display:block;">${a.nome}</strong>
-            <small style="color:#aaa;">${a.tipo} • ${a.tamanho} • ${a.data}</small><br>
-            ${a.usuario ? `<small style="color:#0dcaf0;">👤 Enviado por: ${a.usuario}</small>` : ''}
-            ${a.url ? `<br><small style="color:#00ff99;">☁️ Arquivo em Nuvem</small>` : ''}
-         </div>
-         <button onclick="abrirArquivoAnexo('${numeroCotacao}', ${originalIndex})" style="background:#661155; color:white; border:none; border-radius:4px; padding:6px 12px; cursor:pointer; font-weight:bold;">
-            ${a.url ? '👁️ Abrir' : '⬇️ Baixar'}
-         </button>
-      </div>
-    `}).join('');
+          <div style="background:#1a1a1a; padding:12px; margin-bottom:8px; border-radius:8px; border:1px solid #333; display:flex; justify-content:space-between; align-items:center;">
+             <div style="flex:1; padding-right:10px;">
+                <strong style="color:white; display:block; word-break:break-all;">${a.nome}</strong>
+                <small style="color:#aaa;">${a.tipo} • ${a.tamanho}</small><br>
+                <small style="color:#0dcaf0;">👤 Enviado por: ${a.usuario}</small>
+                ${a.url ? `<br><small style="color:#00ff99;">☁️ Arquivo em Nuvem</small>` : '<br><small style="color:#f39c12;">📦 Banco Seguro (Local)</small>'}
+             </div>
+             <button onclick="abrirArquivoAnexo('${numClean}', ${idxOriginal})" style="background:#661155; color:white; border:none; border-radius:5px; padding:8px 15px; cursor:pointer; font-weight:bold; white-space:nowrap;">
+                ${a.url ? '👁️ Abrir' : '⬇️ Ver'}
+             </button>
+          </div>
+        `}).join('');
 
       modalDocs.style.display = 'flex';
     } catch (e) {
-      console.error("Erro visualizarDocumentos:", e);
-      alert("Erro ao carregar documentos.");
+      console.error("❌ Erro visualizarDocumentos:", e);
+      alert("Erro ao carregar documentos. Verifique o console.");
     }
   };
+
 
   window.abrirArquivoAnexo = async function (numeroCotacao, index) {
     const idDoc = `docs_${numeroCotacao}`;
@@ -11987,6 +12013,12 @@
       localStorage.setItem("cotacoes", JSON.stringify(todasCotacoes));
 
       alert("✅ Resposta enviada com sucesso!");
+
+      // 🧹 LIMPEZA DE UI (ANTI-REPLICAÇÃO)
+      const fileInput = document.getElementById("respAnexo");
+      if (fileInput) fileInput.value = "";
+      document.querySelectorAll("#tabelaResponderCorpo input").forEach(inp => inp.value = "");
+
       fecharModalResponder();
       if (typeof mostrarAbaCotacao === 'function') mostrarAbaCotacao('respondidas');
 
