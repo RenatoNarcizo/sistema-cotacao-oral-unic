@@ -4312,7 +4312,39 @@
       // setTimeout(migrarDadosParaCloud, 1000);
     }
 
+    // 🔄 REFRESH FORÇADO DE DADOS (SYNC IMEDIATO)
+    // Garante que o usuário veja as cotações mais recentes ao logar
+    if (typeof sincronizarCotacoesAgora === "function") {
+      sincronizarCotacoesAgora();
+    } else {
+      console.warn("Função sync manual não encontrada");
+    }
+
     console.log("✅ Login realizado com sucesso para:", usuario.email);
+  }
+
+  // 🔄 HELPER GLOBAL DE SYNC
+  window.sincronizarCotacoesAgora = function () {
+    if (typeof rtdb !== "undefined") {
+      console.log("🔄 Forçando sincronização RTDB no Login...");
+      rtdb.ref("cotacoes").once("value").then(snapshot => {
+        const data = snapshot.val();
+        if (data) {
+          const arrayCotacoes = Object.values(data);
+          const cotacoesValidas = arrayCotacoes.filter(c => c && (c.id || c.numero));
+          localStorage.setItem("cotacoes", JSON.stringify(cotacoesValidas));
+          console.log("✅ Sync Login Completo:", cotacoesValidas.length);
+
+          // Tenta atualizar UI se possível (mesmo oculto)
+          if (typeof renderizarListaFornecedor === "function") {
+            try {
+              const u = JSON.parse(sessionStorage.getItem("usuario_logado"));
+              if (u && u.tipo === 'fornecedor') renderizarListaFornecedor('abertas');
+            } catch (e) { }
+          }
+        }
+      });
+    }
   }
 
   /* ======================================================
@@ -5092,7 +5124,20 @@
     // 💡 Usa ID ou Número para garantir chave única
     const idUnico = cotacao.id || cotacao.numero;
     const chaveRes = `res_${idUnico}_${usuario.email.toLowerCase().trim()}`;
-    const respostaSalva = JSON.parse(localStorage.getItem(chaveRes));
+    let respostaSalva = JSON.parse(localStorage.getItem(chaveRes));
+
+    // ☁️ FALLBACK CLOUD (Sync Cruzado)
+    if (!respostaSalva && Array.isArray(cotacao.respostasFornecedores)) {
+      const respCloud = cotacao.respostasFornecedores.find(r =>
+        normalizarEmail(r.email) === normalizarEmail(usuario.email)
+      );
+      if (respCloud) {
+        console.log("☁️ Resposta recuperada da nuvem para o modal.");
+        respostaSalva = respCloud;
+        // Atualiza cache local
+        localStorage.setItem(chaveRes, JSON.stringify(respCloud));
+      }
+    }
 
     // 💡 AUTO-CORREÇÃO DE MODO (Fix para botão sumido)
     if (modo !== 'visualizar') {
@@ -7943,11 +7988,24 @@
 
       if (!convidado) return;
 
-      // Resposta (Chave robusta)
-      // Tenta numero e id para compatibilidade
+      // Resposta (Chave robusta E Cloud Check)
       const chaveRes = `res_${cot.numero}_${usuario.email.toLowerCase().trim()}`;
       const chaveResId = `res_${cot.id}_${usuario.email.toLowerCase().trim()}`;
-      const jaRespondeu = localStorage.getItem(chaveRes) !== null || localStorage.getItem(chaveResId) !== null;
+
+      // 1. Tenta Local
+      let jaRespondeu = localStorage.getItem(chaveRes) !== null || localStorage.getItem(chaveResId) !== null;
+
+      // 2. Tenta Cloud (Crucial para Cross-Device)
+      if (!jaRespondeu && Array.isArray(cot.respostasFornecedores)) {
+        const respostaCloud = cot.respostasFornecedores.find(r =>
+          normalizarEmail(r.email) === normalizarEmail(usuario.email)
+        );
+        if (respostaCloud) {
+          jaRespondeu = true;
+          // 🔄 Auto-Sync Local: Salva para edição funcionar
+          localStorage.setItem(chaveRes, JSON.stringify(respostaCloud));
+        }
+      }
 
       // Status e datas
       const agora = new Date();
