@@ -12444,6 +12444,107 @@
     }
   }
 
+  // ======================================================
+  // ⚡ FUNÇÕES DE EMERGÊNCIA (CARREGADAS DIRETO NO INDEX)
+  // ======================================================
+
+  window.reabrirCotacao = async function (id) {
+    if (!confirm("⚠️ Deseja REABRIR esta cotação?\n\nIsso estenderá o prazo de fechamento em 3 dias para tentar atrair novos fornecedores.")) return;
+
+    try {
+      let cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
+      const index = cotacoes.findIndex(c => String(c.numero) === String(id) || String(c.id) === String(id));
+
+      if (index === -1) return alert("Cotação não encontrada.");
+
+      const agora = new Date();
+      agora.setDate(agora.getDate() + 3);
+
+      const cot = cotacoes[index];
+      cot.status = 'aberta';
+      cot.prazoEncerrado = false;
+      cot.dataFechamento = agora.toLocaleString();
+
+      localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
+
+      // 🔥 SYNC FIRESTORE
+      if (typeof db !== "undefined") {
+        try {
+          const docId = String(cot.numero || cot.id);
+          await db.collection("cotacoes").doc(docId).update({
+            status: 'aberta',
+            prazoEncerrado: false,
+            dataFechamento: cot.dataFechamento
+          });
+          console.log(`✅ Firestore: Cotação ${docId} reaberta.`);
+        } catch (e) {
+          console.warn("⚠️ Falha ao atualizar Firestore:", e);
+        }
+      }
+
+      // ☁️ SYNC RTDB (CRÍTICO)
+      if (typeof rtdb !== "undefined") {
+        rtdb.ref("cotacoes/" + cot.numero).update({
+          status: 'aberta',
+          prazoEncerrado: false,
+          dataFechamento: cot.dataFechamento
+        }).then(() => console.log("☁️ Reabertura sincronizada no RTDB."))
+          .catch(e => console.error("❌ Erro sync reabertura:", e));
+      }
+
+      alert("✅ Cotação reaberta com sucesso! Prazo estendido.");
+      if (typeof toggleListaRespondidas === 'function') {
+        toggleListaRespondidas('publicadas', true);
+      } else {
+        window.location.reload();
+      }
+
+    } catch (e) {
+      console.error(e);
+      alert("Erro ao reabrir cotação: " + e.message);
+    }
+  };
+
+  window.excluirCotacao = async function (id) {
+    if (!confirm("⚠️ ATENÇÃO: Tem certeza que deseja EXCLUIR permanentemente esta cotação?")) return;
+
+    try {
+      const idStr = String(id);
+
+      // Remove local
+      let cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
+      const novaLista = cotacoes.filter(c => String(c.numero) !== idStr && String(c.id) !== idStr);
+      localStorage.setItem("cotacoes", JSON.stringify(novaLista));
+
+      // Remove respostas
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key.includes(idStr)) localStorage.removeItem(key);
+      }
+
+      // ☁️ Remove Firestore (Background)
+      if (typeof db !== "undefined") {
+        db.collection("cotacoes").doc(idStr).delete().catch(console.warn);
+      }
+
+      // ☁️ Remove RTDB (Background)
+      if (typeof rtdb !== "undefined") {
+        rtdb.ref("cotacoes/" + idStr).remove().catch(console.warn);
+      }
+
+      alert("✅ Cotação excluída com sucesso!");
+      if (typeof toggleListaRespondidas === 'function') {
+        toggleListaRespondidas('publicadas', true);
+      } else {
+        window.location.reload();
+      }
+
+    } catch (e) {
+      console.error("Erro ao excluir cotação:", e);
+      alert("Erro ao excluir: " + e.message);
+    }
+  };
+
   // Inicia assim que possível
   iniciarOuvinteRTDB();
   window.iniciarOuvinteRTDB = iniciarOuvinteRTDB;
