@@ -7473,10 +7473,10 @@
       fecharModalResponder();
 
       /* ======================
-         🔄 ATUALIZA LISTA
+         🔄 ATUALIZA LISTA (CORRIGIDO PARA O FORNECEDOR)
       ====================== */
-      if (typeof carregarCotacoes === "function") {
-        carregarCotacoes("respondidas");
+      if (typeof mostrarAbaCotacao === "function") {
+        mostrarAbaCotacao("respondidas");
       }
     };
 
@@ -7871,45 +7871,156 @@
     });
   }
 
-  function renderizarListaFornecedor(aba = 'abertas') {
+  /* ======================================================
+     📬 ABAS DO PAINEL DO FORNECEDOR (NOVA FUNÇÃO)
+  ====================================================== */
+  window.mostrarAbaCotacao = function (aba) {
+    // 1. Atualiza visual dos botões
+    const botoes = document.querySelectorAll('#responderCotacao button[id^="btn"]');
+    botoes.forEach(btn => {
+      btn.style.background = '#333';
+      btn.classList.remove('ativo');
+    });
+
+    const btnId = aba === 'abertas' ? 'btnAbertas' :
+      aba === 'respondidas' ? 'btnRespondidas' :
+        'btnEncerradas';
+    const btn = document.getElementById(btnId);
+    if (btn) {
+      btn.style.background = '#661155';
+      btn.classList.add('ativo');
+    }
+
+    // 2. Esconde todas as listas
+    ['listaAbertas', 'listaRespondidas', 'listaEncerradas'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    });
+
+    // 3. Mostra a lista alvo e carrega conteúdo
+    let targetId = '';
+    if (aba === 'abertas') targetId = 'listaAbertas';
+    else if (aba === 'respondidas') targetId = 'listaRespondidas';
+    else if (aba === 'encerradas') targetId = 'listaEncerradas';
+
+    const container = document.getElementById(targetId);
+    if (container) {
+      container.style.display = 'block';
+      renderizarListaFornecedor(aba, container);
+    }
+  };
+
+  function renderizarListaFornecedor(aba = 'abertas', containerDireto = null) {
     const usuario = JSON.parse(sessionStorage.getItem("usuario_logado"));
     const cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
-    const listaDiv = document.getElementById("listaCotacoesParaResponder");
-    listaDiv.innerHTML = "";
+
+    // Se nÃ£o passar container, tenta adivinhar (fallback)
+    let container = containerDireto;
+    if (!container) {
+      if (aba === 'abertas') container = document.getElementById("listaAbertas");
+      else if (aba === 'respondidas') container = document.getElementById("listaRespondidas");
+      else if (aba === 'encerradas') container = document.getElementById("listaEncerradas");
+
+      // Fallback final
+      if (!container) container = document.getElementById("listaCotacoesParaResponder");
+    }
+
+    if (!container) return;
+    container.innerHTML = "";
+
+    if (!usuario) return;
+
+    let encontrouAlguma = false;
 
     cotacoes.forEach(cot => {
-      // Verifica se o fornecedor está na lista desta cotação
-      const convidado = cot.fornecedores.includes(usuario.nome) || cot.fornecedores.includes(usuario.email);
+      // Verifica convite (Trata string ou objeto)
+      const convidado = Array.isArray(cot.fornecedores) && cot.fornecedores.some(f => {
+        const emailF = (f.email || f).toLowerCase();
+        return emailF.includes(usuario.email.toLowerCase());
+      });
+
       if (!convidado) return;
 
-      // 🔑 Busca se já existe resposta para esta cotação + este usuário
-      const chaveRes = `res_${cot.id}_${usuario.email.toLowerCase().trim()} `;
-      const jaRespondeu = localStorage.getItem(chaveRes) !== null;
+      // Resposta (Chave robusta)
+      // Tenta numero e id para compatibilidade
+      const chaveRes = `res_${cot.numero}_${usuario.email.toLowerCase().trim()}`;
+      const chaveResId = `res_${cot.id}_${usuario.email.toLowerCase().trim()}`;
+      const jaRespondeu = localStorage.getItem(chaveRes) !== null || localStorage.getItem(chaveResId) !== null;
 
-      // Lógica das abas
-      if (aba === 'abertas' && jaRespondeu) return; // Se já respondeu, não mostra em abertas
-      if (aba === 'respondidas' && !jaRespondeu) return; // Se não respondeu, não mostra em respondidas
+      // Status e datas
+      const agora = new Date();
+      let fechamento;
+      try {
+        if (typeof cot.dataFechamento === 'string' && cot.dataFechamento.includes('/')) {
+          const p = cot.dataFechamento.split(', ');
+          const d = p[0].split('/');
+          const h = p[1] || "00:00";
+          fechamento = new Date(`${d[2]}-${d[1]}-${d[0]}T${h}`);
+        } else {
+          fechamento = new Date(cot.dataFechamento);
+        }
+      } catch (e) { fechamento = new Date(cot.dataFechamento); }
+
+      // Validação de expiração (se for inválida, considera futuro para não bloquear erradamente)
+      const isDataValida = !isNaN(fechamento.getTime());
+      const expirada = isDataValida ? (agora > fechamento) : false;
+      const fechadaManualmente = cot.status === 'fechada' || cot.status === 'finalizada' || cot.status === 'aprovacao';
+
+      // 🔍 LÓGICA DE FILTRO
+      if (aba === 'abertas') {
+        if (jaRespondeu) return;
+        if (expirada) return;
+        if (fechadaManualmente) return;
+      }
+
+      if (aba === 'respondidas') {
+        if (!jaRespondeu) return;
+      }
+
+      if (aba === 'encerradas') {
+        if (jaRespondeu) return; // Se ja respondeu, ta na aba respondidas
+        if (!expirada && !fechadaManualmente) return; // Se esta aberta, ta na aba aberta
+      }
+
+      encontrouAlguma = true;
 
       const card = document.createElement("div");
       card.className = "linha-cotacao";
 
-      // Verifica se expirou para mudar o botão
-      const expirada = new Date() > new Date(cot.dataFechamento);
-      const statusTexto = expirada ? "<span style='color:red'>(Expirada)</span>" : "";
+      const statusTexto = expirada ? "<span style='color:red; font-weight:bold;'>(Expira no passado)</span>" :
+        fechadaManualmente ? "<span style='color:#ccc;'>(Fechada)</span>" :
+          "<span style='color:#0dcaf0;'>(Aberta)</span>";
+
+      // Botão de ação
+      let botaoAcao = "";
+      if (aba === 'abertas') {
+        botaoAcao = `<button onclick="abrirModalResponder('${cot.numero}')">📄 Responder</button>`;
+      } else if (aba === 'respondidas') {
+        // Se ainda estiver no prazo, permite editar. Se não, apenas ver.
+        if (expirada || fechadaManualmente) {
+          botaoAcao = `<button onclick="abrirModalResponder('${cot.numero}', 'respondida')" style="background:#555;">👁️ Ver Resposta</button>`;
+        } else {
+          botaoAcao = `<button onclick="abrirModalResponder('${cot.numero}', 'respondida')">✏️ Ver / Editar</button>`;
+        }
+      } else {
+        botaoAcao = `<span style='color:#aaa; font-style:italic;'>Encerrada</span>`;
+      }
 
       card.innerHTML = `
         <div class="info">
-          <strong>${cot.descricao}</strong> ${statusTexto}<br>
-                <small>Prazo: ${new Date(cot.dataFechamento).toLocaleString()}</small>
-            </div>
-            <div class="acoes">
-                <button onclick="abrirModalResponder('${cot.id}')">
-                    ${jaRespondeu ? (expirada ? "👁️ Ver" : "✏️ Editar") : "📄 Responder"}
-                </button>
-            </div>
+          <strong style="font-size:16px;">${cot.descricao || "Cotação #" + cot.numero}</strong> ${statusTexto}<br>
+          <small style="color:#bbb;">Prazo: ${cot.dataFechamento}</small>
+        </div>
+        <div class="acoes">
+           ${botaoAcao}
+        </div>
       `;
-      listaDiv.appendChild(card);
+      container.appendChild(card);
     });
+
+    if (!encontrouAlguma) {
+      container.innerHTML = `<p style="color:#666; font-style:italic; padding:10px;">Nenhuma cotação nesta aba.</p>`;
+    }
   }
 
   /* ======================================================
@@ -10998,6 +11109,18 @@
     if (id !== "dashboard") {
       const db = document.getElementById("dashboard");
       if (db) db.style.display = "none";
+    }
+
+    // 🚀 INICIALIZAÇÃO ESPECÍFICA POR TELA
+    if (id === "responderCotacao") {
+      if (typeof mostrarAbaCotacao === "function") {
+        mostrarAbaCotacao("abertas");
+      } else {
+        // Fallback se a função ainda não carregou ou não existe
+        const abertas = document.getElementById("listaAbertas");
+        if (abertas) abertas.style.display = "block";
+        if (typeof renderizarListaFornecedor === "function") renderizarListaFornecedor("abertas");
+      }
     }
   }
   window.abrirTela = abrirTela;
