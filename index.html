@@ -3969,6 +3969,17 @@
 
   console.log("🔥 Firebase inicializado com sucesso! RTDB:", rtdb.app.options.databaseURL);
 
+  /* ======================================================
+     📧 HELPER: NORMALIZAR E-MAIL (CRITICO PARA SYNC)
+     - Garante que '  User@Domain.com ' vire 'user@domain.com'
+     - Evita falhas de comparação entre dispositivos
+  ====================================================== */
+  window.normalizarEmail = function (email) {
+    if (!email) return "";
+    return String(email).toLowerCase().trim();
+  };
+  console.log("✅ Helper: normalizarEmail registrado.");
+
 
   /* ======================================================
      🔑 STORAGE HELPERS
