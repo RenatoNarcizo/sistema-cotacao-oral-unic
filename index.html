@@ -5065,18 +5065,18 @@
     else if (pagina === "aprovacoes.html") {
       abrirAprovarCompras();
     }
-    else if (pagina === "financeiro") {
-      // 📝 Abre a gestão financeira do fornecedor
-      fecharTodasAsSecoes();
-      const sec = document.getElementById("secaoFinanceiro");
-      if (sec) {
-        sec.style.display = "block";
-        carregarFinanceiroFornecedor();
-      }
-    }
-    else {
-      alert("Tela em desenvolvimento 🚧");
-    }
+  } else if (pagina === "financeiro") {
+    document.getElementById("financeiro").style.display = "block";
+    if (typeof carregarFinanceiroFornecedor === "function") carregarFinanceiroFornecedor();
+  } else if (pagina === "cotacoesRespondidas") {
+    document.getElementById("cotacoesRespondidas").style.display = "block";
+    if (typeof toggleListaRespondidas === "function") toggleListaRespondidas('publicadas');
+  } else if (pagina === "usuarios") {
+    document.getElementById("usuarios").style.display = "block";
+    if (typeof carregarUsuarios === "function") carregarUsuarios();
+  } else {
+    alert("Tela em desenvolvimento 🚧");
+  }
   }
 
   /* ======================================================
