@@ -11784,6 +11784,16 @@
     return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timeoutId));
   }
 
+  /* 🛠️ HELPER: CONVERTER ARQUIVO PARA BASE64 */
+  function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = (err) => reject(err);
+      reader.readAsDataURL(file);
+    });
+  }
+
   /* ======================================================
      📤 SALVAR RESPOSTA DO FORNECEDOR (VERSÃO ULTRA ROBUSTA)
      ====================================================== */
@@ -11838,18 +11848,16 @@
         return alert("⚠️ Informe pelo menos um preço válido.");
       }
 
-      // 6. Upload de Anexo (com Timeout de 120s p/ conexões lentas)
+      // 6. Upload de Anexo (com Timeout e Fallback Inteligente)
       const fileInput = document.getElementById("respAnexo");
-      let anexoDados = { nome: "", url: "" };
+      let anexoDados = { nome: "", url: "", base64: "" };
 
       if (fileInput && fileInput.files.length > 0) {
         const file = fileInput.files[0];
-
-        // 🧼 LIMPEZA DE NOME DE ARQUIVO (Remove acentos, espaços e caracteres especiais)
         const nomeLimpo = file.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9.-]/g, "_");
-        anexoDados.nome = file.name; // Nome original para exibição
+        anexoDados.nome = file.name;
 
-        console.log(`📤 Perfilando upload: ${file.name} -> ${nomeLimpo} (${(file.size / 1024).toFixed(1)} KB) - Tipo: ${file.type}`);
+        console.log(`📤 Perfilando upload: ${file.name} -> ${nomeLimpo} (${(file.size / 1024).toFixed(1)} KB)`);
 
         if (typeof storage !== "undefined") {
           try {
@@ -11860,35 +11868,42 @@
             console.log("🔄 Iniciando put() no Storage...");
             const uploadTask = storage.ref(path).put(file, metadata);
 
-            // Monitora progresso
+            // Monitor de "travamento" (se não sair de 0% em 10s, avisa no log)
+            let progressTrigger = setTimeout(() => {
+              console.warn("⚠️ Upload parece travado em 0%.");
+            }, 10000);
+
             uploadTask.on('state_changed',
               (snap) => {
                 const progresso = (snap.bytesTransferred / snap.totalBytes) * 100;
                 console.log(`📊 Upload progress: ${progresso.toFixed(0)}%`);
+                if (progresso > 0) clearTimeout(progressTrigger);
               },
-              (err) => {
-                console.error("❌ ERRO FIREBASE STORAGE (on error):", err.code, err.message);
-                if (err.code === 'storage/unauthorized') {
-                  console.error("🚫 Erro de Permissão: Verifique as Security Rules do Storage.");
-                } else if (err.code === 'storage/retry-limit-exceeded') {
-                  console.error("⏳ Limite de tentativas excedido. Conexão instável?");
-                }
-              }
+              (err) => console.error("❌ ERRO STORAGE:", err.code)
             );
 
+            // Timeout de 25 segundos p/ disparar fallback
             const url = await comTimeout(
               uploadTask.then(s => s.ref.getDownloadURL()),
-              120000,
+              25000,
               "Upload de Arquivo"
             );
             anexoDados.url = url;
-            console.log("✅ Upload concluído:", url);
+            console.log("✅ Upload concluído via Storage:", url);
           } catch (e) {
-            console.warn("⚠️ Falha ou timeout no upload:", e.message);
-            if (e.code) console.error("Firebase Code:", e.code);
+            console.warn("⚠️ Falha ou timeout no Storage:", e.message);
 
-            if (!confirm("Ocorreu uma falha no upload do anexo (Tempo esgotado ou erro de rede).\n\nDeseja enviar a resposta mesmo assim (sem o arquivo)?")) {
-              throw new Error("Upload cancelado pelo usuário.");
+            if (file.size > 1024 * 1024) { // 1MB limit for Firestore Base64
+              alert("O arquivo é muito grande para o modo alternativo (> 1MB).");
+              if (!confirm("Deseja enviar sem o anexo?")) throw new Error("Abortado.");
+            } else {
+              if (confirm("O envio em nuvem falhou ou está travado.\n\nDeseja usar o 'Envio de Banco Seguro' (Base64)?\n\nIsso garantirá que o comprador receba o documento.")) {
+                console.log("🔄 Ativando Fallback Base64...");
+                const base64Data = await fileToBase64(file);
+                anexoDados.base64 = base64Data;
+              } else if (!confirm("Deseja enviar a resposta sem o arquivo?")) {
+                throw new Error("Upload cancelado pelo usuário.");
+              }
             }
           }
         }
@@ -11937,22 +11952,29 @@
           "Sync Firestore"
         );
 
-        // B. Se houver anexo, salva na coleção global de documentos
-        if (anexoDados.url) {
+        // B. Se houver anexo (URL ou Base64), salva na coleção global de documentos
+        if (anexoDados.url || anexoDados.base64) {
           const docRef = db.collection("documentos_cotacao").doc(`docs_${numCotacao}`);
           const snap = await db.collection("documentos_cotacao").doc(`docs_${numCotacao}`).get();
           let arquivos = snap.exists ? (snap.data().arquivos || []) : [];
 
           const novoAnexo = {
             nome: anexoDados.nome,
-            url: anexoDados.url,
+            url: anexoDados.url || "",
+            base64: anexoDados.base64 || "",
             data: new Date().toLocaleDateString(),
             usuario: resposta.fornecedor,
             tamanho: fileInput.files[0] ? (fileInput.files[0].size / 1024).toFixed(1) + " KB" : "-",
             tipo: "Resposta Fornecedor"
           };
 
-          if (!arquivos.some(a => a.url === anexoDados.url)) {
+          // Evita duplicatas (verifica URL ou Base64)
+          const existe = arquivos.some(a =>
+            (anexoDados.url && a.url === anexoDados.url) ||
+            (anexoDados.base64 && a.base64 === anexoDados.base64)
+          );
+
+          if (!existe) {
             arquivos.push(novoAnexo);
             await docRef.set({ arquivos: arquivos }, { merge: true });
           }
