@@ -9420,6 +9420,13 @@
 
       localStorage.setItem("cotacoes", JSON.stringify(novaLista));
 
+      // ☁️ SYNC RTDB (CRITICO PARA EXCLUSÃO)
+      if (typeof rtdb !== "undefined") {
+        rtdb.ref("cotacoes/" + id).remove()
+          .then(() => console.log("🗑️ Cotação excluída do RTDB"))
+          .catch(e => console.error("❌ Erro ao excluir do RTDB:", e));
+      }
+
       // 2. Remove respostas vinculadas (Limpeza)
       // Percorre keys para achar respostas desta cotação
       const keysParaRemover = [];
@@ -9563,14 +9570,24 @@
     alert("✅ Cotação enviada para aprovação com sucesso!");
     fecharModalAnalise();
 
-    // ☁️ SYNC FIRESTORE (BACKGROUND)
+    // ☁️ SYNC FIRESTORE + RTDB (CRÍTICO: RTDB É A FONTE DA VERDADE)
     if (typeof db !== "undefined" && firebase) {
-      db.collection("cotacoes").doc(String(cotacao.numero)).update({
+      const updates = {
         adjudicacao: novaAdjudicacao,
         status: "aprovacao"
-      })
-        .then(() => console.log("☁️ Status sincronizado na nuvem!"))
-        .catch(err => console.warn("⚠️ Falha sync status (Quota?):", err));
+      };
+
+      // 1. RTDB (Prioridade 1 - Sync Realtime)
+      if (typeof rtdb !== "undefined") {
+        rtdb.ref("cotacoes/" + cotacao.numero).update(updates)
+          .then(() => console.log("☁️ Status 'aprovacao' salvo no RTDB!"))
+          .catch(e => console.error("❌ Erro ao salvar status no RTDB:", e));
+      }
+
+      // 2. Firestore (Backup/Legado)
+      db.collection("cotacoes").doc(String(cotacao.numero)).update(updates)
+        .then(() => console.log("☁️ Status sincronizado no Firestore!"))
+        .catch(err => console.warn("⚠️ Falha sync status Firestore:", err));
     }
 
     // ATUALIZA UI (SEM EXECUTAR FETCH QUE POSSA REVERTER)
@@ -9638,6 +9655,14 @@
     cotacao.dataAprovacao = new Date().toLocaleString();
 
     salvarCotacoes(cotacoes);
+
+    // ☁️ SYNC RTDB (CRITICO)
+    if (typeof rtdb !== "undefined") {
+      rtdb.ref("cotacoes/" + cotacao.numero).update({
+        status: "fechada",
+        dataAprovacao: cotacao.dataAprovacao
+      });
+    }
 
     alert("✅ Cotação aprovada com sucesso!");
 
