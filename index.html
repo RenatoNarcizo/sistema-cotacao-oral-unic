@@ -5343,6 +5343,7 @@
      COTAÇÃO EXCEL
   ====================================================== */
   function abrirCotacaoExcel() {
+    limparFormulariosCotacao();
     fecharModal();
     document.getElementById("arquivoExcel").click();
   }
@@ -5392,6 +5393,7 @@
      COTAÇÃO MANUAL
   ====================================================== */
   function abrirCotacaoManual() {
+    limparFormulariosCotacao();
     fecharModal();
     fecharTodasAsSecoes();
 
@@ -5495,6 +5497,7 @@
   }
 
   function abrirCotacaoMateriais() {
+    limparFormulariosCotacao();
     fecharModal();
     fecharTodasAsSecoes();
 
@@ -5556,6 +5559,7 @@
   }
 
   function abrirCotacaoServicos() {
+    limparFormulariosCotacao();
     fecharModal();
     fecharTodasAsSecoes();
 
@@ -12009,8 +12013,22 @@
 
       // 9. Atualizar Local e Finalizar
       localStorage.setItem(`res_${numCotacao}_${usuario.email.toLowerCase().trim()}`, JSON.stringify(resposta));
+
+      // OTIMIZAÇÃO DE QUOTA: Remove Base64 do array global (mantém apenas no res_ individual e Docs)
+      if (cotacao.respostasFornecedores) {
+        cotacao.respostasFornecedores.forEach(r => {
+          if (r.base64) delete r.base64;
+          if (r.anexos) r.anexos.forEach(a => { if (a.base64) delete a.base64; });
+        });
+      }
+
       todasCotacoes[cotIndex] = cotacao;
-      localStorage.setItem("cotacoes", JSON.stringify(todasCotacoes));
+
+      try {
+        localStorage.setItem("cotacoes", JSON.stringify(todasCotacoes));
+      } catch (e) {
+        console.warn("⚠️ LocalStorage cheio (QuotaExceeded). Dados salvos apenas na nuvem/sessão.", e);
+      }
 
       alert("✅ Resposta enviada com sucesso!");
 
