@@ -5991,7 +5991,11 @@
       }
 
       const listaDiv = modalDocs.querySelector('#listaDocsContent');
-      listaDiv.innerHTML = arquivosExibir.map((a, i) => `
+      listaDiv.innerHTML = arquivosExibir.map((a) => {
+        // Encontra o índice original para evitar vazamento ao abrir
+        const originalIndex = arquivos.indexOf(a);
+
+        return `
       <div style="background:#1a1a1a; padding:10px; margin-bottom:8px; border-radius:5px; border:1px solid #333; display:flex; justify-content:space-between; align-items:center;">
          <div>
             <strong style="color:white; display:block;">${a.nome}</strong>
@@ -5999,11 +6003,11 @@
             ${a.usuario ? `<small style="color:#0dcaf0;">👤 Enviado por: ${a.usuario}</small>` : ''}
             ${a.url ? `<br><small style="color:#00ff99;">☁️ Arquivo em Nuvem</small>` : ''}
          </div>
-         <button onclick="abrirArquivoAnexo('${numeroCotacao}', ${i})" style="background:#661155; color:white; border:none; border-radius:4px; padding:6px 12px; cursor:pointer; font-weight:bold;">
+         <button onclick="abrirArquivoAnexo('${numeroCotacao}', ${originalIndex})" style="background:#661155; color:white; border:none; border-radius:4px; padding:6px 12px; cursor:pointer; font-weight:bold;">
             ${a.url ? '👁️ Abrir' : '⬇️ Baixar'}
          </button>
       </div>
-    `).join('');
+    `}).join('');
 
       modalDocs.style.display = 'flex';
     } catch (e) {
@@ -7243,197 +7247,6 @@
 
 
   /* function abrirTela movida para consolidação no final do script */
-
-  /* ======================================================
-     📤 ENVIAR RESPOSTA — DEFINITIVO (SEM VAZAMENTO)
-  ====================================================== */
-  /* ======================================================
-     📤 ENVIAR RESPOSTA — COM UPLOAD DE ARQUIVO (ASYNC)
-  ====================================================== */
-  window.salvarRespostaComAnexo = async function (anexoArg = null) {
-    const fileInput = document.getElementById("respAnexo");
-
-    // 🕵️ DEBUG PARA O USUÁRIO (REMOVIDO PARA PRODUÇÃO)
-    // if (fileInput && fileInput.files.length > 0) { /* alert(`DEBUG SISTEMA: Arquivo identificado!\nNome: ${ fileInput.files[0].name } `); */ }
-
-    const processarSalvamento = async (anexoFinal) => {
-      if (!cotacaoRespostaAtual) {
-        alert("Cotação inválida.");
-        return;
-      }
-
-      const usuario = getUsuarioLogado();
-      if (!usuario || !usuario.email) {
-        alert("Usuário não identificado.");
-        return;
-      }
-
-      const cotacoes = getCotacoes();
-
-      const index = cotacoes.findIndex(
-        c => c.numero === cotacaoRespostaAtual
-      );
-
-      if (index === -1) {
-        alert("Cotação não encontrada.");
-        return;
-      }
-
-      const cotacao = cotacoes[index];
-
-      /* ======================
-         🔒 VALIDAÇÕES
-      ====================== */
-      if (cotacao.status === "fechada") {
-        alert("Esta cotação já está fechada.");
-        return;
-      }
-
-      if (!validarPrazo(cotacao)) {
-        alert("🚫 O prazo desta cotação expirou.");
-        return;
-      }
-
-      /* ======================
-         📦 COLETA ITENS
-      ====================== */
-      const itens = cotacao.produtos.map((p, i) => {
-        const input = document.getElementById("preco_" + i);
-        const valor = Number(String(input?.value || "").replace(",", "."));
-
-        return {
-          produto: p.nome,
-          quantidade: p.quantidade,
-          preco: isNaN(valor) ? 0 : valor
-        };
-      });
-
-      /* ======================
-         📎 SALVA ANEXO NOS DOCS DA COTAÇÃO (CLOUD)
-      ===================== */
-      if (anexoFinal) {
-        const docsKey = `docs_${cotacao.numero}`;
-
-        // Agora salvamos a referência do anexo no Firestore também para histórico
-        try {
-          const docRef = db.collection("documentos_cotacao").doc(docsKey);
-          const currentDocs = (await docRef.get()).data()?.arquivos || [];
-          currentDocs.push(anexoFinal);
-          await docRef.set({ arquivos: currentDocs });
-
-          console.log("✅ Referência do arquivo salva no Firestore");
-        } catch (e) {
-          console.warn("Falha ao salvar referência no Firestore, tentando Local:", e);
-          let docs = await dbDocs.buscar(docsKey) || [];
-          docs.push(anexoFinal);
-          await dbDocs.salvar(docsKey, docs);
-        }
-      } else {
-        alert("⚠️ AVISO: A resposta foi enviada SEM nenhum anexo!");
-      }
-
-      /* ======================
-         🔒 SINCRONIZA COTAÇÃO NO FIRESTORE
-      ====================== */
-      // Atualiza a cotação no Firestore com a nova resposta
-      await db.collection("cotacoes").doc(String(cotacao.numero)).set(cotacao);
-
-      /* ======================
-         🔒 ATUALIZA RESPOSTAS
-      ====================== */
-
-      // garante array
-      cotacao.respostasFornecedores = Array.isArray(cotacao.respostasFornecedores)
-        ? cotacao.respostasFornecedores
-        : [];
-
-      // remove resposta anterior deste fornecedor
-      cotacao.respostasFornecedores = cotacao.respostasFornecedores.filter(
-        r => normalizarEmail(r.email) !== normalizarEmail(usuario.email)
-      );
-
-      // nova resposta (SEM BASE64 no storage principal para não estourar quota)
-      const respostaFornecedor = {
-        numeroCotacao: cotacao.numero,
-        email: usuario.email,
-        fornecedor: usuario.nome,
-        data: new Date().toLocaleString(),
-        itens,
-        temAnexo: !!anexoFinal // Apenas indicador, o arquivo real está no IDB
-      };
-
-      cotacao.respostasFornecedores.push(respostaFornecedor);
-
-      /* ======================
-         🔑 STATUS (IMPORTANTE)
-         Mantém como aberta se ainda estiver no prazo (não muda para respondida automaticamente)
-      ====================== */
-      // Removido a alteração automática para 'respondida' pois o usuário quer que continue em Publicadas
-      // if (cotacao.status === "aberta") {
-      //   cotacao.status = "respondida";
-      // }
-
-      /* ======================
-         💾 SALVA COTAÇÃO
-      ====================== */
-      salvarCotacoes(cotacoes);
-
-      /* ======================
-         🔥 BACKUP INDIVIDUAL
-      ====================== */
-      const emailNormalizado = usuario.email.toLowerCase().trim();
-      const chaveIndividual = `resposta_${cotacao.numero}_${emailNormalizado} `;
-
-      localStorage.setItem(
-        chaveIndividual,
-        JSON.stringify(respostaFornecedor)
-      );
-
-      alert("✅ Resposta enviada com sucesso!");
-
-      fecharModalResponder();
-
-      /* ======================
-         🔄 ATUALIZA LISTA (CORRIGIDO PARA O FORNECEDOR)
-      ====================== */
-      if (typeof mostrarAbaCotacao === "function") {
-        mostrarAbaCotacao("respondidas");
-      }
-    };
-
-    // 3. Processamento do Arquivo (FÍSICO NO STORAGE)
-    const file = (!anexoArg && fileInput && fileInput.files.length > 0) ? fileInput.files[0] : null;
-
-    if (file) {
-      try {
-        const msg = document.getElementById("msgSalvarResposta") || { innerText: "" };
-        msg.innerText = "⌛ Fazendo upload do arquivo para nuvem...";
-
-        // Caminho no Storage: cotacoes/NUMERO/EMAIL_NOMEARQUIVO
-        const usuario = getUsuarioLogado();
-        const storageRef = storage.ref(`cotacoes/${cotacaoRespostaAtual}/${usuario.email}_${file.name}`);
-
-        const uploadTask = await storageRef.put(file);
-        const downloadURL = await uploadTask.ref.getDownloadURL();
-
-        const novoAnexo = {
-          nome: file.name,
-          tipo: "Orçamento",
-          data: new Date().toLocaleString(),
-          tamanho: (file.size / 1024).toFixed(2) + " KB",
-          url: downloadURL, // Link real da nuvem
-          usuario: usuario.nome
-        };
-
-        await processarSalvamento(novoAnexo);
-      } catch (error) {
-        console.error("Erro no upload:", error);
-        alert("❌ Falha ao enviar arquivo para o servidor. Verifique sua conexão.");
-      }
-    } else {
-      await processarSalvamento(anexoArg);
-    }
-  };
 
 
   /* ======================================================
@@ -12091,7 +11904,36 @@
 
     try {
       const urlAnexo = await uploadPromise;
-      if (urlAnexo) resposta.anexo.url = urlAnexo;
+      if (urlAnexo) {
+        resposta.anexo.url = urlAnexo;
+        // Metadados consistentes para a coleção global
+        const anexoGlobal = {
+          nome: anexoDados.nome,
+          url: urlAnexo,
+          data: new Date().toLocaleDateString(),
+          usuario: resposta.fornecedor,
+          tamanho: fileInput.files[0] ? (fileInput.files[0].size / 1024).toFixed(1) + " KB" : "—",
+          tipo: "Resposta Fornecedor"
+        };
+
+        // C. FIRESTORE - COLEÇÃO GLOBAL DE DOCUMENTOS (CRÍTICO PARA VISUALIZAÇÃO DO COMPRADOR)
+        if (typeof db !== "undefined") {
+          try {
+            const docsKey = `docs_${cotacao.numero}`;
+            const docRef = db.collection("documentos_cotacao").doc(docsKey);
+            const snapshot = await docRef.get();
+            let currentDocs = snapshot.exists ? (snapshot.data().arquivos || []) : [];
+
+            // Evita duplicatas pelo nome e URL
+            const jaExiste = currentDocs.some(d => d.url === urlAnexo || (d.nome === anexoGlobal.nome && d.usuario === anexoGlobal.usuario));
+            if (!jaExiste) {
+              currentDocs.push(anexoGlobal);
+              await docRef.set({ arquivos: currentDocs }, { merge: true });
+              console.log("☁️ Firestore: Anexo adicionado à coleção global.");
+            }
+          } catch (e) { console.warn("Erro ao salvar na coleção global de documentos:", e); }
+        }
+      }
 
       // A. REALTIME DATABASE (Mestre para Respostas)
       if (typeof rtdb !== "undefined") {
