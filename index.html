@@ -4366,13 +4366,13 @@
 
     // Adiciona Firestore primeiro
     cotacoesFirestore.forEach(c => {
-      const id = String(c.id || c.numero);
+      const id = String(c.numero || c.id || "");
       if (id) mapaUnificado.set(id, c);
     });
 
     // Sobrescreve com RTDB (mais recente)
     cotacoesRTDB.forEach(c => {
-      const id = String(c.id || c.numero);
+      const id = String(c.numero || c.id || "");
       if (id) mapaUnificado.set(id, c);
     });
 
@@ -6820,38 +6820,51 @@
     const usuario = getUsuarioLogado();
     if (!usuario) return;
 
-    // 🔍 BUSCA NO FIRESTORE (COM MERGE INTELIGENTE PARA EVITAR PERDA)
+    // 🔍 BUSCA UNIFICADA (RTDB + FIRESTORE)
     let cotacoes = [];
     try {
-      // 1. Busca Local (Sempre existe)
+      // 1. Coleta Nuvem (Firestore - Histórico)
+      const snapshotFS = await db.collection("cotacoes").get();
+      const cloudFS = snapshotFS.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+
+      // 2. Coleta Nuvem (RTDB - Tempo Real)
+      let cloudRTDB = [];
+      if (typeof rtdb !== "undefined") {
+        const snapRTDB = await rtdb.ref("cotacoes").once("value");
+        const valRTDB = snapRTDB.val();
+        if (valRTDB) cloudRTDB = Object.values(valRTDB);
+      }
+
+      // 3. Merge Inteligente
+      const mapaUnificado = new Map();
+
+      // Prioridade 1: Firestore (Estrutura base)
+      cloudFS.forEach(c => {
+        const id = String(c.numero || c.id || "");
+        if (id) mapaUnificado.set(id, c);
+      });
+
+      // Prioridade 2: RTDB (Sobrescreve com status e respostas tempo-real)
+      cloudRTDB.forEach(c => {
+        const id = String(c.numero || c.id || "");
+        if (id) mapaUnificado.set(id, c);
+      });
+
+      // Prioridade 3: Local (Só o que REALMENTE não subiu ainda)
       const localCotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
-
-      // 2. Busca Nuvem
-      const snapshot = await db.collection("cotacoes").get();
-      const cloudCotacoes = snapshot.docs.map(doc => doc.data());
-
-      // 3. MERGE: Prioriza Nuvem, mas mantêm locais que não estão na nuvem (Recentes/Erro Quota)
-      const mapCotacoes = new Map();
-
-      // Adiciona Cloud primeiro (Fonte da Verdade)
-      cloudCotacoes.forEach(c => mapCotacoes.set(c.id, c));
-
-      // Adiciona Local se não existir ou se for mais recente (Ex: acabou de criar e falhou upload)
       localCotacoes.forEach(c => {
-        if (!mapCotacoes.has(c.id)) {
-          console.warn(`⚠️ Mantendo cotação local (não sincronizada): ${c.numero}`);
-          mapCotacoes.set(c.id, c);
+        const id = String(c.numero || c.id || "");
+        if (id && !mapaUnificado.has(id)) {
+          console.log("💾 Preservando cotação local pendente de sync:", id);
+          mapaUnificado.set(id, c);
         }
       });
 
-      // Converte volta para array
-      cotacoes = Array.from(mapCotacoes.values());
-
-      // 4. Salva o Merge no LocalStorage (Agora seguro)
+      cotacoes = Array.from(mapaUnificado.values());
       localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
 
     } catch (e) {
-      console.warn("⚠️ Erro Firebase/Rede. Usando versão Local:", e);
+      console.warn("⚠️ Falha na rede/firebase. Usando cache local:", e);
       cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
     }
 
@@ -12310,63 +12323,69 @@
     console.log("✅ Resposta salva e vinculada localmente.");
 
     // 6. SYNC CLOUD (SINCRONIZAÇÃO SÍNCRONA)
-    // Mostra um pequeno feedback de carregamento
     const btnOriginal = document.querySelector("#modalResponder button[onclick='salvarRespostaComAnexo()']");
     if (btnOriginal) {
       btnOriginal.disabled = true;
-      btnOriginal.innerText = "⌛ Enviando para nuvem...";
+      btnOriginal.innerText = "⌛ Enviando..."; // Usuário pediu para não mudar o nome drásticamente
     }
 
     try {
       const urlAnexo = await uploadPromise;
       if (urlAnexo) resposta.anexo.url = urlAnexo;
 
+      // A. REALTIME DATABASE (Mestre para Respostas)
       if (typeof rtdb !== "undefined") {
         const cotRef = rtdb.ref("cotacoes/" + cotacao.numero);
 
         await cotRef.transaction(currentData => {
           if (currentData) {
-            if (!currentData.respostasFornecedores) {
-              currentData.respostasFornecedores = [];
-            }
-            let respostas = [];
-            if (Array.isArray(currentData.respostasFornecedores)) {
-              respostas = currentData.respostasFornecedores;
-            } else if (typeof currentData.respostasFornecedores === 'object') {
-              respostas = Object.values(currentData.respostasFornecedores);
-            }
+            if (!currentData.respostasFornecedores) currentData.respostasFornecedores = [];
 
-            // Remove anterior se houver (update)
+            let respostas = Array.isArray(currentData.respostasFornecedores)
+              ? currentData.respostasFornecedores
+              : Object.values(currentData.respostasFornecedores);
+
             respostas = respostas.filter(r =>
               r && r.email && normalizarEmail(r.email) !== normalizarEmail(usuario.email)
             );
             respostas.push(resposta);
             currentData.respostasFornecedores = respostas;
+          } else {
+            // Fallback se o nó não existir (raro)
+            cotacao.respostasFornecedores = [resposta];
+            return cotacao;
           }
           return currentData;
         });
-        console.log("☁️ Sync RTDB: Resposta confirmada na nuvem.");
       }
 
-      // 7. UI FEEDBACK (Só após confirmação da nuvem)
+      // B. FIRESTORE (Garante visibilidade no carregarCotacoes legado e backup)
+      if (typeof db !== "undefined") {
+        try {
+          // Sincroniza o objeto local com a nova resposta antes de subir
+          const docRef = db.collection("cotacoes").doc(String(cotacao.numero));
+          await docRef.set(cotacao, { merge: true });
+          console.log("☁️ Firestore: Sincronia de resposta confirmada.");
+        } catch (e) { console.warn("Erro sync Firestore (ignorado se RTDB ok):", e); }
+      }
+
+      // 7. UI FEEDBACK
       alert("✅ Resposta enviada com sucesso!");
 
-      // Fecha modal e atualiza tela
       const modal = document.getElementById("modalResponder");
       if (modal) modal.style.display = 'none';
       document.body.style.overflow = "auto";
 
-      // Força atualização da listagem
       if (typeof mostrarAbaCotacao === 'function') {
         mostrarAbaCotacao('respondidas');
       }
 
     } catch (err) {
       console.error("❌ Erro ao salvar na nuvem:", err);
-      alert("⚠️ Ocorreu um erro ao sincronizar com o servidor. Verifique sua conexão.");
+      alert("⚠️ Falha ao enviar: " + err.message);
       if (btnOriginal) {
         btnOriginal.disabled = false;
-        btnOriginal.innerText = "Enviar para Nuvem";
+        btnOriginal.innerText = "Enviar Resposta"; // Retorna ao nome original solicitado
       }
     }
   }
@@ -12429,13 +12448,13 @@
 
           // 2. Preserva tudo que já existe localmente (Firestore History)
           localAtual.forEach(c => {
-            const id = String(c.id || c.numero);
+            const id = String(c.numero || c.id || "");
             if (id) mapaUnificado.set(id, c);
           });
 
           // 3. Atualiza com dados frescos do RTDB (Sobrescreve se existir, adiciona se novo)
           cotacoesRTDB.forEach(c => {
-            const id = String(c.id || c.numero);
+            const id = String(c.numero || c.id || "");
             if (id) mapaUnificado.set(id, c);
           });
 
