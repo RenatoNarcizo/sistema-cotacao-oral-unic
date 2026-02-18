@@ -8038,11 +8038,20 @@
       // 1. Tenta Local
       let jaRespondeu = localStorage.getItem(chaveRes) !== null || localStorage.getItem(chaveResId) !== null;
 
-      // 2. Tenta Cloud (Crucial para Cross-Device)
-      if (!jaRespondeu && Array.isArray(cot.respostasFornecedores)) {
-        const respostaCloud = cot.respostasFornecedores.find(r =>
-          normalizarEmail(r.email) === normalizarEmail(usuario.email)
+      // 2. Tenta Cloud (Crucial para Cross-Device) - FIX ROBUSTEZ RTDB
+      // RTDB pode retornar array como objeto se houver chaves numéricas esparsas
+      if (!jaRespondeu && cot.respostasFornecedores) {
+        let respostasArray = [];
+        if (Array.isArray(cot.respostasFornecedores)) {
+          respostasArray = cot.respostasFornecedores;
+        } else if (typeof cot.respostasFornecedores === 'object') {
+          respostasArray = Object.values(cot.respostasFornecedores);
+        }
+
+        const respostaCloud = respostasArray.find(r =>
+          r && r.email && normalizarEmail(r.email) === normalizarEmail(usuario.email)
         );
+
         if (respostaCloud) {
           jaRespondeu = true;
           // 🔄 Auto-Sync Local: Salva para edição funcionar
