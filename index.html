@@ -8069,16 +8069,11 @@
 
       if (!convidado) return;
 
-      // Resposta (Chave robusta E Cloud Check)
-      const chaveRes = `res_${cot.numero}_${usuario.email.toLowerCase().trim()}`;
-      const chaveResId = `res_${cot.id}_${usuario.email.toLowerCase().trim()}`;
+      // Resposta (Fonte Única: Array de Respostas do RTDB)
+      let jaRespondeu = false;
 
-      // 1. Tenta Local
-      let jaRespondeu = localStorage.getItem(chaveRes) !== null || localStorage.getItem(chaveResId) !== null;
-
-      // 2. Tenta Cloud (Crucial para Cross-Device) - FIX ROBUSTEZ RTDB
-      // RTDB pode retornar array como objeto se houver chaves numéricas esparsas
-      if (!jaRespondeu && cot.respostasFornecedores) {
+      // 1. Tenta Cloud (Crucial para Cross-Device)
+      if (cot.respostasFornecedores) {
         let respostasArray = [];
         if (Array.isArray(cot.respostasFornecedores)) {
           respostasArray = cot.respostasFornecedores;
@@ -8092,10 +8087,14 @@
 
         if (respostaCloud) {
           jaRespondeu = true;
-          // 🔄 Auto-Sync Local: Salva para edição funcionar
+          // 🔄 Auto-Sync Local: Apenas para cache e edição offline rápida
+          const chaveRes = `res_${cot.numero}_${usuario.email.toLowerCase().trim()}`;
           localStorage.setItem(chaveRes, JSON.stringify(respostaCloud));
         }
       }
+
+      // 2. Se não achou na nuvem, NÃO considera local (pode estar defasado)
+      // jaRespondeu permanece false se não estiver na nuvem.
 
       // Status e datas
       const agora = new Date();
@@ -12310,45 +12309,66 @@
 
     console.log("✅ Resposta salva e vinculada localmente.");
 
-    // 6. UI FEEDBACK IMEDIATO (Otimista)
-    alert("✅ Resposta enviada com sucesso!");
-
-    // Fecha modal e atualiza tela
-    const modal = document.getElementById("modalResponder");
-    if (modal) modal.style.display = 'none';
-    document.body.style.overflow = "auto";
-
-    // Força atualização da listagem
-    if (typeof mostrarAbaCotacao === 'function') {
-      mostrarAbaCotacao('respondidas');
+    // 6. SYNC CLOUD (SINCRONIZAÇÃO SÍNCRONA)
+    // Mostra um pequeno feedback de carregamento
+    const btnOriginal = document.querySelector("#modalResponder button[onclick='salvarRespostaComAnexo()']");
+    if (btnOriginal) {
+      btnOriginal.disabled = true;
+      btnOriginal.innerText = "⌛ Enviando para nuvem...";
     }
 
-    // 7. SYNC CLOUD (BACKGROUND PROMISES)
-    // Não usamos AWAIT aqui para não travar a UI
-    // Primeiro tenta o upload (se houver), depois o firestore
-    uploadPromise.then(urlAnexo => {
-      if (urlAnexo) resposta.anexo.url = urlAnexo; // Atualiza URL se sucesso
+    try {
+      const urlAnexo = await uploadPromise;
+      if (urlAnexo) resposta.anexo.url = urlAnexo;
 
       if (typeof rtdb !== "undefined") {
         const cotRef = rtdb.ref("cotacoes/" + cotacao.numero);
 
-        cotRef.transaction(currentData => {
+        await cotRef.transaction(currentData => {
           if (currentData) {
             if (!currentData.respostasFornecedores) {
               currentData.respostasFornecedores = [];
             }
+            let respostas = [];
+            if (Array.isArray(currentData.respostasFornecedores)) {
+              respostas = currentData.respostasFornecedores;
+            } else if (typeof currentData.respostasFornecedores === 'object') {
+              respostas = Object.values(currentData.respostasFornecedores);
+            }
+
             // Remove anterior se houver (update)
-            currentData.respostasFornecedores = currentData.respostasFornecedores.filter(r =>
-              r.email !== usuario.email
+            respostas = respostas.filter(r =>
+              r && r.email && normalizarEmail(r.email) !== normalizarEmail(usuario.email)
             );
-            currentData.respostasFornecedores.push(resposta);
+            respostas.push(resposta);
+            currentData.respostasFornecedores = respostas;
           }
           return currentData;
-        })
-          .then(() => console.log("☁️ Sync RTDB: Resposta salva com sucesso"))
-          .catch(err => console.warn("☁️ Sync RTDB: Falha", err));
+        });
+        console.log("☁️ Sync RTDB: Resposta confirmada na nuvem.");
       }
-    });
+
+      // 7. UI FEEDBACK (Só após confirmação da nuvem)
+      alert("✅ Resposta enviada com sucesso!");
+
+      // Fecha modal e atualiza tela
+      const modal = document.getElementById("modalResponder");
+      if (modal) modal.style.display = 'none';
+      document.body.style.overflow = "auto";
+
+      // Força atualização da listagem
+      if (typeof mostrarAbaCotacao === 'function') {
+        mostrarAbaCotacao('respondidas');
+      }
+
+    } catch (err) {
+      console.error("❌ Erro ao salvar na nuvem:", err);
+      alert("⚠️ Ocorreu um erro ao sincronizar com o servidor. Verifique sua conexão.");
+      if (btnOriginal) {
+        btnOriginal.disabled = false;
+        btnOriginal.innerText = "Enviar para Nuvem";
+      }
+    }
   }
 
   // Torna global explicitamente
