@@ -11775,219 +11775,179 @@
 
 
 
+  /* 🛠️ HELPER: PROMISE COM TIMEOUT */
+  function comTimeout(promise, ms, nome = "Operação") {
+    let timeoutId;
+    const timeoutPromise = new Promise((_, reject) => {
+      timeoutId = setTimeout(() => reject(new Error(`${nome} demorou demais (${ms / 1000}s)`)), ms);
+    });
+    return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timeoutId));
+  }
+
   /* ======================================================
-     📤 SALVAR RESPOSTA DO FORNECEDOR (CORRIGIDO V3)
+     📤 SALVAR RESPOSTA DO FORNECEDOR (VERSÃO ULTRA ROBUSTA)
      ====================================================== */
   async function salvarRespostaComAnexo() {
-    console.log("🚀 Iniciando envio de resposta...");
+    console.log("🚀 [INÍCIO] salvarRespostaComAnexo");
+    const btnOriginal = document.querySelector("#modalResponder button[onclick='salvarRespostaComAnexo()']");
+    let textoOriginal = "Enviar Resposta";
 
-    // 1. Identificar Usuário Logado
-    const usuario = JSON.parse(sessionStorage.getItem("usuario_logado"));
-    if (!usuario) {
-      alert("⚠️ Você precisa estar logado para responder.");
-      return;
-    }
+    try {
+      // 1. Identificar Usuário Logado
+      const usuarioPre = sessionStorage.getItem("usuario_logado");
+      if (!usuarioPre) throw new Error("Usuário não logado no sessionStorage.");
+      const usuario = JSON.parse(usuarioPre);
 
-    // 2. Identificar Cotação
-    const numCotacao = document.getElementById("respNumero").textContent.trim();
-    if (!numCotacao) {
-      alert("Erro ao identificar o número da cotação.");
-      return;
-    }
+      // 2. Identificar Cotação
+      const numCotacao = document.getElementById("respNumero")?.textContent.trim();
+      if (!numCotacao) throw new Error("ID da cotação não encontrado no modal.");
 
-    let todasCotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
-    let cotacaoIndex = todasCotacoes.findIndex(c => String(c.numero) === String(numCotacao) || String(c.id) === String(numCotacao));
-    let cotacao = todasCotacoes[cotacaoIndex];
+      console.log(`📦 Processando resposta para COT: ${numCotacao} por ${usuario.email}`);
 
-    if (!cotacao) {
-      alert("Cotação não encontrada na base local.");
-      return;
-    }
+      // 3. Bloquear botão para evitar cliques duplos
+      if (btnOriginal) {
+        textoOriginal = btnOriginal.innerText;
+        btnOriginal.disabled = true;
+        btnOriginal.innerText = "⌛ Enviando...";
+      }
 
-    // 3. Coletar Itens da Tabela
-    const linhas = document.querySelectorAll("#tabelaResponderCorpo tr");
-    let itensRespondidos = [];
+      // 4. Buscar cotação local para garantir dados base
+      let todasCotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
+      let cotIndex = todasCotacoes.findIndex(c => String(c.numero) === String(numCotacao) || String(c.id) === String(numCotacao));
+      if (cotIndex === -1) throw new Error("Cotação não encontrada no cache local.");
+      let cotacao = todasCotacoes[cotIndex];
 
-    linhas.forEach(tr => {
-      const cells = tr.querySelectorAll("td");
-      if (cells.length >= 3) {
-        const produto = cells[0].innerText.trim();
+      // 5. Coletar Itens
+      const linhas = document.querySelectorAll("#tabelaResponderCorpo tr");
+      let itensRespondidos = [];
+      linhas.forEach(tr => {
         const input = tr.querySelector("input");
-        const preco = parseFloat(input.value) || 0;
-
-        if (preco > 0) {
+        if (input && (parseFloat(input.value) || 0) > 0) {
+          const produto = tr.cells[0]?.innerText.trim() || "Produto";
           itensRespondidos.push({
             produto: produto,
             nome: produto,
-            preco: preco,
-            valor: preco
+            preco: parseFloat(input.value),
+            valor: parseFloat(input.value)
           });
         }
+      });
+
+      if (itensRespondidos.length === 0) {
+        if (btnOriginal) { btnOriginal.disabled = false; btnOriginal.innerText = textoOriginal; }
+        return alert("⚠️ Informe pelo menos um preço válido.");
       }
-    });
 
-    if (itensRespondidos.length === 0) {
-      alert("⚠️ Preencha o preço de pelo menos um item.");
-      return;
-    }
+      // 6. Upload de Anexo (com Timeout de 30s)
+      const fileInput = document.getElementById("respAnexo");
+      let anexoDados = { nome: "", url: "" };
 
-    // 4. Upload de Anexo (Best Effort - Async)
-    const fileInput = document.getElementById("respAnexo");
-    let anexoDados = { nome: "", url: "" };
+      if (fileInput && fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        anexoDados.nome = file.name;
+        console.log(`📤 Perfilando upload: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`);
 
-    // Upload separado para não travar o fluxo caso demore
-    let uploadPromise = Promise.resolve(null);
-
-    if (fileInput && fileInput.files.length > 0) {
-      const arquivo = fileInput.files[0];
-      anexoDados.nome = arquivo.name;
-
-      if (typeof storage !== "undefined") {
-        const path = `respostas/${cotacao.numero}/${Date.now()}_${arquivo.name}`;
-        const ref = storage.ref(path);
-        uploadPromise = ref.put(arquivo)
-          .then(task => task.ref.getDownloadURL())
-          .then(url => {
-            anexoDados.url = url;
-            console.log("✅ Anexo enviado:", url);
-            return url;
-          })
-          .catch(err => {
-            console.warn("⚠️ Falha upload anexo (Quota?):", err);
-            return "";
-          });
-      }
-    }
-
-    // O objeto de resposta base (sem URL de anexo ainda se o upload estiver rodando)
-    // Mas para UX imediata, salvamos assim mesmo. O anexo pode atualizar depois na nuvem.
-    const resposta = {
-      fornecedor: usuario.nome || usuario.razaoSocial || usuario.email.split('@')[0],
-      fornecedorNome: usuario.nome || usuario.razaoSocial,
-      email: usuario.email,
-      emailFornecedor: usuario.email,
-      data: new Date().toLocaleString(),
-      itens: itensRespondidos,
-      anexo: anexoDados, // URL será vazia se não esperar
-      anexos: [anexoDados]
-    };
-
-    // 5. ATUALIZAÇÃO LOCAL ROBUSTA (CRÍTICO PARA MUDAR DE ABA)
-    // Salva caches individuais
-    const chave = `res_${cotacao.id}_${usuario.email.toLowerCase().trim()}`;
-    const chave2 = `resposta_${cotacao.numero}_${usuario.email.toLowerCase().trim()}`;
-    localStorage.setItem(chave, JSON.stringify(resposta));
-    localStorage.setItem(chave2, JSON.stringify(resposta));
-
-    // ATUALIZA ARRAY NA COTAÇÃO VIVA (Fundamental para carregarCotacoes funcionar)
-    if (!Array.isArray(cotacao.respostasFornecedores)) {
-      cotacao.respostasFornecedores = [];
-    }
-    // Remove resposta anterior do mesmo user se houver (para update)
-    cotacao.respostasFornecedores = cotacao.respostasFornecedores.filter(r =>
-      normalizarEmail(r.email) !== normalizarEmail(usuario.email)
-    );
-    cotacao.respostasFornecedores.push(resposta);
-
-    // Salva cotação atualizada no LS
-    todasCotacoes[cotacaoIndex] = cotacao;
-    localStorage.setItem("cotacoes", JSON.stringify(todasCotacoes));
-
-    console.log("✅ Resposta salva e vinculada localmente.");
-
-    // 6. SYNC CLOUD (SINCRONIZAÇÃO SÍNCRONA)
-    const btnOriginal = document.querySelector("#modalResponder button[onclick='salvarRespostaComAnexo()']");
-    if (btnOriginal) {
-      btnOriginal.disabled = true;
-      btnOriginal.innerText = "⌛ Enviando..."; // Usuário pediu para não mudar o nome drásticamente
-    }
-
-    try {
-      const urlAnexo = await uploadPromise;
-      if (urlAnexo) {
-        resposta.anexo.url = urlAnexo;
-        // Metadados consistentes para a coleção global
-        const anexoGlobal = {
-          nome: anexoDados.nome,
-          url: urlAnexo,
-          data: new Date().toLocaleDateString(),
-          usuario: resposta.fornecedor,
-          tamanho: fileInput.files[0] ? (fileInput.files[0].size / 1024).toFixed(1) + " KB" : "—",
-          tipo: "Resposta Fornecedor"
-        };
-
-        // C. FIRESTORE - COLEÇÃO GLOBAL DE DOCUMENTOS (CRÍTICO PARA VISUALIZAÇÃO DO COMPRADOR)
-        if (typeof db !== "undefined") {
+        if (typeof storage !== "undefined") {
           try {
-            const docsKey = `docs_${cotacao.numero}`;
-            const docRef = db.collection("documentos_cotacao").doc(docsKey);
-            const snapshot = await docRef.get();
-            let currentDocs = snapshot.exists ? (snapshot.data().arquivos || []) : [];
-
-            // Evita duplicatas pelo nome e URL
-            const jaExiste = currentDocs.some(d => d.url === urlAnexo || (d.nome === anexoGlobal.nome && d.usuario === anexoGlobal.usuario));
-            if (!jaExiste) {
-              currentDocs.push(anexoGlobal);
-              await docRef.set({ arquivos: currentDocs }, { merge: true });
-              console.log("☁️ Firestore: Anexo adicionado à coleção global.");
+            const path = `respostas/${numCotacao}/${Date.now()}_${file.name}`;
+            const uploadTask = storage.ref(path).put(file);
+            const url = await comTimeout(
+              uploadTask.then(s => s.ref.getDownloadURL()),
+              30000,
+              "Upload de Arquivo"
+            );
+            anexoDados.url = url;
+            console.log("✅ Upload concluído:", url);
+          } catch (e) {
+            console.warn("⚠️ Falha ou timeout no upload:", e.message);
+            if (!confirm("Ocorreu uma falha no upload do anexo. Deseja enviar a resposta sem o arquivo?")) {
+              throw new Error("Upload cancelado pelo usuário.");
             }
-          } catch (e) { console.warn("Erro ao salvar na coleção global de documentos:", e); }
+          }
         }
       }
 
-      // A. REALTIME DATABASE (Mestre para Respostas)
+      // 7. Montar Resposta Final
+      const resposta = {
+        fornecedor: usuario.nome || usuario.razaoSocial || usuario.email.split('@')[0],
+        email: usuario.email,
+        data: new Date().toLocaleString(),
+        itens: itensRespondidos,
+        anexo: anexoDados,
+        anexos: [anexoDados]
+      };
+
+      // 8. Sync Cloud (com Timeouts)
+      console.log("☁️ Sincronizando com Realtime Database...");
       if (typeof rtdb !== "undefined") {
-        const cotRef = rtdb.ref("cotacoes/" + cotacao.numero);
-
-        await cotRef.transaction(currentData => {
-          if (currentData) {
-            if (!currentData.respostasFornecedores) currentData.respostasFornecedores = [];
-
-            let respostas = Array.isArray(currentData.respostasFornecedores)
-              ? currentData.respostasFornecedores
-              : Object.values(currentData.respostasFornecedores);
-
-            respostas = respostas.filter(r =>
-              r && r.email && normalizarEmail(r.email) !== normalizarEmail(usuario.email)
-            );
-            respostas.push(resposta);
-            currentData.respostasFornecedores = respostas;
-          } else {
-            // Fallback se o nó não existir (raro)
-            cotacao.respostasFornecedores = [resposta];
-            return cotacao;
-          }
-          return currentData;
-        });
+        const cotRef = rtdb.ref("cotacoes/" + numCotacao);
+        await comTimeout(
+          cotRef.transaction(current => {
+            if (!current) return current;
+            if (!current.respostasFornecedores) current.respostasFornecedores = [];
+            let resps = Array.isArray(current.respostasFornecedores) ? current.respostasFornecedores : Object.values(current.respostasFornecedores);
+            // Atualiza ou insere
+            resps = resps.filter(r => (r.email || "").toLowerCase().trim() !== usuario.email.toLowerCase().trim());
+            resps.push(resposta);
+            current.respostasFornecedores = resps;
+            return current;
+          }),
+          15000,
+          "Sincronização Database"
+        );
       }
 
-      // B. FIRESTORE (Garante visibilidade no carregarCotacoes legado e backup)
+      console.log("☁️ Sincronizando com Firestore...");
       if (typeof db !== "undefined") {
-        try {
-          // Sincroniza o objeto local com a nova resposta antes de subir
-          const docRef = db.collection("cotacoes").doc(String(cotacao.numero));
-          await docRef.set(cotacao, { merge: true });
-          console.log("☁️ Firestore: Sincronia de resposta confirmada.");
-        } catch (e) { console.warn("Erro sync Firestore (ignorado se RTDB ok):", e); }
+        // A. Sincroniza Objeto Cotação
+        if (!cotacao.respostasFornecedores) cotacao.respostasFornecedores = [];
+        cotacao.respostasFornecedores = cotacao.respostasFornecedores.filter(r => (r.email || "").toLowerCase().trim() !== usuario.email.toLowerCase().trim());
+        cotacao.respostasFornecedores.push(resposta);
+
+        await comTimeout(
+          db.collection("cotacoes").doc(String(numCotacao)).set(cotacao, { merge: true }),
+          10000,
+          "Sync Firestore"
+        );
+
+        // B. Se houver anexo, salva na coleção global de documentos
+        if (anexoDados.url) {
+          const docRef = db.collection("documentos_cotacao").doc(`docs_${numCotacao}`);
+          const snap = await db.collection("documentos_cotacao").doc(`docs_${numCotacao}`).get();
+          let arquivos = snap.exists ? (snap.data().arquivos || []) : [];
+
+          const novoAnexo = {
+            nome: anexoDados.nome,
+            url: anexoDados.url,
+            data: new Date().toLocaleDateString(),
+            usuario: resposta.fornecedor,
+            tamanho: fileInput.files[0] ? (fileInput.files[0].size / 1024).toFixed(1) + " KB" : "-",
+            tipo: "Resposta Fornecedor"
+          };
+
+          if (!arquivos.some(a => a.url === anexoDados.url)) {
+            arquivos.push(novoAnexo);
+            await docRef.set({ arquivos: arquivos }, { merge: true });
+          }
+        }
       }
 
-      // 7. UI FEEDBACK
+      // 9. Atualizar Local e Finalizar
+      localStorage.setItem(`res_${numCotacao}_${usuario.email.toLowerCase().trim()}`, JSON.stringify(resposta));
+      todasCotacoes[cotIndex] = cotacao;
+      localStorage.setItem("cotacoes", JSON.stringify(todasCotacoes));
+
       alert("✅ Resposta enviada com sucesso!");
-
-      const modal = document.getElementById("modalResponder");
-      if (modal) modal.style.display = 'none';
-      document.body.style.overflow = "auto";
-
-      if (typeof mostrarAbaCotacao === 'function') {
-        mostrarAbaCotacao('respondidas');
-      }
+      fecharModalResponder();
+      if (typeof mostrarAbaCotacao === 'function') mostrarAbaCotacao('respondidas');
 
     } catch (err) {
-      console.error("❌ Erro ao salvar na nuvem:", err);
-      alert("⚠️ Falha ao enviar: " + err.message);
+      console.error("❌ ERRO FATAL salvarRespostaComAnexo:", err);
+      alert("⚠️ Erro ao enviar: " + err.message);
+    } finally {
       if (btnOriginal) {
         btnOriginal.disabled = false;
-        btnOriginal.innerText = "Enviar Resposta"; // Retorna ao nome original solicitado
+        btnOriginal.innerText = textoOriginal;
       }
     }
   }
@@ -12114,6 +12074,17 @@
       return new Date(`${ano}-${mes}-${dia}T${horaLimpa}`);
     }
     return new Date(s); // Fallback ISO/USA
+  };
+
+  /* 🛠️ HELPER NORMALIZAR EMAIL */
+  window.normalizarEmail = function (e) {
+    return (e || "").toLowerCase().trim();
+  };
+
+  /* 🛠️ HELPER SALVAR COTAÇÕES */
+  window.salvarCotacoes = function (lista) {
+    if (!Array.isArray(lista)) return;
+    localStorage.setItem("cotacoes", JSON.stringify(lista));
   };
 
   window.reabrirCotacao = async function (id) {
