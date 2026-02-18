@@ -3951,7 +3951,7 @@
     apiKey: "AIzaSyCz7BqYiwX4ojRTMBkWwvaB01-Ac71D8No",
     authDomain: "cotacao-oral-unic.firebaseapp.com",
     projectId: "cotacao-oral-unic",
-    storageBucket: "cotacao-oral-unic.firebasestorage.app",
+    storageBucket: "cotacao-oral-unic.appspot.com",
     messagingSenderId: "648085968917",
     appId: "1:648085968917:web:26029a08b8dd363c9c961c",
     databaseURL: "https://cotacao-oral-unic-default-rtdb.firebaseio.com"
@@ -11844,24 +11844,36 @@
 
       if (fileInput && fileInput.files.length > 0) {
         const file = fileInput.files[0];
-        anexoDados.nome = file.name;
-        console.log(`📤 Perfilando upload: ${file.name} (${(file.size / 1024).toFixed(1)} KB) - Tipo: ${file.type}`);
+
+        // 🧼 LIMPEZA DE NOME DE ARQUIVO (Remove acentos, espaços e caracteres especiais)
+        const nomeLimpo = file.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9.-]/g, "_");
+        anexoDados.nome = file.name; // Nome original para exibição
+
+        console.log(`📤 Perfilando upload: ${file.name} -> ${nomeLimpo} (${(file.size / 1024).toFixed(1)} KB) - Tipo: ${file.type}`);
 
         if (typeof storage !== "undefined") {
           try {
-            const path = `respostas/${numCotacao}/${Date.now()}_${file.name}`;
-            const metadata = { contentType: file.type || 'application/pdf' };
+            const path = `respostas/${numCotacao}/${Date.now()}_${nomeLimpo}`;
+            const metadata = { contentType: file.type || 'application/octet-stream' };
 
+            console.log("🔄 Bucket:", storage.ref().bucket);
             console.log("🔄 Iniciando put() no Storage...");
             const uploadTask = storage.ref(path).put(file, metadata);
 
-            // Monitora progresso (opcional, para log)
+            // Monitora progresso
             uploadTask.on('state_changed',
               (snap) => {
-                const progresto = (snap.bytesTransferred / snap.totalBytes) * 100;
-                if (progresto % 25 === 0) console.log(`📊 Upload: ${progresto.toFixed(0)}%`);
+                const progresso = (snap.bytesTransferred / snap.totalBytes) * 100;
+                console.log(`📊 Upload progress: ${progresso.toFixed(0)}%`);
               },
-              (err) => console.warn("❌ Erro imediato no stream do upload:", err)
+              (err) => {
+                console.error("❌ ERRO FIREBASE STORAGE (on error):", err.code, err.message);
+                if (err.code === 'storage/unauthorized') {
+                  console.error("🚫 Erro de Permissão: Verifique as Security Rules do Storage.");
+                } else if (err.code === 'storage/retry-limit-exceeded') {
+                  console.error("⏳ Limite de tentativas excedido. Conexão instável?");
+                }
+              }
             );
 
             const url = await comTimeout(
@@ -11873,8 +11885,7 @@
             console.log("✅ Upload concluído:", url);
           } catch (e) {
             console.warn("⚠️ Falha ou timeout no upload:", e.message);
-            // Se o erro for do Firebase (não timeout), loga os detalhes
-            if (e.code) console.error("Firebase Error Code:", e.code);
+            if (e.code) console.error("Firebase Code:", e.code);
 
             if (!confirm("Ocorreu uma falha no upload do anexo (Tempo esgotado ou erro de rede).\n\nDeseja enviar a resposta mesmo assim (sem o arquivo)?")) {
               throw new Error("Upload cancelado pelo usuário.");
