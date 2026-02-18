@@ -6554,12 +6554,14 @@
 
       // Volta ao painel sem recarregar (evita logout)
       limparFormulariosCotacao();
-      const loginContainer = document.getElementById("login-container");
-      const dashboardEl = document.getElementById("dashboard");
-      if (loginContainer) loginContainer.style.display = "none";
-      if (dashboardEl) dashboardEl.style.display = "block";
-      document.querySelectorAll("section.secao").forEach(s => s.style.display = "none");
-      if (dashboardEl) dashboardEl.style.display = "block";
+      // Esconde todas as seções de cotação e mostra o dashboard
+      ["cotacaoExcel", "cotacaoManual", "cotacaoMateriais", "cotacaoServicos"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = "none";
+      });
+      const dash = document.getElementById("dashboard");
+      if (dash) dash.style.display = "block";
+      window.scrollTo(0, 0);
 
     } catch (e) {
       console.error("Erro ao salvar:", e);
@@ -11781,17 +11783,14 @@
       limparFormulariosCotacao();
 
       // Volta ao painel sem recarregar (evita logout)
-      const loginContainer = document.getElementById("login-container");
-      const dashboardEl = document.getElementById("dashboard");
-      if (loginContainer) loginContainer.style.display = "none";
-      if (dashboardEl) dashboardEl.style.display = "block";
-      // Esconde seções de criação de cotação
-      ["nova-cotacao", "novaCotacao", "secao-cotacao", "criar-cotacao"].forEach(id => {
+      // Esconde todas as seções de cotação e mostra o dashboard
+      ["cotacaoExcel", "cotacaoManual", "cotacaoMateriais", "cotacaoServicos"].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = "none";
       });
-      document.querySelectorAll("section.secao").forEach(s => s.style.display = "none");
-      if (dashboardEl) dashboardEl.style.display = "block";
+      const dash = document.getElementById("dashboard");
+      if (dash) dash.style.display = "block";
+      window.scrollTo(0, 0);
 
     } catch (e) {
       console.error("Erro FATAL V2:", e);
