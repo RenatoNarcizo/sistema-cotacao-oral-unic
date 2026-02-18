@@ -12134,15 +12134,24 @@
     uploadPromise.then(urlAnexo => {
       if (urlAnexo) resposta.anexo.url = urlAnexo; // Atualiza URL se sucesso
 
-      if (typeof db !== "undefined" && firebase) {
-        const docRef = db.collection("cotacoes").doc(String(cotacao.numero));
+      if (typeof rtdb !== "undefined") {
+        const cotRef = rtdb.ref("cotacoes/" + cotacao.numero);
 
-        // Tenta update no array
-        docRef.update({
-          respostasFornecedores: firebase.firestore.FieldValue.arrayUnion(resposta)
+        cotRef.transaction(currentData => {
+          if (currentData) {
+            if (!currentData.respostasFornecedores) {
+              currentData.respostasFornecedores = [];
+            }
+            // Remove anterior se houver (update)
+            currentData.respostasFornecedores = currentData.respostasFornecedores.filter(r =>
+              r.email !== usuario.email
+            );
+            currentData.respostasFornecedores.push(resposta);
+          }
+          return currentData;
         })
-          .then(() => console.log("☁️ Sync Cloud: Sucesso"))
-          .catch(err => console.warn("☁️ Sync Cloud: Falha silenciosa (Quota/Rede)", err));
+          .then(() => console.log("☁️ Sync RTDB: Resposta salva com sucesso"))
+          .catch(err => console.warn("☁️ Sync RTDB: Falha", err));
       }
     });
   }
@@ -12178,8 +12187,46 @@
   }
   window.fecharModalResponder = fecharModalResponder;
 
-</script>
 
+
+
+  /* ======================================================
+  🔄 SINCRONIZAÇÃO EM TEMPO REAL (RTDB -> LOCALSTORAGE)
+  ====================================================== */
+  if (typeof rtdb !== "undefined") {
+    console.log("📡 Iniciando ouvinte RTDB (Sincronização)...");
+    rtdb.ref("cotacoes").on("value", snapshot => {
+      const data = snapshot.val();
+
+      if (data) {
+        const arrayCotacoes = Object.values(data);
+        const cotacoesValidas = arrayCotacoes.filter(c => c && (c.id || c.numero));
+
+        localStorage.setItem("cotacoes", JSON.stringify(cotacoesValidas));
+        console.log("☁️ Sync RTDB -> LocalStorage:", cotacoesValidas.length);
+
+        // 🟢 ATUALIZAÇÃO REATIVA DA UI
+        // 1. FORNECEDOR
+        if (typeof renderizarListaFornecedor === "function") {
+          const abertas = document.getElementById("listaAbertas");
+          if (abertas && abertas.style.display !== 'none') renderizarListaFornecedor('abertas');
+
+          const respondidas = document.getElementById("listaRespondidas");
+          if (respondidas && respondidas.style.display !== 'none') renderizarListaFornecedor('respondidas');
+
+          const encerradas = document.getElementById("listaEncerradas");
+          if (encerradas && encerradas.style.display !== 'none') renderizarListaFornecedor('encerradas');
+        }
+
+        // 2. COMPRADOR (DASHBOARD) (Evita refresh se estiver em modal)
+        const modalAberto = document.querySelector(".modal[style*='block']") || document.querySelector(".modal[style*='flex']");
+        if (!modalAberto && typeof carregarCotacoes === "function") {
+          setTimeout(() => carregarCotacoes(), 100);
+        }
+      }
+    });
+  }
+</script>
 
 <script src="premium_render.js?v=10015"></script>
 </body>
