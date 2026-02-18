@@ -7374,7 +7374,9 @@
 
       if (c.status === "aberta") {
         const agora = new Date();
-        const fim = new Date(c.dataFechamento);
+        // 🛠️ FIX: Usa o parser global para evitar Invalid Date
+        const fim = window.parseDateBR ? window.parseDateBR(c.dataFechamento) : new Date(c.dataFechamento);
+
         const diffMs = fim - agora;
         let tempoRestante = "Expirado";
 
@@ -7383,6 +7385,11 @@
           const horas = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
           const minutos = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
           tempoRestante = `${dias}d ${horas}h ${minutos}m`;
+        }
+
+        // 🟢 LABEL REABERTA
+        if (c.reaberta) {
+          tempoRestante += " <span style='color:#ffd700; font-size:11px;'>(Reaberta)</span>";
         }
 
         bloco.innerHTML = `
@@ -8109,7 +8116,7 @@
       const expirada = isDataValida ? (agora > fechamento) : false;
       const fechadaManualmente = cot.status === 'fechada' || cot.status === 'finalizada' || cot.status === 'aprovacao';
 
-      // 🔍 LÓGICA DE FILTRO
+      // 🔍 LÓGICA DE FILTRO (CORRIGIDA)
       if (aba === 'abertas') {
         if (jaRespondeu) return;
         if (expirada) return;
@@ -8118,11 +8125,13 @@
 
       if (aba === 'respondidas') {
         if (!jaRespondeu) return;
+        // Se já respondeu, mas fechou/expirou => Vai para Encerradas
+        if (expirada || fechadaManualmente) return;
       }
 
       if (aba === 'encerradas') {
-        if (jaRespondeu) return; // Se ja respondeu, ta na aba respondidas
-        if (!expirada && !fechadaManualmente) return; // Se esta aberta, ta na aba aberta
+        // Mostra TUDO que fechou, independente se respondeu ou não
+        if (!expirada && !fechadaManualmente) return;
       }
 
       encontrouAlguma = true;
@@ -12448,6 +12457,24 @@
   // ⚡ FUNÇÕES DE EMERGÊNCIA (CARREGADAS DIRETO NO INDEX)
   // ======================================================
 
+  // 🛠️ HELPER DE DATA GLOBAL (FIX "Expirado")
+  window.parseDateBR = function (dateStr) {
+    if (!dateStr) return null;
+    const s = String(dateStr).trim();
+    // Se tiver barra (DD/MM/YYYY...)
+    if (s.includes('/')) {
+      const parts = s.split(','); // Tenta separar data e hora
+      const [dia, mes, ano] = parts[0].trim().split('/');
+
+      let horaLimpa = "00:00:00";
+      if (parts[1]) horaLimpa = parts[1].trim();
+
+      // Formato ISO para o Date constructor: YYYY-MM-DDTHH:mm:ss
+      return new Date(`${ano}-${mes}-${dia}T${horaLimpa}`);
+    }
+    return new Date(s); // Fallback ISO/USA
+  };
+
   window.reabrirCotacao = async function (id) {
     if (!confirm("⚠️ Deseja REABRIR esta cotação?\n\nIsso estenderá o prazo de fechamento em 3 dias para tentar atrair novos fornecedores.")) return;
 
@@ -12463,6 +12490,7 @@
       const cot = cotacoes[index];
       cot.status = 'aberta';
       cot.prazoEncerrado = false;
+      cot.reaberta = true; // 🟢 FLAG REABERTA
       cot.dataFechamento = agora.toLocaleString();
 
       localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
@@ -12474,6 +12502,7 @@
           await db.collection("cotacoes").doc(docId).update({
             status: 'aberta',
             prazoEncerrado: false,
+            reaberta: true,
             dataFechamento: cot.dataFechamento
           });
           console.log(`✅ Firestore: Cotação ${docId} reaberta.`);
@@ -12487,6 +12516,7 @@
         rtdb.ref("cotacoes/" + cot.numero).update({
           status: 'aberta',
           prazoEncerrado: false,
+          reaberta: true,
           dataFechamento: cot.dataFechamento
         }).then(() => console.log("☁️ Reabertura sincronizada no RTDB."))
           .catch(e => console.error("❌ Erro sync reabertura:", e));
