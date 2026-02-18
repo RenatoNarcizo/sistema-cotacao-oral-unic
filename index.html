@@ -12307,12 +12307,29 @@
       rtdb.ref("cotacoes").on("value", snapshot => {
         const data = snapshot.val();
         if (data) {
-          const arrayCotacoes = Object.values(data);
-          const cotacoesValidas = arrayCotacoes.filter(c => c && (c.id || c.numero));
+          const cotacoesRTDB = Object.values(data).filter(c => c && (c.id || c.numero));
+
+          // 1. Carrega dados atuais (Mix RTDB + Firestore)
+          const localAtual = JSON.parse(localStorage.getItem("cotacoes")) || [];
+          const mapaUnificado = new Map();
+
+          // 2. Preserva tudo que já existe localmente (Firestore History)
+          localAtual.forEach(c => {
+            const id = String(c.id || c.numero);
+            if (id) mapaUnificado.set(id, c);
+          });
+
+          // 3. Atualiza com dados frescos do RTDB (Sobrescreve se existir, adiciona se novo)
+          cotacoesRTDB.forEach(c => {
+            const id = String(c.id || c.numero);
+            if (id) mapaUnificado.set(id, c);
+          });
+
+          const listaFinal = Array.from(mapaUnificado.values());
 
           // Salva Local
-          localStorage.setItem("cotacoes", JSON.stringify(cotacoesValidas));
-          console.log("☁️ Sync RTDB -> LocalStorage:", cotacoesValidas.length);
+          localStorage.setItem("cotacoes", JSON.stringify(listaFinal));
+          console.log(`☁️ Sync Merge (RTDB+Local): ${listaFinal.length} cotações.`);
 
           // 🟢 ATUALIZAÇÃO REATIVA DA UI
           // 1. FORNECEDOR (Atualiza abas visíveis)
