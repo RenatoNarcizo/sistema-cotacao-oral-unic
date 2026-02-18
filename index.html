@@ -5095,12 +5095,14 @@
     const respostaSalva = JSON.parse(localStorage.getItem(chaveRes));
 
     // 💡 AUTO-CORREÇÃO DE MODO (Fix para botão sumido)
-    if (respostaSalva) {
-      console.log("📝 Resposta encontrada localmente -> Modo RESPONDIDA");
-      modo = 'respondida';
-    } else {
-      console.log("📝 Sem resposta salva -> Modo NOVO");
-      modo = 'novo';
+    if (modo !== 'visualizar') {
+      if (respostaSalva) {
+        console.log("📝 Resposta encontrada localmente -> Modo RESPONDIDA");
+        modo = 'respondida';
+      } else {
+        console.log("📝 Sem resposta salva -> Modo NOVO");
+        modo = 'novo';
+      }
     }
 
     if (respostaSalva) {
@@ -7987,9 +7989,7 @@
       const card = document.createElement("div");
       card.className = "linha-cotacao";
 
-      const statusTexto = expirada ? "<span style='color:red; font-weight:bold;'>(Expira no passado)</span>" :
-        fechadaManualmente ? "<span style='color:#ccc;'>(Fechada)</span>" :
-          "<span style='color:#0dcaf0;'>(Aberta)</span>";
+      const statusTexto = fechadaManualmente ? "<span style='color:#ccc;'>(Fechada)</span>" : "";
 
       // Botão de ação
       let botaoAcao = "";
@@ -8003,7 +8003,7 @@
           botaoAcao = `<button onclick="abrirModalResponder('${cot.numero}', 'respondida')">✏️ Ver / Editar</button>`;
         }
       } else {
-        botaoAcao = `<span style='color:#aaa; font-style:italic;'>Encerrada</span>`;
+        botaoAcao = `<button onclick="abrirModalResponder('${cot.numero}', 'visualizar')" style="background:#555;">👁️ Detalhes</button>`;
       }
 
       card.innerHTML = `
