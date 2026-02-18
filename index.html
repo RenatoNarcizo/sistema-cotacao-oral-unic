@@ -5089,8 +5089,20 @@
     });
 
     // Se já houver resposta salva, preenche os preços para edição
-    const chaveRes = `res_${cotacao.id}_${usuario.email.toLowerCase().trim()}`;
+    // 💡 Usa ID ou Número para garantir chave única
+    const idUnico = cotacao.id || cotacao.numero;
+    const chaveRes = `res_${idUnico}_${usuario.email.toLowerCase().trim()}`;
     const respostaSalva = JSON.parse(localStorage.getItem(chaveRes));
+
+    // 💡 AUTO-CORREÇÃO DE MODO (Fix para botão sumido)
+    if (respostaSalva) {
+      console.log("📝 Resposta encontrada localmente -> Modo RESPONDIDA");
+      modo = 'respondida';
+    } else {
+      console.log("📝 Sem resposta salva -> Modo NOVO");
+      modo = 'novo';
+    }
+
     if (respostaSalva) {
       respostaSalva.itens.forEach(item => {
         const input = document.querySelector(`input[data-produto="${item.produto}"]`);
