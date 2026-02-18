@@ -4324,26 +4324,69 @@
   }
 
   // 🔄 HELPER GLOBAL DE SYNC
-  window.sincronizarCotacoesAgora = function () {
+  // 🔄 HELPER GLOBAL DE SYNC (RTDB + FIRESTORE MERGE)
+  window.sincronizarCotacoesAgora = async function () {
+    console.log("🔄 Iniciando Sincronização Unificada (RTDB + Firestore)...");
+
+    let cotacoesRTDB = [];
+    let cotacoesFirestore = [];
+
+    // 1. Busca RTDB (Recente/Rápido)
     if (typeof rtdb !== "undefined") {
-      console.log("🔄 Forçando sincronização RTDB no Login...");
-      rtdb.ref("cotacoes").once("value").then(snapshot => {
+      try {
+        const snapshot = await rtdb.ref("cotacoes").once("value");
         const data = snapshot.val();
         if (data) {
-          const arrayCotacoes = Object.values(data);
-          const cotacoesValidas = arrayCotacoes.filter(c => c && (c.id || c.numero));
-          localStorage.setItem("cotacoes", JSON.stringify(cotacoesValidas));
-          console.log("✅ Sync Login Completo:", cotacoesValidas.length);
-
-          // Tenta atualizar UI se possível (mesmo oculto)
-          if (typeof renderizarListaFornecedor === "function") {
-            try {
-              const u = JSON.parse(sessionStorage.getItem("usuario_logado"));
-              if (u && u.tipo === 'fornecedor') renderizarListaFornecedor('abertas');
-            } catch (e) { }
-          }
+          cotacoesRTDB = Object.values(data);
         }
-      });
+      } catch (e) { console.warn("Erro RTDB Sync:", e); }
+    }
+
+    // 2. Busca Firestore (Histórico/Antigo)
+    if (typeof db !== "undefined") {
+      try {
+        const snapshot = await db.collection("cotacoes").get();
+        cotacoesFirestore = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+      } catch (e) { console.warn("Erro Firestore Sync:", e); }
+    }
+
+    // 3. Merge e Deduplicação (Prioridade: RTDB > Firestore)
+    const mapaUnificado = new Map();
+
+    // Adiciona Firestore primeiro
+    cotacoesFirestore.forEach(c => {
+      const id = String(c.id || c.numero);
+      if (id) mapaUnificado.set(id, c);
+    });
+
+    // Sobrescreve com RTDB (mais recente)
+    cotacoesRTDB.forEach(c => {
+      const id = String(c.id || c.numero);
+      if (id) mapaUnificado.set(id, c);
+    });
+
+    const listaFinal = Array.from(mapaUnificado.values());
+
+    if (listaFinal.length > 0) {
+      localStorage.setItem("cotacoes", JSON.stringify(listaFinal));
+      console.log(`✅ Sync Completo: ${listaFinal.length} cotações recuperadas.`);
+
+      // Atualiza UI
+      if (typeof renderizarListaFornecedor === "function") {
+        try {
+          const u = JSON.parse(sessionStorage.getItem("usuario_logado"));
+          if (u && u.tipo === 'fornecedor') {
+            renderizarListaFornecedor('abertas');
+            renderizarListaFornecedor('respondidas');
+            renderizarListaFornecedor('encerradas');
+          }
+        } catch (e) { }
+      }
+
+      // Atualiza Dashboard Comprador
+      if (typeof carregarCotacoes === "function") {
+        setTimeout(() => carregarCotacoes(), 500);
+      }
     }
   }
 
