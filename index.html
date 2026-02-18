@@ -2222,13 +2222,13 @@
         <p>Adicionar serviços no sistema</p>
       </div>
 
-      <div class="card" onclick="abrirTela('financeiro'); carregarFinanceiroFornecedor()">
+      <div class="card" onclick="abrirPagina('financeiro'); carregarFinanceiroFornecedor()">
         <i class="fa-solid fa-file-invoice-dollar"></i>
         <h3>Gestão Financeira</h3>
         <p>Notas Fiscais e Boletos</p>
       </div>
 
-      <div class="card" onclick="abrirTela('responderCotacao')">
+      <div class="card" onclick="abrirPagina('cotas_recebidas.html')">
         <i class="fa-solid fa-envelope-open-text"></i>
         <h3>Responder Cotação</h3>
         <p>Ver e responder solicitações recebidas</p>
@@ -2243,7 +2243,7 @@
       -->
 
 
-      <div class="card" onclick="abrirTela('cotacoesRespondidas')">
+      <div class="card" onclick="abrirPagina('cotacoesRespondidas')">
         <i class="fa-solid fa-circle-check"></i>
         <h3>Cotações Respondidas</h3>
         <p>Visualizar respostas recebidas dos fornecedores</p>
@@ -2255,7 +2255,7 @@
         <p>Visualizar e aprovar cotações finalizadas</p>
       </div>
 
-      <div class="card" onclick="abrirTela('usuarios'); carregarUsuarios()">
+      <div class="card" onclick="abrirPagina('usuarios'); carregarUsuarios()">
         <i class="fa-solid fa-users-gear"></i>
         <h3>Gerenciar Usuários</h3>
         <p>Adicionar e controlar acessos do sistema</p>
@@ -5057,8 +5057,10 @@
       document.getElementById("cadastroServico").style.display = "block";
 
     } else if (pagina === "cotas_recebidas.html") {
-      abrirResponderCotacao();
-
+      document.getElementById("responderCotacao").style.display = "block";
+      if (typeof mostrarAbaCotacao === "function") {
+        mostrarAbaCotacao('abertas');
+      }
     }
     else if (pagina === "aprovacoes.html") {
       abrirAprovarCompras();
@@ -5193,8 +5195,8 @@
       }
     }
 
-    // 💡 AUTO-CORREÇÃO DE MODO (Fix para botão sumido)
-    if (modo !== 'visualizar') {
+    // 💡 AUTO-CORREÇÃO DE MODO (Apenas se não for um modo forçado)
+    if (modo !== 'visualizar' && modo !== 'novo') {
       if (respostaSalva) {
         console.log("📝 Resposta encontrada localmente -> Modo RESPONDIDA");
         modo = 'respondida';
@@ -8156,11 +8158,11 @@
       // Botão de ação
       let botaoAcao = "";
       if (aba === 'abertas') {
-        botaoAcao = `<button onclick="abrirModalResponder('${cot.numero}')">📄 Responder</button>`;
+        botaoAcao = `<button onclick="abrirModalResponder('${cot.numero}', 'novo')">📄 Responder</button>`;
       } else if (aba === 'respondidas') {
         // Se ainda estiver no prazo, permite editar. Se não, apenas ver.
         if (expirada || fechadaManualmente) {
-          botaoAcao = `<button onclick="abrirModalResponder('${cot.numero}', 'respondida')" style="background:#555;">👁️ Ver Resposta</button>`;
+          botaoAcao = `<button onclick="abrirModalResponder('${cot.numero}', 'visualizar')" style="background:#555;">👁️ Ver Resposta</button>`;
         } else {
           botaoAcao = `<button onclick="abrirModalResponder('${cot.numero}', 'respondida')">✏️ Ver / Editar</button>`;
         }
