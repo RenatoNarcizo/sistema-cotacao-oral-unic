@@ -15,6 +15,7 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
   <style>
     :root {
@@ -3952,7 +3953,8 @@
     projectId: "cotacao-oral-unic",
     storageBucket: "cotacao-oral-unic.firebasestorage.app",
     messagingSenderId: "648085968917",
-    appId: "1:648085968917:web:26029a08b8dd363c9c961c"
+    appId: "1:648085968917:web:26029a08b8dd363c9c961c",
+    databaseURL: "https://cotacao-oral-unic-default-rtdb.firebaseio.com"
   };
 
   // Inicializa Firebase
@@ -3963,8 +3965,9 @@
   const db = firebase.firestore();
   const auth = firebase.auth();
   const storage = firebase.storage();
+  const rtdb = firebase.database(); // ✅ Realtime Database (substitui Firestore para cotações)
 
-  console.log("🔥 Firebase inicializado com sucesso!");
+  console.log("🔥 Firebase inicializado com sucesso! RTDB:", rtdb.app.options.databaseURL);
 
 
   /* ======================================================
@@ -6523,12 +6526,12 @@
       cotacoes.push(novaCotacao);
       localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
 
-      // 🔥 SINCRONIZA COM FIRESTORE (COM PROTEÇÃO DE COTA)
+      // 🔥 SINCRONIZA COM REALTIME DATABASE
       try {
-        await db.collection("cotacoes").doc(String(novaCotacao.numero)).set(novaCotacao);
-        console.log("✅ Cotação salva no Firestore");
-      } catch (errQuota) {
-        console.warn("⚠️ Cota do Firestore excedida HOJE. Salvo localmente. Amanhã sincroniza.", errQuota);
+        await rtdb.ref("cotacoes/" + novaCotacao.numero).set(novaCotacao);
+        console.log("✅ Cotação salva no Realtime Database");
+      } catch (errRtdb) {
+        console.warn("⚠️ Erro ao salvar no RTDB. Salvo localmente.", errRtdb);
       }
 
       // 🔔 NOTIFICAÇÃO: NOVA FUNÇÃO (WEBHOOK)
@@ -6549,15 +6552,14 @@
       window.fornecedoresSelecionadosTemp = [];
       numeroCotacaoAtual = null;
 
-      alert("✅ Cotação publicada com sucesso! A página será recarregada.");
-
-      // 🔄 RECARREGA PARA GARANTIR VISUALIZAÇÃO CORRETA E LIMPEZA
-      window.location.reload();
-
-      // Código antigo removido pois o reload resolve tudo
-      // voltarMenu();
-      // limparFormulariosCotacao();
-      // setTimeout...
+      // Volta ao painel sem recarregar (evita logout)
+      limparFormulariosCotacao();
+      const loginContainer = document.getElementById("login-container");
+      const dashboardEl = document.getElementById("dashboard");
+      if (loginContainer) loginContainer.style.display = "none";
+      if (dashboardEl) dashboardEl.style.display = "block";
+      document.querySelectorAll("section.secao").forEach(s => s.style.display = "none");
+      if (dashboardEl) dashboardEl.style.display = "block";
 
     } catch (e) {
       console.error("Erro ao salvar:", e);
@@ -11732,41 +11734,29 @@
       localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
       console.log("✅ V2: Backup local salvo.");
 
-      // ☁️ 2. CLOUD (TIMEOUT DE 10S - SEGURANÇA)
-      console.log("🔄 Iniciando upload para Firestore...");
+      // ☁️ 2. REALTIME DATABASE (Rápido e confiável)
+      console.log("🔄 Enviando para Realtime Database...");
 
-      if (typeof db !== "undefined") {
+      if (typeof rtdb !== "undefined") {
         try {
-          console.log(`📤 Enviando cotação ${novaCotacao.numero} para Firestore...`);
-
-          // Timeout de 10 segundos
-          const uploadPromise = db.collection("cotacoes").doc(String(novaCotacao.numero)).set(novaCotacao);
-          const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error("Firestore não respondeu em 10 segundos")), 10000)
-          );
-
-          await Promise.race([uploadPromise, timeoutPromise]);
-          console.log("✅ V2: Sincronização Nuvem CONFIRMADA.");
+          console.log(`📤 Enviando cotação ${novaCotacao.numero} para RTDB...`);
+          await rtdb.ref("cotacoes/" + novaCotacao.numero).set(novaCotacao);
+          console.log("✅ V2: Sincronização RTDB CONFIRMADA.");
 
           alert("✅ Cotação publicada com sucesso!\n\nOs fornecedores podem visualizar agora.");
         } catch (errSync) {
-          console.error("❌ ERRO CRÍTICO AO ENVIAR PARA FIRESTORE:", errSync);
-          console.error("Código do erro:", errSync.code);
-          console.error("Mensagem:", errSync.message);
-          console.error("Stack:", errSync.stack);
+          console.error("❌ ERRO AO ENVIAR PARA RTDB:", errSync);
+          alert(`❌ Erro ao publicar:\n\n${errSync.message}\n\nVerifique sua conexão e tente novamente.`);
 
-          alert(`❌ FIRESTORE BLOQUEADO/TIMEOUT:\n\n${errSync.message}\n\n⚠️ A cotação está salva LOCALMENTE.\n\nAbra o Console (F12) e digite:\nrecuperarCotacoes()\n\nPara forçar o envio de todas as cotações pendentes.`);
-
-          // Desbloqueia botão para tentar novamente
           if (btnSalvar && btnSalvar.tagName === "BUTTON") {
             btnSalvar.disabled = false;
             btnSalvar.innerText = textoOriginal;
           }
-          return; // Para aqui, não recarrega
+          return;
         }
       } else {
-        console.error("❌ FIREBASE NÃO INICIALIZADO!");
-        alert("❌ ERRO: Firebase não está inicializado.\n\nVerifique a configuração do sistema.");
+        console.error("❌ RTDB NÃO INICIALIZADO!");
+        alert("❌ ERRO: Realtime Database não inicializado.");
 
         if (btnSalvar && btnSalvar.tagName === "BUTTON") {
           btnSalvar.disabled = false;
@@ -11789,7 +11779,19 @@
       numeroCotacaoAtual = null;
 
       limparFormulariosCotacao();
-      window.location.reload();
+
+      // Volta ao painel sem recarregar (evita logout)
+      const loginContainer = document.getElementById("login-container");
+      const dashboardEl = document.getElementById("dashboard");
+      if (loginContainer) loginContainer.style.display = "none";
+      if (dashboardEl) dashboardEl.style.display = "block";
+      // Esconde seções de criação de cotação
+      ["nova-cotacao", "novaCotacao", "secao-cotacao", "criar-cotacao"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = "none";
+      });
+      document.querySelectorAll("section.secao").forEach(s => s.style.display = "none");
+      if (dashboardEl) dashboardEl.style.display = "block";
 
     } catch (e) {
       console.error("Erro FATAL V2:", e);
@@ -11838,7 +11840,7 @@
 
     for (const cot of local) {
       try {
-        await db.collection("cotacoes").doc(String(cot.numero)).set(cot);
+        await rtdb.ref("cotacoes/" + cot.numero).set(cot);
         console.log(`✅ ${cot.numero} enviado`);
         ok++;
       } catch (e) {
@@ -11852,7 +11854,7 @@
     if (ok > 0) {
       alert(`✅ ${ok} cotações enviadas!\n\nRecarregue a página para atualizar.`);
     } else {
-      alert(`❌ Todas falharam.\n\nO Firestore está bloqueado.\nVerifique as Regras de Segurança no Firebase Console.`);
+      alert(`❌ Todas falharam.\n\nVerifique sua conexão com a internet.`);
     }
   };
   console.log("🆘 EMERGÊNCIA: Digite 'recuperarCotacoes()' no Console para forçar envio.");
