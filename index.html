@@ -7716,14 +7716,15 @@
           try {
             localStorage.setItem(chaveRes, JSON.stringify(respostaCloud));
           } catch (e) {
-            // Se estourar a cota (anexo grande), salva sem o anexo para não quebrar o app
+            // Se estourar a cota, tenta salvar sem anexo
             if (e.name === 'QuotaExceededError') {
-              console.warn(`⚠️ LocalStorage cheio! Salvando resposta ${cot.numero} sem anexo.`);
+              console.warn(`⚠️ Cache cheio: Salvando simplificado ${cot.numero}...`);
               const copiaSemAnexo = { ...respostaCloud, anexo: null, anexoNome: (respostaCloud.anexoNome || 'Anexo (Não Cacheado)') };
               try {
                 localStorage.setItem(chaveRes, JSON.stringify(copiaSemAnexo));
               } catch (e2) {
-                console.error("❌ Falha crítica ao salvar cache local:", e2);
+                // Se ainda falhar, apenas ignora. O app usa o dado da memória/nuvem.
+                console.warn("⚠️ Cache local esgotado totalmente. Operando sem cache para este item.");
               }
             }
           }
