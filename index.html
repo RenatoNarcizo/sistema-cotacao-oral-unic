@@ -11952,7 +11952,8 @@
 
         if (typeof storage !== "undefined") {
           try {
-            const path = `respostas/${numCotacao}/${Date.now()}_${nomeLimpo}`;
+            // 🏗️ ESTRUTURA HIERÁRQUICA RIGOROSA (COTACAO > FORNECEDOR > ARQUIVO)
+            const path = `cotacoes/${numCotacao}/${usuario.email}/${Date.now()}_${nomeLimpo}`;
             const metadata = { contentType: file.type || 'application/octet-stream' };
 
             console.log("🔄 Bucket:", storage.ref().bucket);
@@ -12000,12 +12001,13 @@
         }
       }
 
-      // 7. Montar Resposta Final
+      // 7. Montar Resposta Final (COM ID VINCULADO)
       const resposta = {
-        fornecedor: usuario.nome || usuario.razaoSocial || usuario.email.split('@')[0],
-        email: usuario.email,
-        data: new Date().toLocaleString(),
+        cotacaoId: String(numCotacao),
+        fornecedor: usuario.nome,
+        email: usuario.email.toLowerCase().trim(),
         itens: itensRespondidos,
+        data: new Date().toISOString(),
         anexo: anexoDados,
         anexos: [anexoDados]
       };
@@ -12146,6 +12148,104 @@
   window.habilitarEdicaoResposta = habilitarEdicaoResposta;
 
   /* ======================================================
+     👁️ VISUALIZAR DOCUMENTOS (STRICT MODE - ISOLADO)
+     Garante que só abrimos documentos desta cotação específica.
+  ====================================================== */
+  window.visualizarDocumentos = function (idCotacao, emailFornecedor) {
+    console.log(`👁️ Abrindo documentos isolados: COT ${idCotacao} | Forn: ${emailFornecedor || 'Todos'}`);
+
+    // Cria/Busca Modal dinamicamente se não existir
+    let modal = document.getElementById("modalVisualizarDocumentos");
+    if (!modal) {
+      modal = document.createElement("div");
+      modal.id = "modalVisualizarDocumentos";
+      modal.className = "modal"; // Usa classe padrão
+      modal.innerHTML = `
+            <div class="modal-content" style="max-width: 500px; background:#222; color:#fff; border:1px solid #661155;">
+                <span class="close" onclick="document.getElementById('modalVisualizarDocumentos').style.display='none'">&times;</span>
+                <h2 style="color:#00ff99; border-bottom:1px solid #444; padding-bottom:10px;">📄 Documentos da Cotação</h2>
+                <div id="listaDocumentosAnexados" style="margin-top:20px; max-height:400px; overflow-y:auto;"></div>
+            </div>`;
+      document.body.appendChild(modal);
+    }
+
+    const container = document.getElementById("listaDocumentosAnexados");
+    container.innerHTML = "<p>Carregando documentos...</p>";
+    modal.style.display = "flex";
+
+    // 1. Busca TODAS as respostas locais
+    const respostas = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      // Busca flexível por prefixo
+      if (key.includes(`res_${idCotacao}`) || key.includes(`resposta_${idCotacao}`)) {
+        try {
+          const r = JSON.parse(localStorage.getItem(key));
+
+          // 🔒 FILTRO DE SEGURANÇA: Se tiver ID vinculado, valida!
+          if (r.cotacaoId && String(r.cotacaoId) !== String(idCotacao)) {
+            console.warn("⛔ Ignorando resposta com ID incompatível (Cross-talk prevention):", r);
+            continue;
+          }
+          respostas.push(r);
+        } catch (e) { }
+      }
+    }
+
+    // 2. Filtra por fornecedor se especificado
+    const displayItems = emailFornecedor
+      ? respostas.filter(r => (r.email || "").toLowerCase().trim() === (emailFornecedor || "").toLowerCase().trim())
+      : respostas;
+
+    container.innerHTML = "";
+
+    if (displayItems.length === 0) {
+      container.innerHTML = "<p style='color:#ccc; text-align:center;'>Nenhum documento encontrado.</p>";
+      return;
+    }
+
+    // 3. Renderiza
+    displayItems.forEach(r => {
+      const anexos = r.anexos || (r.anexo ? [r.anexo] : []);
+      const temBase64 = r.base64 && r.base64.length > 100;
+
+      if (anexos.length === 0 && !temBase64) return;
+
+      const div = document.createElement("div");
+      div.style.marginBottom = "15px";
+      div.style.padding = "10px";
+      div.style.border = "1px solid #444";
+      div.style.borderRadius = "5px";
+      div.style.backgroundColor = "#111";
+
+      div.innerHTML = `<strong style="color:#00ff99; display:block; margin-bottom:5px;">${r.fornecedor || r.email}</strong>`;
+
+      let achouArquivo = false;
+
+      anexos.forEach(anexo => {
+        const link = anexo.url || anexo.link;
+        if (link) {
+          achouArquivo = true;
+          div.innerHTML += `
+                    <a href="${link}" target="_blank" style="color:#3ab9b6; text-decoration:none; display:flex; align-items:center; gap:8px; margin-top:5px; padding:5px; border:1px solid #333; border-radius:4px;">
+                       <i class="fa-solid fa-cloud-arrow-down"></i> ${anexo.nome || "Documento Anexado"} (Nuvem)
+                    </a>`;
+        }
+      });
+
+      // Fallback Base64 (Legacy)
+      if (temBase64 && !achouArquivo) {
+        div.innerHTML += `
+                <a href="#" onclick="abrirBase64('${r.base64}'); return false;" style="color:#fbbf24; text-decoration:none; display:flex; align-items:center; gap:8px; margin-top:5px; padding:5px; border:1px solid #333; border-radius:4px;">
+                   <i class="fa-solid fa-file-pdf"></i> ⚠️ Documento Salvo Localmente (Base64)
+                </a>`;
+      }
+
+      container.appendChild(div);
+    });
+  };
+
+  /* ======================================================
      ❌ FECHAR MODAL DE RESPOSTA (MISSING FUNCTION RESTORED)
      ====================================================== */
   function fecharModalResponder() {
@@ -12156,11 +12256,6 @@
   window.fecharModalResponder = fecharModalResponder;
 
 
-
-
-  /* ======================================================
-  🔄 SINCRONIZAÇÃO EM TEMPO REAL (RTDB -> LOCALSTORAGE)
-  ====================================================== */
   /* ======================================================
   🔄 SINCRONIZAÇÃO EM TEMPO REAL (RTDB -> LOCALSTORAGE)
   ====================================================== */
