@@ -3862,8 +3862,8 @@
     box-shadow:0 0 15px rgba(102,17,85,0.6);
   ">
 
-      <!-- 🔍 BUSCA -->
-      <div style="margin-bottom:20px; text-align:center;">
+      <!-- 🔍 BUSCA & SYNC -->
+      <div style="margin-bottom:20px; text-align:center; display:flex; justify-content:center; gap:10px;">
         <input type="text" id="buscaCotacaoRespondida" placeholder="🔍 Buscar cotação (número ou descrição)..."
           oninput="filtrarCotacoesInstantaneo()" style="
           padding:12px;
@@ -3876,6 +3876,18 @@
           outline:none;
           text-align:center;
         ">
+        <button onclick="sincronizarCotacoesAgora().then(() => alert('Sincronização concluída!'))" style="
+            background:#333; 
+            color:#0dcaf0; 
+            border:1px solid #0dcaf0; 
+            border-radius:50%; 
+            width:42px; 
+            height:42px; 
+            cursor:pointer;
+            title='Forçar Sincronização';
+        ">
+          🔄
+        </button>
       </div>
 
       <!-- 📑 ABAS -->
@@ -7300,22 +7312,21 @@
     let filtradas = [];
 
     /* ===========================
-       🚚 FORNECEDOR (LOGICA CORRIGIDA)
+       🚚 FORNECEDOR (LOGICA CORRIGIDA & ROBUSTA)
     ============================ */
-    if (usuario.tipo === "fornecedor") {
+    const tipoUsuario = String(usuario.tipo || "").toLowerCase().trim();
+
+    if (tipoUsuario === "fornecedor") {
       filtradas = cotacoes.filter(c => {
-        // 1. Filtro básico de status
-        if (!statusFiltro.includes(c.status)) return false;
+        const sCotacao = String(c.status).toLowerCase().trim();
+        const sFiltro = statusFiltro.map(s => String(s).toLowerCase().trim());
 
-        // 2. Se for ABERTA, o fornecedor DEVE ver (desde que não tenha respondido ainda na aba de abertas? 
-        //    Geralmente mostra-se tudo que está disponível).
-        if (c.status === 'aberta') {
-          // Opcional: verificar se está na lista de convidados (c.fornecedores)
-          // Para corrigir o "sumiço", mostramos todas abertas onde ele não foi explicitamente excluído
-          return true;
-        }
+        if (!sFiltro.includes(sCotacao)) return false;
 
-        // 3. Se for RESPONDIDA/FECHADA, só mostra se ele participou
+        // Se ABERTA -> Mostra (convite implícito)
+        if (sCotacao === 'aberta') return true;
+
+        // Se RESPONDIDA -> Checa participação
         return fornecedorRespondeu(c, usuario.email);
       });
     }
@@ -7323,9 +7334,11 @@
        👔 ADMIN / COMPRADOR / APROVADOR
     ============================ */
     else {
-      filtradas = cotacoes.filter(c =>
-        statusFiltro.includes(c.status)
-      );
+      filtradas = cotacoes.filter(c => {
+        const sCotacao = String(c.status).toLowerCase().trim();
+        const sFiltro = statusFiltro.map(s => String(s).toLowerCase().trim());
+        return sFiltro.includes(sCotacao);
+      });
     }
 
     // Aplica o filtro de busca final
@@ -7333,16 +7346,15 @@
 
     if (filtradas.length === 0) {
       container.innerHTML =
-        "<p style='text-align:center;'>Nenhuma cotação encontrada.</p>";
+        `<p style='text-align:center;'>Nenhuma cotação encontrada. (Total no sistema: ${cotacoes.length})</p>`;
       return;
     }
 
     // List each quotation
     filtradas.forEach(c => {
-
       const respostas = Array.isArray(c.respostasFornecedores) ? c.respostasFornecedores : [];
-      const qtdRespostas = usuario.tipo === "fornecedor" ? 1 : respostas.length;
-      const qtdConvidados = Array.isArray(c.fornecedores) ? c.fornecedores.length : 0;
+      const qtdRespostas = tipoUsuario === "fornecedor" ? 1 : respostas.length;
+      const qtdConvidados = Array.isArray(c.fornecedores) ? c.fornecedores.length : 0; // Fix duplicate var if strictly needed or just reuse
 
       const STATUS_NORMALIZADO = String(c.status).toLowerCase().trim();
 
