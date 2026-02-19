@@ -6974,6 +6974,24 @@
               padding:8px;
             ">`;
       console.log("🔥 Input de anexo recriado: " + novoId);
+
+      // 🧹 LIMPEZA DE "FANTASMAS" VISUAIS (Janitor Script)
+      try {
+        const divPai = containerAnexo.parentElement; // Onde os fantasmas moram
+        if (divPai) {
+          const links = divPai.querySelectorAll('a, span.anexo-link');
+          links.forEach(el => {
+            if (el.innerText && (el.innerText.includes("Anexo") || el.innerText.includes("Arquivo"))) {
+              console.log("👻 Removendo link fantasma:", el);
+              el.style.display = 'none';
+              el.innerHTML = '';
+            }
+          });
+        }
+        // Tenta achar qualquer elemento com ID suspeito
+        const ghostLabel = document.getElementById("respAnexoAtual");
+        if (ghostLabel) { ghostLabel.style.display = 'none'; ghostLabel.innerHTML = ''; }
+      } catch (e) { console.warn("Erro ao limpar fantasmas:", e); }
     }
 
     const email = usuario.email.toLowerCase().trim();
