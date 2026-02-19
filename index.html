@@ -5257,7 +5257,28 @@
       console.error("abrirResponderCotacao não encontrada no escopo.");
     }
   };
-  window.abrirResponderCotacao = window.abrirResponderCotacao || undefined; // Evita sobrescrever a declaração original se já existir
+  window.abrirResponderCotacao = window.abrirResponderCotacao || undefined;
+
+  // 💰 HELPERS DE FORMATAÇÃO DE MOEDA (BRL)
+  window.formatarMoedaBRL = function (valor) {
+    if (typeof valor !== "number") valor = parseFloat(valor) || 0;
+    return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  };
+
+  window.limparMoeda = function (texto) {
+    if (typeof texto !== "string") return parseFloat(texto) || 0;
+    // Remove tudo que não é dígito
+    let apenasNumeros = texto.replace(/\D/g, "");
+    return parseFloat(apenasNumeros) / 100 || 0;
+  };
+
+  window.mascararMoeda = function (input) {
+    let valor = input.value.replace(/\D/g, "");
+    valor = (valor / 100).toFixed(2) + "";
+    valor = valor.replace(".", ",");
+    valor = valor.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    input.value = "R$ " + valor;
+  };
 
   // FUNÇÃO DO TIMER (SIMPLES E DIRETA)
   function iniciarTimerCotacao(dataFechamento) {
@@ -6957,9 +6978,11 @@
       <td style="text-align: center;">${p.marca || "-"}</td>
       <td style="text-align: center;">${p.quantidade}</td>
       <td style="text-align: center;">
-        <div style="display:flex; align-items:center; background:#1a1a1a; border:1px solid #444; border-radius:4px; padding:0 8px; width:110px; margin:0 auto;">
-          <span style="color:#777; font-size:12px; margin-right:4px;">R$</span>
-          <input type="number" min="0" step="0.01" id="preco_${i}" class="preco-input" data-produto="${p.nome}" style="width: 100%; border:none; background:transparent; color:#fff; text-align:right; font-size:14px; outline:none; padding:6px 0;">
+        <div style="display:flex; align-items:center; background:#1a1a1a; border:1px solid #444; border-radius:4px; padding:0 8px; width:130px; margin:0 auto;">
+          <input type="text" id="preco_${i}" class="preco-input" data-produto="${p.nome}" 
+            oninput="window.mascararMoeda(this)" 
+            placeholder="R$ 0,00"
+            style="width: 100%; border:none; background:transparent; color:#fff; text-align:right; font-size:14px; outline:none; padding:6px 0;">
         </div>
       </td>
     `;
@@ -7017,7 +7040,10 @@
         const idx = cotacao.produtos.findIndex(p => p.nome === item.produto || p.nome === item.nome);
         if (idx !== -1) {
           const input = document.getElementById("preco_" + idx);
-          if (input) input.value = item.preco ?? item.valor ?? 0;
+          if (input) {
+            const valNum = item.preco ?? item.valor ?? 0;
+            input.value = window.formatarMoedaBRL(valNum);
+          }
         }
       });
 
@@ -11971,13 +11997,14 @@
       let itensRespondidos = [];
       linhas.forEach(tr => {
         const input = tr.querySelector("input");
-        if (input && (parseFloat(input.value) || 0) > 0) {
+        const valRef = window.limparMoeda(input.value);
+        if (input && valRef > 0) {
           const produto = tr.cells[0]?.innerText.trim() || "Produto";
           itensRespondidos.push({
             produto: produto,
             nome: produto,
-            preco: parseFloat(input.value),
-            valor: parseFloat(input.value)
+            preco: valRef,
+            valor: valRef
           });
         }
       });
