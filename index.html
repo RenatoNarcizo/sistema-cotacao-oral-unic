@@ -6941,38 +6941,78 @@
       <td style="text-align: center;">${p.marca || "-"}</td>
       <td style="text-align: center;">${p.quantidade}</td>
       <td style="text-align: center;">
-        <input type="number" min="0" step="0.01" id="preco_${i}" style="width: 80px; text-align: center;">
+        <input type="number" min="0" step="0.01" id="preco_${i}" data-produto="${p.nome}" style="width: 80px; text-align: center;">
       </td>
     `;
       tbody.appendChild(tr);
     });
 
-    // 🧹 LIMPEZA DE ARQUIVO (EFICAZ PARA NOVO UPLOAD)
     // 🧹 LIMPEZA DE ARQUIVO ULTRA-FORÇADA (CLONE NODE)
-    // Isso remove referências internas do navegador que o .value="" às vezes falha em limpar
     const inputAnexo = document.getElementById("respAnexo");
+    const labelAnexo = document.getElementById("labelAnexoAtual"); // Novo elemento para mostrar anexo
+
+    // Cria label se não existir
+    if (!labelAnexo && inputAnexo) {
+      const divAnexo = inputAnexo.parentNode;
+      const p = document.createElement("p");
+      p.id = "labelAnexoAtual";
+      p.style.fontSize = "12px";
+      p.style.color = "#0dcaf0";
+      p.style.marginTop = "5px";
+      divAnexo.appendChild(p);
+    }
+
     if (inputAnexo) {
       try {
         const novoInput = inputAnexo.cloneNode(true);
         novoInput.value = "";
         inputAnexo.parentNode.replaceChild(novoInput, inputAnexo);
-        console.log("🧹 Input de anexo recriado e limpo.");
-      } catch (e) {
-        console.warn("Falha ao clonar input, tentando limpeza padrão", e);
-        inputAnexo.value = "";
-      }
+      } catch (e) { inputAnexo.value = ""; }
+    }
+
+    // Limpa label
+    if (document.getElementById("labelAnexoAtual")) {
+      document.getElementById("labelAnexoAtual").innerHTML = "";
     }
 
     const email = usuario.email.toLowerCase().trim();
-    const chave = `resposta_${numero}_${email}`;
-    const respostaRaw = localStorage.getItem(chave);
+    // Tenta achar na cotação (Cloud/Local)
+    let respostaSalva = cotacao.respostasFornecedores?.find(r =>
+      (r.email || "").toLowerCase().trim() === email
+    );
 
-    if (respostaRaw) {
-      const resposta = JSON.parse(respostaRaw);
-      (resposta.itens || []).forEach((item, i) => {
-        const input = document.getElementById("preco_" + i);
-        if (input) input.value = item.preco ?? 0;
-      });
+    // Se não achar, tenta no LocalStorage individual (Fallback)
+    if (!respostaSalva) {
+      const key = `res_${numero}_${email}`;
+      try {
+        respostaSalva = JSON.parse(localStorage.getItem(key));
+      } catch (e) { }
+    }
+
+    if (respostaSalva) {
+      if (respostaSalva.itens) {
+        respostaSalva.itens.forEach(item => {
+          // Tenta por data-produto (Mais robusto)
+          let input = document.querySelector(`#tabelaResponderCorpo input[data-produto="${item.produto}"]`);
+          // Fallback por ID (Compatibilidade)
+          if (!input) {
+            // Tenta achar pelo index se o produto bater
+            const index = cotacao.produtos.findIndex(p => p.nome === item.produto);
+            if (index !== -1) input = document.getElementById("preco_" + index);
+          }
+
+          if (input) input.value = item.preco ?? 0;
+        });
+      }
+
+      // Mostra anexo existente
+      const anexoAtual = respostaSalva.anexo || (respostaSalva.anexos ? respostaSalva.anexos[0] : null);
+      if (anexoAtual && (anexoAtual.url || anexoAtual.base64 || anexoAtual.nome)) {
+        const lbl = document.getElementById("labelAnexoAtual");
+        if (lbl) {
+          lbl.innerHTML = `📎 Arquivo atual: <strong>${anexoAtual.nome}</strong> (Será mantido se não enviar outro)`;
+        }
+      }
     }
 
     // 🔑 CONTROLE DE MODO DEFINITIVO
@@ -11877,14 +11917,20 @@
       let itensRespondidos = [];
       linhas.forEach(tr => {
         const input = tr.querySelector("input");
-        if (input && (parseFloat(input.value) || 0) > 0) {
-          const produto = tr.cells[0]?.innerText.trim() || "Produto";
-          itensRespondidos.push({
-            produto: produto,
-            nome: produto,
-            preco: parseFloat(input.value),
-            valor: parseFloat(input.value)
-          });
+        if (input) {
+          // Robustez: Troca vírgula por ponto (caso navegador permita)
+          const valStr = String(input.value).replace(',', '.');
+          const valFloat = parseFloat(valStr);
+
+          if (valFloat > 0) {
+            const produto = tr.cells[0]?.innerText.trim() || "Produto";
+            itensRespondidos.push({
+              produto: produto,
+              nome: produto,
+              preco: valFloat,
+              valor: valFloat
+            });
+          }
         }
       });
 
