@@ -6956,8 +6956,8 @@
       <td style="text-align: left; padding-left: 12px;">${p.nome}</td>
       <td style="text-align: center;">${p.marca || "-"}</td>
       <td style="text-align: center;">${p.quantidade}</td>
-      <td style="text-align: center;">
-        <input type="number" min="0" step="0.01" id="preco_${i}" class="preco-input" data-produto="${p.nome}" style="width: 80px; text-align: center; background:#222; border:1px solid #444; color:#fff; border-radius:3px;">
+      <td style="text-align: center; color: #00ff99; font-weight: bold;">
+        R$ <input type="number" min="0" step="0.01" id="preco_${i}" class="preco-input" data-produto="${p.nome}" style="width: 80px; text-align: center; background:#222; border:1px solid #444; color:#fff; border-radius:3px; font-weight: normal;">
       </td>
     `;
       tbody.appendChild(tr);
@@ -7020,18 +7020,27 @@
 
       // 2. Mostrar Anexo Atual se existir
       if (resposta.anexo && (resposta.anexo.url || resposta.anexo.base64)) {
+        // Remove qualquer aviso antigo para não duplicar
+        const antigo = document.getElementById("respAnexoAtual");
+        if (antigo) antigo.remove();
+
         const linkElem = document.createElement("div");
         linkElem.id = "respAnexoAtual";
-        linkElem.style = "margin-top:10px; padding:8px; background:#222; border:1px solid #444; border-radius:4px;";
+        linkElem.className = "anexo-persistente-link"; // Nova classe para escapar do Janitor Script
+        linkElem.style = "margin-top:15px; padding:12px; background:rgba(0, 255, 153, 0.05); border:1px dashed #00ff99; border-radius:8px; text-align:center;";
 
         const url = resposta.anexo.url || (resposta.anexo.base64 ? "#" : "");
-        const nome = resposta.anexo.nome || "Ver Anexo Enviado";
+        const nome = resposta.anexo.nome || "Documento Enviado";
 
         linkElem.innerHTML = `
-          <span style="color:#bbb; font-size:12px; display:block; margin-bottom:4px;">📎 Anexo já enviado:</span>
-          <a href="${url}" ${resposta.anexo.url ? 'target="_blank"' : `onclick="abrirArquivoAnexo('${resposta.anexo.base64}', '${nome}'); return false;"`} style="color:#00ff99; text-decoration:none; font-weight:bold;">
+          <div style="color:#00ff99; font-size:13px; margin-bottom:8px; font-weight:bold;">
+            <i class="fa-solid fa-paperclip"></i> SEU ANEXO ATUAL
+          </div>
+          <a href="${url}" ${resposta.anexo.url ? 'target="_blank"' : `onclick="abrirArquivoAnexo('${resposta.anexo.base64}', '${nome}'); return false;"`} 
+             style="display:inline-block; background:#00ff99; color:#000; padding:6px 15px; border-radius:20px; text-decoration:none; font-weight:bold; font-size:12px; transition:0.3s;">
             <i class="fa-solid fa-file-pdf"></i> ${nome}
           </a>
+          <div style="color:#777; font-size:10px; margin-top:8px;">(Selecione um novo arquivo para substituir este)</div>
         `;
         if (containerAnexo) containerAnexo.appendChild(linkElem);
       }
@@ -12190,133 +12199,137 @@
      Garante que só abrimos documentos desta cotação específica.
   ====================================================== */
   window.visualizarDocumentos = function (idCotacao, emailFornecedor) {
-    console.log(`👁️ Abrindo documentos isolados: COT ${idCotacao} | Forn: ${emailFornecedor || 'Todos'}`);
+    console.log(`👁️ Abrindo documentos: COT ${idCotacao}`);
 
-    // Cria/Busca Modal dinamicamente se não existir
     let modal = document.getElementById("modalVisualizarDocumentos");
     if (!modal) {
       modal = document.createElement("div");
       modal.id = "modalVisualizarDocumentos";
-      modal.className = "modal"; // Usa classe padrão
+      modal.className = "modal";
       modal.innerHTML = `
-            <div class="modal-content" style="max-width: 500px; background:#222; color:#fff; border:1px solid #661155;">
-                <span class="close" onclick="document.getElementById('modalVisualizarDocumentos').style.display='none'">&times;</span>
-                <h2 style="color:#00ff99; border-bottom:1px solid #444; padding-bottom:10px;">📄 Documentos da Cotação</h2>
-                <div id="listaDocumentosAnexados" style="margin-top:20px; max-height:400px; overflow-y:auto;"></div>
+            <div class="modal-content" style="max-width: 800px; background:#1a1a1a; color:#fff; border:2px solid #661155; border-radius:12px; box-shadow: 0 0 30px rgba(0,0,0,0.8);">
+                <span class="close" onclick="document.getElementById('modalVisualizarDocumentos').style.display='none'" style="color:#661155; font-size:28px;">&times;</span>
+                <h2 style="color:#00ff99; border-bottom:1px solid #333; padding-bottom:15px; margin-top:0;">📄 Documentos da Cotação #${idCotacao}</h2>
+                <div id="listaDocumentosAnexados" style="margin-top:20px; max-height:500px; overflow-y:auto;"></div>
             </div>`;
       document.body.appendChild(modal);
     }
 
     const container = document.getElementById("listaDocumentosAnexados");
-    container.innerHTML = "<p>Carregando documentos...</p>";
+    container.innerHTML = "<p style='text-align:center; padding:20px;'>🔍 Buscando arquivos...</p>";
     modal.style.display = "flex";
 
-    // 1. Busca TODAS as respostas (Combina Cotações Locais + Respostas Individuais)
-    let respostas = [];
-    const hash = new Set(); // Para de-duplicar por email
+    // 1. DATA GATHERING (MERGE CLOUD & LOCAL)
+    let todasRespostas = [];
+    const hash = new Set();
 
-    // A. Busca na lista mestre de cotações (Visão do Comprador)
+    // A. Fonte 1: Array de respostas dentro do objeto cotação (Visão Comprador / Nuvem)
     const todasCotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
-    const cotacaoMestre = todasCotacoes.find(c => String(c.numero) === String(idCotacao) || String(c.id) === String(idCotacao));
-
-    if (cotacaoMestre && Array.isArray(cotacaoMestre.respostasFornecedores)) {
-      cotacaoMestre.respostasFornecedores.forEach(r => {
-        const email = (r.email || "").toLowerCase().trim();
-        if (email && !hash.has(email)) {
-          respostas.push(r);
-          hash.add(email);
+    const cot = todasCotacoes.find(c => String(c.numero) === String(idCotacao) || String(c.id) === String(idCotacao));
+    if (cot && cot.respostasFornecedores) {
+      cot.respostasFornecedores.forEach(r => {
+        const key = (r.email || r.fornecedor || "").toLowerCase();
+        if (key && !hash.has(key)) {
+          todasRespostas.push(r);
+          hash.add(key);
         }
       });
     }
 
-    // B. Busca nas respostas individuais locais (Visão de Rascunho/Fornecedor)
+    // B. Fonte 2: LocalStorage (res_...)
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       if (key.includes(`res_${idCotacao}`) || key.includes(`resposta_${idCotacao}`)) {
         try {
           const r = JSON.parse(localStorage.getItem(key));
-          const email = (r.email || "").toLowerCase().trim();
-
-          if (email && !hash.has(email)) {
-            // 🔒 Valida ID se existir
-            if (r.cotacaoId && String(r.cotacaoId) !== String(idCotacao)) continue;
-            respostas.push(r);
-            hash.add(email);
+          const emailKey = (r.email || r.fornecedor || "").toLowerCase();
+          if (emailKey && !hash.has(emailKey)) {
+            todasRespostas.push(r);
+            hash.add(emailKey);
           }
         } catch (e) { }
       }
     }
 
-    // 2. Filtra por fornecedor se for um histórico individual
+    // Filtro por fornecedor se necessário
     if (emailFornecedor) {
-      respostas = respostas.filter(r => (r.email || "").toLowerCase().trim() === (emailFornecedor || "").toLowerCase().trim());
+      todasRespostas = todasRespostas.filter(r => (r.email || "").toLowerCase().trim() === emailFornecedor.toLowerCase().trim());
     }
 
-    container.innerHTML = "";
-
-    if (respostas.length === 0) {
-      container.innerHTML = `
-        <div style="text-align:center; padding:30px; color:#666;">
-          <i class="fa-solid fa-folder-open" style="font-size:40px; margin-bottom:10px; opacity:0.3;"></i>
-          <p>Nenhum documento anexado para esta cotação.</p>
-        </div>`;
+    if (todasRespostas.length === 0) {
+      container.innerHTML = "<p style='text-align:center; color:#777; padding:40px;'>Nenhuma resposta ou anexo encontrado para esta cotação.</p>";
       return;
     }
 
-    // 3. Renderiza com Layout Profissional
-    respostas.forEach(r => {
-      const anexos = r.anexos || (r.anexo ? [r.anexo] : []);
-      const temBase64 = r.base64 && r.base64.length > 100;
+    // 2. RENDER (TABLE PATTERN)
+    let tableHTML = `
+      <table style="width:100%; border-collapse:collapse; color:#eee; font-size:14px;">
+        <thead>
+          <tr style="background:#222; border-bottom:2px solid #333;">
+            <th style="padding:12px; text-align:left;">Fornecedor</th>
+            <th style="padding:12px; text-align:center;">Arquivo(s)</th>
+            <th style="padding:12px; text-align:right;">Ação</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
 
-      if (anexos.length === 0 && !temBase64) return;
+    todasRespostas.forEach(r => {
+      const anexosList = r.anexos || (r.anexo ? [r.anexo] : []);
+      const linkBase64 = r.base64 || (r.anexo && r.anexo.base64 ? r.anexo.base64 : null);
 
-      const div = document.createElement("div");
-      div.className = "documento-fornecedor-item";
-      div.style = "margin-bottom:20px; padding:12px; border:1px solid #333; border-radius:8px; background-color:#1a1a1a; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);";
+      const fornecedorNome = r.fornecedor || r.email || "Desconhecido";
 
-      div.innerHTML = `
-        <div style="display:flex; align-items:center; gap:10px; border-bottom:1px solid #333; padding-bottom:8px; margin-bottom:10px;">
-          <div style="width:32px; height:32px; background:#661155; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:bold;">
-            ${(r.fornecedor || "?").charAt(0).toUpperCase()}
-          </div>
-          <div>
-            <strong style="color:#00ff99; display:block;">${r.fornecedor || "Fornecedor"}</strong>
-            <small style="color:#777; font-size:11px;">${r.email || ""}</small>
-          </div>
-        </div>
+      // Se não tem nada de anexo, pula
+      if (anexosList.length === 0 && !linkBase64) return;
+
+      tableHTML += `
+        <tr style="border-bottom:1px solid #222;">
+          <td style="padding:12px;">
+            <div style="font-weight:bold; color:#00ff99;">${fornecedorNome}</div>
+            <div style="font-size:11px; color:#666;">${r.email || ""}</div>
+          </td>
+          <td style="padding:12px; text-align:center;">
       `;
 
-      let achouArquivo = false;
-
-      anexos.forEach(anexo => {
-        const link = anexo.url || anexo.link;
-        if (link) {
-          achouArquivo = true;
-          div.innerHTML += `
-            <a href="${link}" target="_blank" style="color:#3ab9b6; text-decoration:none; display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:8px; padding:10px; background:#111; border:1px solid #222; border-radius:6px; transition: 0.2s;">
-               <span style="display:flex; align-items:center; gap:10px;">
-                 <i class="fa-solid fa-file-pdf" style="color:#ff4444; font-size:18px;"></i> 
-                 <span>${anexo.nome || "Anexo Enviado"}</span>
-               </span>
-               <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:12px; opacity:0.5;"></i>
-            </a>`;
+      // Render links de anexos (Nuvem)
+      anexosList.forEach(anexo => {
+        const url = anexo.url || anexo.link || (anexo.base64 ? "#" : "");
+        if (url) {
+          const isBase64 = url === "#" || url.startsWith("data:");
+          tableHTML += `
+              <div style="margin:4px 0;">
+                <i class="fa-solid fa-file-pdf" style="color:#ff4444;"></i> 
+                <span style="font-size:12px;">${anexo.nome || "Anexo"}</span>
+              </div>`;
         }
       });
 
-      // Fallback Base64 (Legacy)
-      if (temBase64 && !achouArquivo) {
-        div.innerHTML += `
-            <a href="#" onclick="abrirBase64('${r.base64}'); return false;" style="color:#fbbf24; text-decoration:none; display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:8px; padding:10px; background:#111; border:1px solid #222; border-radius:6px;">
-               <span style="display:flex; align-items:center; gap:10px;">
-                 <i class="fa-solid fa-file-code" style="color:#fbbf24; font-size:18px;"></i> 
-                 <span>Documento Local (Base64)</span>
-               </span>
-               <i class="fa-solid fa-eye" style="font-size:12px; opacity:0.5;"></i>
-            </a>`;
+      // Se só tem base64
+      if (anexosList.length === 0 && linkBase64) {
+        tableHTML += `<div><i class="fa-solid fa-file-code" style="color:#fbbf24;"></i> Base64</div>`;
       }
 
-      container.appendChild(div);
+      tableHTML += `</td><td style="padding:12px; text-align:right;">`;
+
+      // Botões de Ação
+      anexosList.forEach(anexo => {
+        if (anexo.url) {
+          tableHTML += `<a href="${anexo.url}" target="_blank" class="btn-visualizar-mini" title="Abrir Link" style="background:#3ab9b6; color:#000; padding:4px 8px; border-radius:4px; font-size:11px; text-decoration:none; margin-left:5px;"><i class="fa-solid fa-external-link"></i></a>`;
+        } else if (anexo.base64) {
+          tableHTML += `<button onclick="abrirArquivoAnexo('${anexo.base64}', '${anexo.nome || 'Anexo'}')" class="btn-visualizar-mini" title="Ver Base64" style="background:#fbbf24; color:#000; padding:4px 8px; border-radius:4px; border:none; cursor:pointer; font-size:11px; margin-left:5px;"><i class="fa-solid fa-eye"></i></button>`;
+        }
+      });
+
+      if (anexosList.length === 0 && linkBase64) {
+        tableHTML += `<button onclick="abrirArquivoAnexo('${linkBase64}', 'Anexo')" class="btn-visualizar-mini" title="Ver Base64" style="background:#fbbf24; color:#000; padding:4px 8px; border-radius:4px; border:none; cursor:pointer; font-size:11px; margin-left:5px;"><i class="fa-solid fa-eye"></i></button>`;
+      }
+
+      tableHTML += `</td></tr>`;
     });
+
+    tableHTML += "</tbody></table>";
+    container.innerHTML = tableHTML;
   };
 
   /* ======================================================
