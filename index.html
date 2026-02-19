@@ -7274,6 +7274,13 @@
     const cotacoes = getCotacoes(); // TODAS
     const usuario = getUsuarioLogado();
 
+    if (!usuario) {
+      // Se chamado via sync antes do login ou session perdida
+      console.warn("⚠️ carregarRespondidas: Usuário não logado ou sessão expirada.");
+      container.innerHTML = "<p style='text-align:center;'>Aguardando login...</p>";
+      return;
+    }
+
     container.innerHTML = "";
 
     // 🔑 normaliza status para array
