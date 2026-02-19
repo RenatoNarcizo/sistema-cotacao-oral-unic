@@ -5222,12 +5222,8 @@
     const btnEnviar = document.getElementById('btnEnviarResposta');
     const btnEditar = document.getElementById('btnEditarResposta');
     const inputs = document.querySelectorAll("#tabelaResponderCorpo input");
-    const fileInput = document.getElementById("respAnexo");
-
-    // Reset Inicial
-    if (btnEnviar) btnEnviar.style.display = 'none';
-    if (btnEditar) btnEditar.style.display = 'none';
-    inputs.forEach(i => i.disabled = true);
+    const containerAnexo = document.getElementById("containerAnexoResponder");
+    const fileInput = containerAnexo ? containerAnexo.querySelector("input[type='file']") : null;
     if (fileInput) fileInput.disabled = true;
 
     if (modo === 'novo') {
@@ -5255,8 +5251,9 @@
 
   // Wrapper para chamar com o modo correto
   window.abrirResponderCotacao = function (id, modo) {
-    abrirModalResponder(id, modo);
-  };
+    abrirResponderCotacao(id, modo);
+  }
+  window.abrirModalResponder = abrirResponderCotacao; // 🛡️ ALIAS GLOBAL DE SEGURANÇA (Garante que qualquer chamada use a versão corrigida);
 
   // FUNÇÃO DO TIMER (SIMPLES E DIRETA)
   function iniciarTimerCotacao(dataFechamento) {
@@ -6868,10 +6865,15 @@
     cotacaoRespostaAtual = numero;
 
     // 🔴 FIX: Limpar anexo anterior para evitar replicação
-    const anexoInput = document.getElementById('respAnexo');
-    if (anexoInput) anexoInput.value = '';
-    const anexoLabel = document.getElementById('respAnexoLabel'); // Se houver label
-    if (anexoLabel) anexoLabel.innerText = '';
+    const containerParaLimpar = document.getElementById("containerAnexoResponder");
+    const anexoInput = containerParaLimpar ? containerParaLimpar.querySelector("input[type='file']") : null;
+    if (anexoInput) { try { anexoInput.value = ''; } catch (e) { } }
+
+    // Limpa labels e links fantasmas
+    const ghostLabel = document.getElementById("respAnexoAtual");
+    if (ghostLabel) { ghostLabel.innerText = ''; ghostLabel.style.display = 'none'; }
+    const resAnexoLabel = document.getElementById('respAnexoLabel');
+    if (resAnexoLabel) resAnexoLabel.innerText = '';
 
     console.log(`Abrindo resposta para: ${numero} (Anexos limpos)`);
 
@@ -7067,7 +7069,8 @@
       .querySelectorAll("#tabelaResponderCorpo input")
       .forEach(inp => inp.disabled = false);
 
-    const anexo = document.getElementById("respAnexo");
+    const containerAnexo = document.getElementById("containerAnexoResponder");
+    const anexo = containerAnexo ? containerAnexo.querySelector("input[type='file']") : null;
     if (anexo) anexo.disabled = false;
 
     // troca botões
@@ -7820,16 +7823,16 @@
       // Botão de ação
       let botaoAcao = "";
       if (aba === 'abertas') {
-        botaoAcao = `<button onclick="abrirModalResponder('${cot.numero}', 'novo')">📄 Responder</button>`;
+        botaoAcao = `<button onclick="abrirResponderCotacao('${cot.numero}', 'novo')">📄 Responder</button>`;
       } else if (aba === 'respondidas') {
         // Se ainda estiver no prazo, permite editar. Se não, apenas ver.
         if (expirada || fechadaManualmente) {
-          botaoAcao = `<button onclick="abrirModalResponder('${cot.numero}', 'visualizar')" style="background:#555;">👁️ Ver Resposta</button>`;
+          botaoAcao = `<button onclick="abrirResponderCotacao('${cot.numero}', 'visualizar')" style="background:#555;">👁️ Ver Resposta</button>`;
         } else {
-          botaoAcao = `<button onclick="abrirModalResponder('${cot.numero}', 'respondida')">✏️ Ver / Editar</button>`;
+          botaoAcao = `<button onclick="abrirResponderCotacao('${cot.numero}', 'respondida')">✏️ Ver / Editar</button>`;
         }
       } else {
-        botaoAcao = `<button onclick="abrirModalResponder('${cot.numero}', 'visualizar')" style="background:#555;">👁️ Detalhes</button>`;
+        botaoAcao = `<button onclick="abrirResponderCotacao('${cot.numero}', 'visualizar')" style="background:#555;">👁️ Detalhes</button>`;
       }
 
       card.innerHTML = `
@@ -11907,10 +11910,9 @@
 
       // 3. Bloquear botão para evitar cliques duplos
       if (btnOriginal) {
-        // This block is now redundant due to the change above, but keeping it for context if it was meant to be a separate step.
-        // The instruction implies the new btnOriginal block replaces the old one.
-        // If the instruction meant to *add* this block, it would be a different interpretation.
-        // Given "Code Edit" structure, it's a replacement.
+        textoOriginal = btnOriginal.innerText;
+        btnOriginal.disabled = true;
+        btnOriginal.innerText = "⏳ Enviando...";
       }
 
       // 4. Buscar cotação local para garantir dados base
@@ -11946,7 +11948,7 @@
       }
 
       // 6. Upload de Anexo (com Timeout e Fallback Inteligente)
-      const fileInput = document.getElementById("respAnexo");
+      // (fileInput já foi capturado no início da função via querySelector)
       let anexoDados = { nome: "", url: "", base64: "" };
 
       if (fileInput && fileInput.files.length > 0) {
@@ -12063,7 +12065,7 @@
             base64: anexoDados.base64 || "",
             data: new Date().toLocaleDateString(),
             usuario: resposta.fornecedor,
-            tamanho: fileInput.files[0] ? (fileInput.files[0].size / 1024).toFixed(1) + " KB" : "-",
+            tamanho: file ? (file.size / 1024).toFixed(1) + " KB" : "-",
             tipo: "Resposta Fornecedor"
           };
 
