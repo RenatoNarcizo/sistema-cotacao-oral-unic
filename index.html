@@ -4380,7 +4380,11 @@
     const listaFinal = Array.from(mapaUnificado.values());
 
     if (listaFinal.length > 0) {
-      localStorage.setItem("cotacoes", JSON.stringify(listaFinal));
+      try {
+        localStorage.setItem("cotacoes", JSON.stringify(listaFinal));
+      } catch (e) {
+        console.warn("⚠️ LocalStorage cheio ao salvar lista de cotações. Operando sem cache persistente.", e);
+      }
       console.log(`✅ Sync Completo: ${listaFinal.length} cotações recuperadas.`);
 
       // Atualiza UI
