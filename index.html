@@ -7713,7 +7713,20 @@
           jaRespondeu = true;
           // 🔄 Auto-Sync Local: Apenas para cache e edição offline rápida
           const chaveRes = `res_${cot.numero}_${usuario.email.toLowerCase().trim()}`;
-          localStorage.setItem(chaveRes, JSON.stringify(respostaCloud));
+          try {
+            localStorage.setItem(chaveRes, JSON.stringify(respostaCloud));
+          } catch (e) {
+            // Se estourar a cota (anexo grande), salva sem o anexo para não quebrar o app
+            if (e.name === 'QuotaExceededError') {
+              console.warn(`⚠️ LocalStorage cheio! Salvando resposta ${cot.numero} sem anexo.`);
+              const copiaSemAnexo = { ...respostaCloud, anexo: null, anexoNome: (respostaCloud.anexoNome || 'Anexo (Não Cacheado)') };
+              try {
+                localStorage.setItem(chaveRes, JSON.stringify(copiaSemAnexo));
+              } catch (e2) {
+                console.error("❌ Falha crítica ao salvar cache local:", e2);
+              }
+            }
+          }
         }
       }
 
