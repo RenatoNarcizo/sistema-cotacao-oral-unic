@@ -12663,43 +12663,97 @@
     tbody.appendChild(tr);
   };
 
+  /* ======================================================
+     PREMIUM SUPPLIER SELECTION (RESTORED LAYOUT)
+  ====================================================== */
   window.renderizarFornecedoresModal = function (filtro = '') {
     const container = document.getElementById('listaFornecedoresModal');
     if (!container) return;
 
     container.innerHTML = '';
+
+    // Estilo Grid Premium
+    container.style.display = 'grid';
+    container.style.gridTemplateColumns = 'repeat(auto-fill, minmax(280px, 1fr))';
+    container.style.gap = '15px';
+    container.style.maxHeight = '300px';
+    container.style.overflowY = 'auto';
+    container.style.padding = '10px';
+    container.style.border = '1px solid #333';
+    container.style.borderRadius = '8px';
+    container.style.background = '#0a0a0a';
+
     const fornecedores = JSON.parse(localStorage.getItem('fornecedores')) || [];
 
     if (fornecedores.length === 0) {
-      container.innerHTML = '<p style="color:#aaa; grid-column:1/-1; text-align:center;">Nenhum fornecedor cadastrado.</p>';
+      container.innerHTML = '<p style="color:#aaa; grid-column:1/-1; text-align:center; padding:20px;">Nenhum fornecedor cadastrado.</p>';
       return;
     }
 
     fornecedores.forEach(f => {
       const div = document.createElement('div');
+      // Card Style
+      div.style.background = '#1a1a1a';
+      div.style.border = '1px solid #333';
+      div.style.borderRadius = '8px';
+      div.style.padding = '15px';
       div.style.display = 'flex';
       div.style.alignItems = 'center';
-      div.style.gap = '8px';
-      div.style.background = '#222';
-      div.style.padding = '8px';
-      div.style.borderRadius = '6px';
+      div.style.gap = '15px';
+      div.style.cursor = 'pointer';
+      div.style.transition = 'all 0.2s';
+      div.style.position = 'relative'; // Para o checkbox overlay
+
+      div.onmouseover = () => { div.style.borderColor = '#661155'; div.style.background = '#222'; };
+      div.onmouseout = () => { if (!checkbox.checked) { div.style.borderColor = '#333'; div.style.background = '#1a1a1a'; } };
 
       const checkbox = document.createElement('input');
       checkbox.type = 'checkbox';
       checkbox.value = f.email;
       checkbox.dataset.nome = f.nome;
       checkbox.checked = true;
-      checkbox.style.width = '16px';
-      checkbox.style.height = '16px';
+      checkbox.style.width = '18px';
+      checkbox.style.height = '18px';
+      checkbox.style.accentColor = '#661155';
+      checkbox.style.cursor = 'pointer';
 
-      const label = document.createElement('label');
-      label.textContent = f.nome;
-      label.style.cursor = 'pointer';
-      label.style.fontSize = '13px';
-      label.onclick = () => checkbox.click();
+      // Icone
+      const icon = document.createElement('div');
+      icon.innerHTML = '<i class="fa-solid fa-truck-fast"></i>';
+      icon.style.color = '#661155';
+      icon.style.fontSize = '20px';
+
+      // Info
+      const info = document.createElement('div');
+      info.style.flex = '1';
+
+      const nome = document.createElement('strong');
+      nome.textContent = f.nome;
+      nome.style.display = 'block';
+      nome.style.color = 'white';
+      nome.style.fontSize = '14px';
+
+      const email = document.createElement('small');
+      email.textContent = f.email;
+      email.style.color = '#888';
+      email.style.fontSize = '11px';
+
+      info.appendChild(nome);
+      info.appendChild(email);
+
+      div.onclick = (e) => {
+        if (e.target !== checkbox) checkbox.checked = !checkbox.checked;
+        if (checkbox.checked) {
+          div.style.borderColor = '#00ff99';
+          div.style.background = '#111';
+        } else {
+          div.style.borderColor = '#333';
+        }
+      };
 
       div.appendChild(checkbox);
-      div.appendChild(label);
+      div.appendChild(icon);
+      div.appendChild(info);
       container.appendChild(div);
     });
   };
@@ -12827,7 +12881,10 @@
 
         // Open tab: Show only if NOT responded yet (and is invited or public)
         if (statusFiltro.includes('aberta')) {
-          return (s === 'aberta' || s === 'reaberta') && !jaRespondeu && convite;
+          // RELAXED: Show all open quotations to suppliers (Public Board)
+          // to prevent "missing" quotations issue.
+          // Only hide if already responded.
+          return (s === 'aberta' || s === 'reaberta') && !jaRespondeu;
         }
         // Responded tab
         if (statusFiltro.includes('respondida')) {
