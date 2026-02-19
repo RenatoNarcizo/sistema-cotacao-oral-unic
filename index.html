@@ -3257,7 +3257,8 @@
       </div>
 
       <!-- 📎 Anexo -->
-      <div style="margin-top:15px;">
+      <!-- 📎 Anexo (CONTAINER REINICIÁVEL) -->
+      <div id="containerAnexoResponder" style="margin-top:15px;">
         <label>Anexar Orçamento (PDF ou imagem):</label>
         <input type="file" id="respAnexo" accept=".pdf,image/*" style="
           width:100%;
@@ -6952,21 +6953,19 @@
       tbody.appendChild(tr);
     });
 
-    // 🧹 LIMPEZA RIGOROSA DE UI (ANTI-REPLICAÇÃO)
-    const inputAnexo = document.getElementById("respAnexo");
-    if (inputAnexo) {
-      inputAnexo.value = "";
-      inputAnexo.setAttribute("value", "");
-      // Hack para forçar o browser a esquecer o arquivo anterior
-      try {
-        inputAnexo.type = '';
-        inputAnexo.type = 'file';
-      } catch (e) { console.log("Limpeza de input: " + e); }
-    }
-    const labelAnexo = document.getElementById("respAnexoAtual");
-    if (labelAnexo) {
-      labelAnexo.style.display = "none";
-      labelAnexo.innerText = "";
+    // 🧹 LIMPEZA TOTAL (Substituição de DOM)
+    const containerAnexo = document.getElementById("containerAnexoResponder");
+    if (containerAnexo) {
+      containerAnexo.innerHTML = `
+            <label>Anexar Orçamento (PDF ou imagem):</label>
+            <input type="file" id="respAnexo" accept=".pdf,image/*" style="
+              width:100%;
+              background:#1a1a1a;
+              border:1px solid #661155;
+              border-radius:5px;
+              color:white;
+              padding:8px;
+            ">`;
     }
 
     const email = usuario.email.toLowerCase().trim();
