@@ -6978,11 +6978,11 @@
       <td style="text-align: center;">${p.marca || "-"}</td>
       <td style="text-align: center;">${p.quantidade}</td>
       <td style="text-align: center;">
-        <div style="display:flex; align-items:center; background:#1a1a1a; border:1px solid #444; border-radius:4px; padding:0 8px; width:130px; margin:0 auto;">
+        <div style="display:flex; align-items:center; background:#1a1a1a; border:1px solid #444; border-radius:4px; padding:0 12px; width:140px; margin:0 auto;">
           <input type="text" id="preco_${i}" class="preco-input" data-produto="${p.nome}" 
             oninput="window.mascararMoeda(this)" 
             placeholder="R$ 0,00"
-            style="width: 100%; border:none; background:transparent; color:#fff; text-align:right; font-size:14px; outline:none; padding:6px 0;">
+            style="width: 100%; border:none; background:transparent; color:#fff; text-align:center; font-size:14px; outline:none; padding:10px 0; font-family:'Inter', sans-serif;">
         </div>
       </td>
     `;
@@ -12088,7 +12088,15 @@
       };
 
       // 8. Sync Cloud (com Timeouts)
-      console.log("☁️ Sincronizando com Realtime Database...");
+      // 9. ATUALIZAR LOCAL (IMEDIATO - PRIORIDADE)
+      try {
+        localStorage.setItem(`res_${numCotacao}_${usuario.email.toLowerCase().trim()}`, JSON.stringify(resposta));
+        console.log("💾 Cópia local de segurança salva.");
+      } catch (e) {
+        console.warn("⚠️ Falha no cache local (QuotaExceeded).", e);
+      }
+
+      // 10. Sync Cloud (com Timeouts)
       if (typeof rtdb !== "undefined") {
         const cotRef = rtdb.ref("cotacoes/" + numCotacao);
         await comTimeout(
@@ -12096,8 +12104,7 @@
             if (!current) return current;
             if (!current.respostasFornecedores) current.respostasFornecedores = [];
             let resps = Array.isArray(current.respostasFornecedores) ? current.respostasFornecedores : Object.values(current.respostasFornecedores);
-            // Atualiza ou insere
-            // 🔥 CRÍTICO: Limpar Base64 para evitar limite de tamanho
+
             const resSegura = JSON.parse(JSON.stringify(resposta));
             if (resSegura.anexo) delete resSegura.anexo.base64;
             if (resSegura.anexos) resSegura.anexos.forEach(a => delete a.base64);
@@ -12113,19 +12120,16 @@
         );
       }
 
-      console.log("☁️ Sincronizando com Firestore...");
       if (typeof db !== "undefined") {
-        // 🔥 CRÍTICO: Limpar Base64 ANTES de salvar no objeto compartilhado (Evita 1MB limit)
         const respostaSegura = JSON.parse(JSON.stringify(resposta));
         if (respostaSegura.anexo) delete respostaSegura.anexo.base64;
         if (respostaSegura.anexos) respostaSegura.anexos.forEach(a => delete a.base64);
-        delete respostaSegura.base64; // redundância
+        delete respostaSegura.base64;
 
         if (!cotacao.respostasFornecedores) cotacao.respostasFornecedores = [];
         cotacao.respostasFornecedores = cotacao.respostasFornecedores.filter(r => (r.email || "").toLowerCase().trim() !== usuario.email.toLowerCase().trim());
         cotacao.respostasFornecedores.push(respostaSegura);
 
-        // A. Sincroniza Objeto Cotação (Documentos Grandes podem falhar, então usamos try-catch)
         try {
           await comTimeout(
             db.collection("cotacoes").doc(String(numCotacao)).set({
@@ -12135,83 +12139,52 @@
             "Sync Firestore"
           );
         } catch (e) {
-          console.warn("⚠️ Falha ao salvar no documento principal (Provável limite de 1MB). Usando Coleção de Respostas Alternativa.");
-          // Fallback: Salva como documento individual se o principal falhar
+          console.warn("⚠️ Fallback Individual (Limite de 1MB).");
           await db.collection("cotacoes").doc(String(numCotacao)).collection("respostas_individuais").doc(usuario.email.toLowerCase().trim()).set(respostaSegura);
         }
 
-        // B. Se houver anexo (URL ou Base64), salva na coleção global de documentos
         if (anexoDados.url || anexoDados.base64) {
           const docRef = db.collection("cotacoes").doc(String(numCotacao)).collection("respostas").doc(usuario.email.toLowerCase().trim());
           const respostaFirestore = JSON.parse(JSON.stringify(resposta));
-          if (respostaFirestore.anexo) delete respostaFirestore.anexo.base64;
-          if (respostaFirestore.anexos) respostaFirestore.anexos.forEach(a => delete a.base64);
-
+          if (anexoDados.base64 && anexoDados.base64.length > 800000 && respostaFirestore.anexo) {
+            delete respostaFirestore.anexo.base64;
+          }
           await docRef.set(respostaFirestore, { merge: true });
 
-          // C. Salva na coleção global de documentos (para o log geral)
           const globalDocRef = db.collection("documentos_cotacao").doc(`docs_${numCotacao}`);
           const snap = await globalDocRef.get();
           let arquivos = snap.exists ? (snap.data().arquivos || []) : [];
 
-          const novoAnexo = {
+          const novoAnexoLimpo = {
             nome: anexoDados.nome,
             url: anexoDados.url || "",
-            base64: anexoDados.base64 || "",
+            base64: "", // 🔥 NUNCA NO COLETIVO
             data: new Date().toLocaleDateString(),
             usuario: resposta.fornecedor,
             tamanho: file ? (file.size / 1024).toFixed(1) + " KB" : "-",
             tipo: "Resposta Fornecedor"
           };
 
-          // Evita duplicatas (verifica URL ou Base64)
-          const existe = arquivos.some(a =>
-            (anexoDados.url && a.url === anexoDados.url) ||
-            (anexoDados.base64 && a.base64 === anexoDados.base64)
-          );
-
+          const existe = arquivos.some(a => (anexoDados.url && a.url === anexoDados.url) || (a.nome === novoAnexoLimpo.nome && a.usuario === novoAnexoLimpo.usuario));
           if (!existe) {
-            arquivos.push(novoAnexo);
+            arquivos.push(novoAnexoLimpo);
             await globalDocRef.set({ arquivos: arquivos }, { merge: true });
           }
         }
       }
 
-      // 9. Atualizar Local e Finalizar (COM PROTEÇÃO CONTRA QUOTA)
-      try {
-        localStorage.setItem(`res_${numCotacao}_${usuario.email.toLowerCase().trim()}`, JSON.stringify(resposta));
-      } catch (e) {
-        if (e.name === 'QuotaExceededError') {
-          console.warn(`⚠️ Cache cheio ao salvar resposta ${numCotacao}. Tentando salvar sem anexo/base64.`);
-          // Remove anexo e base64 da cópia local
-          const respLeve = { ...resposta, anexo: null, anexos: [], base64: null };
-          try {
-            localStorage.setItem(`res_${numCotacao}_${usuario.email.toLowerCase().trim()}`, JSON.stringify(respLeve));
-          } catch (e2) {
-            console.error("❌ Impossível salvar no cache local (Quota Totalmente Cheia).", e2);
-          }
-        }
-      }
-
-      // OTIMIZAÇÃO DE QUOTA: Remove Base64 do array global (mantém apenas no res_ individual e Docs)
+      // Otimização final do objeto na memória local
       if (cotacao.respostasFornecedores) {
         cotacao.respostasFornecedores.forEach(r => {
           if (r.base64) delete r.base64;
           if (r.anexos) r.anexos.forEach(a => { if (a.base64) delete a.base64; });
         });
       }
-
       todasCotacoes[cotIndex] = cotacao;
-
-      try {
-        localStorage.setItem("cotacoes", JSON.stringify(todasCotacoes));
-      } catch (e) {
-        console.warn("⚠️ LocalStorage cheio (QuotaExceeded). Dados salvos apenas na nuvem/sessão.", e);
-      }
+      localStorage.setItem("cotacoes", JSON.stringify(todasCotacoes));
 
       alert("✅ Resposta enviada com sucesso!");
 
-      // 🧹 LIMPEZA DE UI (ANTI-REPLICAÇÃO)
       if (fileInput) fileInput.value = "";
       document.querySelectorAll("#tabelaResponderCorpo input").forEach(inp => inp.value = "");
 
@@ -12228,8 +12201,6 @@
       }
     }
   }
-
-  // Torna global explicitamente
   window.salvarRespostaComAnexo = salvarRespostaComAnexo;
 
   /* ======================================================
@@ -12620,9 +12591,6 @@
 </script>
 
 <script src="premium_render.js?v=10016"></script>
-</body>
-
-
 </body>
 
 </html>
