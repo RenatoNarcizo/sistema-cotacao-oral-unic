@@ -12294,174 +12294,69 @@
 </body>
 
 <!-- ======================================================
-     RESTORING MISSING MODALS & SCRIPTS (EMERGENCY FIX)
+     RESTORING CORRECT LOGIC (MATCHING USER HTML)
 ====================================================== -->
-
-<!-- 1. MODAL COTAÇÃO (SIMPLIFICADO) -->
-<div id="modalCotacao" class="modal" style="display:none;">
-  <div class="modal-content" style="max-width:900px; background:#111; border:1px solid #661155; color:white;">
-    <button class="close-btn" onclick="fecharModalCotacao()">&times;</button>
-    <h2 style="color:#661155; margin-bottom:20px; text-align:center;">🆕 Nova Cotação</h2>
-
-    <div style="margin-bottom:15px;">
-      <label style="display:block; margin-bottom:5px;">Descrição / Título</label>
-      <input type="text" id="novaDescricao" placeholder="Ex: Cotação de Materiais Elétricos"
-        style="width:100%; padding:8px; background:#1a1a1a; border:1px solid #444; color:white;">
-    </div>
-
-    <div style="margin-bottom:15px;">
-      <label style="display:block; margin-bottom:5px;">Data de Encerramento</label>
-      <input type="date" id="novaDataFim" style="padding:8px; background:#1a1a1a; border:1px solid #444; color:white;">
-    </div>
-
-    <!-- SELEÇÃO DE FORNECEDORES (USER REQUEST: SIMPLE LIST) -->
-    <div style="margin-bottom:20px; border:1px solid #444; padding:10px; border-radius:5px;">
-      <h3 style="margin-top:0; font-size:16px; border-bottom:1px solid #333; padding-bottom:5px;">Selecionar
-        Fornecedores</h3>
-      <div id="listaFornecedoresModal" style="max-height:200px; overflow-y:auto; margin-top:10px;"></div>
-    </div>
-
-    <!-- ITENS -->
-    <table style="width:100%; border-collapse:collapse; margin-bottom:10px;">
-      <thead>
-        <tr style="background:#333; color:white;">
-          <th style="padding:8px; text-align:left;">Item</th>
-          <th style="padding:8px; text-align:left;">Marca</th>
-          <th style="padding:8px; text-align:center;">Qtd</th>
-          <th style="padding:8px;"></th>
-        </tr>
-      </thead>
-      <tbody id="tabelaItensCorpo"></tbody>
-    </table>
-    <button onclick="adicionarItem()"
-      style="background:#333; color:white; border:1px solid #555; padding:5px 10px; cursor:pointer;">+ Adicionar
-      Item</button>
-
-    <div style="text-align:center; margin-top:20px;">
-      <button onclick="salvarCotacao()"
-        style="background:#661155; color:white; border:none; padding:12px 30px; border-radius:6px; cursor:pointer; font-weight:bold;">🚀
-        Publicar Cotação</button>
-    </div>
-  </div>
-</div>
-
-<!-- 2. MODAL RESPONDER COTAÇÃO (FORNECEDORES) -->
-<div id="modalResponder" class="modal" style="display:none;">
-  <div class="modal-content" style="max-width:900px; background:#111; border:1px solid #661155; color:white;">
-    <button class="close-btn" onclick="fecharModalResponder()">&times;</button>
-    <h2 style="color:#661155; margin-bottom:10px; text-align:center;">📝 Responder Cotação</h2>
-    <h3 id="respNumero" style="color:#ccc; text-align:center; margin-bottom:20px;">COT-0000</h3>
-
-    <div id="listaProdutosResponder" style="max-height:60vh; overflow:auto;">
-      <table class="tabela-responder" style="width:100%;">
-        <thead>
-          <tr style="background:#661155;">
-            <th>Produto</th>
-            <th>Marca</th>
-            <th>Qtd</th>
-            <th>Preço Unit. (R$)</th>
-          </tr>
-        </thead>
-        <tbody id="tabelaResponderCorpo"></tbody>
-      </table>
-    </div>
-
-    <div style="margin-top:20px; border-top:1px solid #333; padding-top:15px;">
-      <label>Anexar Arquivo (Opcional)</label>
-      <div style="display:flex; gap:10px;">
-        <input type="file" id="respAnexo" style="background:#1a1a1a; padding:5px;">
-        <span id="respAnexoAtual" style="display:none; color:#00ff99; align-self:center;">📎 Arquivo Anexado</span>
-      </div>
-    </div>
-
-    <div style="text-align:center; margin-top:25px;">
-      <button id="btnEnviarResposta" onclick="salvarRespostaComAnexo()"
-        style="background:#661155; color:white; padding:12px 30px; border:none; border-radius:6px; cursor:pointer;">🚀
-        Enviar Resposta</button>
-    </div>
-  </div>
-</div>
 
 <script>
   /* ======================================================
-     JS FUNCTIONS - RESTORED & FIXED
+     1. SELEÇÃO DE FORNECEDORES (USER ORIGINAL LOGIC)
   ====================================================== */
+  window.abrirSelecaoFornecedores = function (btn) {
+    // Identifica origem (manual, excel, materiais, etc)
+    const origem = btn.getAttribute('data-origem');
+    window.origemSelecaoFornecedores = origem;
 
-  /* --- NOVA COTAÇÃO --- */
-  window.abrirModalCotacao = function () {
-    const modal = document.getElementById('modalCotacao');
+    const modal = document.getElementById('modalFornecedores');
     if (modal) {
       modal.style.display = 'flex';
-      // Reset campos
-      if (document.getElementById('novaDescricao')) document.getElementById('novaDescricao').value = '';
-      if (document.getElementById('novaDataFim')) document.getElementById('novaDataFim').value = '';
-
-      // Reset tabela itens
-      const tbody = document.getElementById('tabelaItensCorpo');
-      if (tbody) {
-        tbody.innerHTML = '';
-        window.adicionarItem();
-      }
-
-      // Carrega fornecedores (LISTA SIMPLES)
-      window.renderizarFornecedoresModal();
-    } else {
-      alert("Erro: Modal de cotação não encontrado (ID modalCotacao).");
+      window.renderizarListaFornecedores();
     }
   };
 
-  window.fecharModalCotacao = function () {
-    const modal = document.getElementById('modalCotacao');
-    if (modal) modal.style.display = 'none';
+  window.fecharModalFornecedores = function () {
+    document.getElementById('modalFornecedores').style.display = 'none';
   };
 
-  window.adicionarItem = function () {
-    const tbody = document.getElementById('tabelaItensCorpo');
-    if (!tbody) return;
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-        <td style="padding:5px;"><input type="text" class="item-nome" placeholder="Produto/Serviço" style="width:100%; background:#1a1a1a; color:white; border:1px solid #444; padding:5px;"></td>
-        <td style="padding:5px;"><input type="text" class="item-marca" placeholder="Marca" style="width:100%; background:#1a1a1a; color:white; border:1px solid #444; padding:5px;"></td>
-        <td style="padding:5px;"><input type="number" class="item-qtd" value="1" min="1" style="width:100%; background:#1a1a1a; color:white; border:1px solid #444; padding:5px; text-align:center;"></td>
-        <td style="text-align:center;"><button onclick="this.closest('tr').remove()" style="background:transparent; border:none; color:#ff4d6d; cursor:pointer;">&times;</button></td>
-    `;
-    tbody.appendChild(tr);
-  };
-
-  /* --- RELAXED SUPPLIER LIST (SIMPLE LIST) --- */
-  window.renderizarFornecedoresModal = function (filtro = '') {
+  window.renderizarListaFornecedores = function (filtro = '') {
     const container = document.getElementById('listaFornecedoresModal');
-    if (!container) return;
-
     container.innerHTML = '';
-    const fornecedores = JSON.parse(localStorage.getItem('fornecedores')) || [];
+
+    let fornecedores = JSON.parse(localStorage.getItem('fornecedores')) || [];
+
+    // Filtro simples
+    if (filtro) {
+      const f_lower = filtro.toLowerCase();
+      fornecedores = fornecedores.filter(f =>
+        (f.nome || '').toLowerCase().includes(f_lower) ||
+        (f.email || '').toLowerCase().includes(f_lower)
+      );
+    }
 
     if (fornecedores.length === 0) {
-      container.innerHTML = '<p style="color:#aaa; text-align:center;">Nenhum fornecedor cadastrado.</p>';
+      container.innerHTML = '<p style="color:#aaa; text-align:center;">Nenhum fornecedor encontrado.</p>';
       return;
     }
 
+    // LISTA SIMPLES COM CHECKBOX (ORIGINAL STYLE)
     fornecedores.forEach(f => {
       const div = document.createElement('div');
-      // Simple Row Style (Usuario Requested)
+      div.style.padding = '8px';
+      div.style.borderBottom = '1px solid #333';
       div.style.display = 'flex';
       div.style.alignItems = 'center';
       div.style.gap = '10px';
-      div.style.padding = '8px';
-      div.style.borderBottom = '1px solid #333';
 
       const checkbox = document.createElement('input');
       checkbox.type = 'checkbox';
       checkbox.value = f.email;
       checkbox.dataset.nome = f.nome;
-      checkbox.checked = true; // Default selected
       checkbox.style.cursor = 'pointer';
 
       const label = document.createElement('label');
-      label.textContent = f.nome + (f.email ? ` (${f.email})` : '');
+      label.textContent = f.nome;
+      label.style.color = '#fff';
       label.style.cursor = 'pointer';
-      label.style.color = 'white';
-      label.style.flex = '1';
+      label.style.flex = 1;
 
       div.onclick = (e) => {
         if (e.target !== checkbox && e.target !== label) checkbox.click();
@@ -12473,158 +12368,146 @@
     });
   };
 
-  window.salvarCotacao = function () {
-    const desc = document.getElementById('novaDescricao').value;
-    const dataFim = document.getElementById('novaDataFim').value;
-
-    if (!desc) return alert("Preencha a descrição.");
-
-    const itens = [];
-    document.querySelectorAll('#tabelaItensCorpo tr').forEach(tr => {
-      const nome = tr.querySelector('.item-nome').value;
-      const marca = tr.querySelector('.item-marca').value;
-      const qtd = tr.querySelector('.item-qtd').value;
-      if (nome) itens.push({ item: nome, marca, quantidade: qtd });
-    });
-
-    if (itens.length === 0) return alert("Adicione pelo menos 1 item.");
-
-    const selectedForns = [];
-    document.querySelectorAll('#listaFornecedoresModal input:checked').forEach(cb => {
-      selectedForns.push({ email: cb.value, nome: cb.dataset.nome });
-    });
-
-    const nova = {
-      id: 'COT-' + Date.now(),
-      numero: 'COT-' + Date.now(),
-      descricao: desc,
-      dataFechamento: dataFim || new Date().toLocaleString(),
-      dataCriacao: new Date().toLocaleString(),
-      status: 'aberta',
-      itens: itens,
-      fornecedores: selectedForns,
-      respostasFornecedores: []
-    };
-
-    const lista = JSON.parse(localStorage.getItem('cotacoes')) || [];
-    lista.push(nova);
-    localStorage.setItem('cotacoes', JSON.stringify(lista)); // Local
-
-    // Auto-Sync Firestore
-    if (typeof db !== 'undefined') db.collection('cotacoes').doc(nova.id).set(nova);
-
-    alert("Cotação Criada com Sucesso!");
-    if (window.fecharModalCotacao) window.fecharModalCotacao();
-    window.location.reload();
+  window.filtrarFornecedores = function () {
+    const termo = document.getElementById('buscaFornecedor').value;
+    window.renderizarListaFornecedores(termo);
   };
 
-  /* --- DASHBOARD FORNECEDOR (RELAXED + DEBUG) --- */
-  window.carregarRespondidas = function (statusFiltro, container) {
+  window.confirmarFornecedoresCotacao = function () {
+    const selecionados = [];
+    document.querySelectorAll('#listaFornecedoresModal input:checked').forEach(cb => {
+      selecionados.push({ email: cb.value, nome: cb.dataset.nome });
+    });
+
+    const origem = window.origemSelecaoFornecedores;
+    let campoTextoId = '';
+
+    if (origem === 'excel') campoTextoId = 'fornecedoresCotacaoExcel';
+    else if (origem === 'manual') campoTextoId = 'fornecedoresCotacaoManual';
+    else if (origem === 'materiais') campoTextoId = 'fornecedoresCotacaoMateriais';
+    else if (origem === 'servicos') campoTextoId = 'fornecedoresCotacaoServicos';
+
+    if (campoTextoId) {
+      const textarea = document.getElementById(campoTextoId);
+      if (textarea) {
+        textarea.value = selecionados.map(f => f.nome).join(', ');
+        // Salva no dataset para uso posterior
+        textarea.dataset.json = JSON.stringify(selecionados);
+      }
+    }
+
+    window.fecharModalFornecedores();
+  };
+
+  /* ======================================================
+     2. PAINEL FORNECEDOR (CORRECT LOGIC + FIX)
+  ====================================================== */
+  window.toggleListaRespondidas = function (aba = 'abertas') {
+    // 1. Alternar visualização das abas
+    ['listaPublicadas', 'listaAnalise', 'listaAprovacao', 'listaFechadas'].forEach(id => {
+      document.getElementById(id).style.display = 'none';
+    });
+    ['btnPublicadas', 'btnAnalise', 'btnAprovacao', 'btnFechadas'].forEach(id => {
+      document.getElementById(id).classList.remove('ativo');
+    });
+
+    let containerId = '';
+    if (aba === 'publicadas' || aba === 'abertas') {
+      containerId = 'listaPublicadas';
+      document.getElementById('btnPublicadas').classList.add('ativo');
+    } else if (aba === 'analise' || aba === 'respondidas') {
+      containerId = 'listaAnalise'; // ou listaRespondidas
+      document.getElementById('btnAnalise').classList.add('ativo');
+    } else if (aba === 'aprovacao') {
+      containerId = 'listaAprovacao';
+      document.getElementById('btnAprovacao').classList.add('ativo');
+    } else if (aba === 'fechada' || aba === 'encerradas') {
+      containerId = 'listaFechadas';
+      document.getElementById('btnFechadas').classList.add('ativo');
+    }
+
+    const container = document.getElementById(containerId);
     if (!container) return;
-    container.innerHTML = '';
+    container.style.display = 'block';
+    container.innerHTML = '<p style="text-align:center; color:#666;">Carregando...</p>';
 
     const usuario = JSON.parse(localStorage.getItem('usuarioLogado'));
-    if (!usuario) return;
+    if (!usuario) {
+      container.innerHTML = '<p style="text-align:center;">Usuário não identificado. Faça login novamente.</p>';
+      return;
+    }
 
     const cotacoes = JSON.parse(localStorage.getItem('cotacoes')) || [];
+    const emailLogado = (usuario.email || '').toLowerCase().trim();
 
-    // FILTRO RELAXADO: Mostrar Abertas mesmo sem convite explícito (se público/aberto)
+    // 🔍 FILTRAGEM (FIXED "MISSING QUOTATIONS" BUG)
     const filtradas = cotacoes.filter(c => {
       const s = (c.status || '').toLowerCase();
 
-      // Verifica resposta
-      const emailLogado = (usuario.email || '').toLowerCase().trim();
+      // Verifica se este fornecedor já respondeu
       const jaRespondeu = (c.respostasFornecedores || []).some(
         r => (r.email || '').toLowerCase().trim() === emailLogado
       );
 
-      if (statusFiltro.includes('aberta')) {
-        // MOSTRAR TODAS ABERTAS (MURAL) QUE NÃO RESPONDEU
+      if (containerId === 'listaPublicadas') {
+        // MOSTRAR TODAS ABERTAS PARA O FORNECEDOR (MURAL)
+        // Independente de convite explícito
         return (s === 'aberta' || s === 'reaberta') && !jaRespondeu;
       }
-      if (statusFiltro.includes('respondida')) {
+      if (containerId === 'listaAnalise') { // Respondidas
         return jaRespondeu;
       }
-      if (statusFiltro.includes('fechada')) {
+      if (containerId === 'listaAprovacao') {
+        return (s === 'aprovacao' || s === 'analise') && jaRespondeu;
+      }
+      if (containerId === 'listaFechadas') {
         return (s === 'fechada' || s === 'finalizada') && jaRespondeu;
       }
       return false;
     });
 
     if (filtradas.length === 0) {
-      // DEBUG VISUAL PARA DATA/FILTRO
+      // DEBUG VISUAL
       const debugInfo = `
-            <div style="margin-top:20px; padding:10px; border:1px dashed #444; color:#888; font-size:12px; text-align:left;">
-               <strong>🐛 Debug Info (Suporte):</strong><br>
-               Usuário: ${usuario.email} (${usuario.tipo})<br>
-               Total Cotações no Banco: ${cotacoes.length}<br>
-               Filtro Atual: ${statusFiltro}<br>
-               <em>Se "Total: 0", tente Logout/Login para sincronizar.</em>
-            </div>
-        `;
-      container.innerHTML = '<div style="text-align:center; padding:20px; color:#aaa;">Nenhuma cotação encontrada.</div>' + debugInfo;
+              <div style="margin-top:20px; padding:10px; border:1px dashed #444; color:#888; font-size:12px; text-align:left;">
+                 <strong>🐛 Debug Info (Suporte):</strong><br>
+                 Usuário: ${usuario.email}<br>
+                 Total Cotações no Banco: ${cotacoes.length}<br>
+                 Aba: ${aba} (${containerId})<br>
+              </div>
+          `;
+      container.innerHTML = '<div style="text-align:center; padding:20px; color:#aaa;">Nenhuma cotação encontrada nesta aba.</div>' + debugInfo;
       return;
     }
 
-    // Renderiza Lista
+    // RENDERIZAR CARDS
+    container.innerHTML = '';
     filtradas.forEach(c => {
       const div = document.createElement('div');
-      div.style.background = '#1a1a1a';
-      div.style.border = '1px solid #444';
-      div.style.padding = '15px';
+      div.className = 'linha-cotacao';
       div.style.marginBottom = '10px';
-      div.style.borderRadius = '8px';
-      div.style.display = 'flex';
-      div.style.justifyContent = 'space-between';
 
       div.innerHTML = `
-            <div>
-               <strong style="color:#661155; font-size:16px;">${c.numero || c.id}</strong>
-               <div style="color:white; margin-top:5px;">${c.descricao}</div>
-               <div style="color:#777; font-size:12px;">Fechamento: ${c.dataFechamento}</div>
-            </div>
-            <div>
-               <button onclick="abrirResponderCotacao('${c.numero || c.id}')" style="background:#3ab9b6; color:#000; padding:8px 15px; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">
-                  ${statusFiltro.includes('respondida') ? '👁️ Ver/Editar' : '📝 Responder'}
-               </button>
-            </div>
-        `;
+              <div>
+                 <strong style="color:#661155; font-size:16px;">${c.numero || c.id}</strong>
+                 <div style="color:white; margin-top:5px;">${c.descricao || 'Sem descrição'}</div>
+                 <div style="color:#777; font-size:12px;">Fechamento: ${c.dataFechamento}</div>
+              </div>
+              <div>
+                 <button onclick="abrirResponderCotacao('${c.numero || c.id}')" style="background:#3ab9b6; color:#000; padding:8px 15px; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">
+                    ${containerId === 'listaPublicadas' ? '📝 Responder' : '👁️ Ver Detalhes'}
+                 </button>
+              </div>
+          `;
       container.appendChild(div);
     });
   };
 
-  /* --- RESPONDER MODAL --- */
-  window.abrirResponderCotacao = function (id) {
-    const cotacoes = JSON.parse(localStorage.getItem('cotacoes')) || [];
-    const c = cotacoes.find(x => x.numero === id || x.id === id);
-    if (!c) return alert("Cotação não encontrada.");
+  // Inicializa na aba padrão ao carregar (se estiver na tela certa)
+  if (document.getElementById('cotacoesRespondidas').style.display !== 'none') {
+    window.toggleListaRespondidas('publicadas');
+  }
 
-    const modal = document.getElementById('modalResponder');
-    if (modal) {
-      modal.style.display = 'flex';
-      if (document.getElementById('respNumero')) document.getElementById('respNumero').textContent = c.numero || c.id;
-
-      const tbody = document.getElementById('tabelaResponderCorpo');
-      if (tbody) {
-        tbody.innerHTML = '';
-        (c.itens || []).forEach((item, idx) => {
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-                      <td style="padding:10px;">${item.item}</td>
-                      <td style="text-align:center;">${item.marca || '-'}</td>
-                      <td style="text-align:center;">${item.quantidade}</td>
-                      <td style="text-align:center;"><input type="number" class="resp-preco" data-idx="${idx}" placeholder="0.00" style="width:100px; padding:5px; background:#111; color:white; border:1px solid #444;"></td>
-                  `;
-          tbody.appendChild(tr);
-        });
-      }
-    }
-  };
-
-  window.fecharModalResponder = function () {
-    const modal = document.getElementById('modalResponder');
-    if (modal) modal.style.display = 'none';
-  };
 </script>
 </body>
 
