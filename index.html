@@ -3862,8 +3862,8 @@
     box-shadow:0 0 15px rgba(102,17,85,0.6);
   ">
 
-      <!-- 🔍 BUSCA & SYNC -->
-      <div style="margin-bottom:20px; text-align:center; display:flex; justify-content:center; gap:10px;">
+      <!-- 🔍 BUSCA -->
+      <div style="margin-bottom:20px; text-align:center;">
         <input type="text" id="buscaCotacaoRespondida" placeholder="🔍 Buscar cotação (número ou descrição)..."
           oninput="filtrarCotacoesInstantaneo()" style="
           padding:12px;
@@ -3876,18 +3876,6 @@
           outline:none;
           text-align:center;
         ">
-        <button onclick="sincronizarCotacoesAgora().then(() => alert('Sincronização concluída!'))" style="
-            background:#333; 
-            color:#0dcaf0; 
-            border:1px solid #0dcaf0; 
-            border-radius:50%; 
-            width:42px; 
-            height:42px; 
-            cursor:pointer;
-            title='Forçar Sincronização';
-        ">
-          🔄
-        </button>
       </div>
 
       <!-- 📑 ABAS -->
