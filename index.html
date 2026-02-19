@@ -6957,6 +6957,11 @@
     if (inputAnexo) {
       inputAnexo.value = "";
       inputAnexo.setAttribute("value", "");
+      // Hack para forçar o browser a esquecer o arquivo anterior
+      try {
+        inputAnexo.type = '';
+        inputAnexo.type = 'file';
+      } catch (e) { console.log("Limpeza de input: " + e); }
     }
     const labelAnexo = document.getElementById("respAnexoAtual");
     if (labelAnexo) {
@@ -12042,8 +12047,21 @@
         }
       }
 
-      // 9. Atualizar Local e Finalizar
-      localStorage.setItem(`res_${numCotacao}_${usuario.email.toLowerCase().trim()}`, JSON.stringify(resposta));
+      // 9. Atualizar Local e Finalizar (COM PROTEÇÃO CONTRA QUOTA)
+      try {
+        localStorage.setItem(`res_${numCotacao}_${usuario.email.toLowerCase().trim()}`, JSON.stringify(resposta));
+      } catch (e) {
+        if (e.name === 'QuotaExceededError') {
+          console.warn(`⚠️ Cache cheio ao salvar resposta ${numCotacao}. Tentando salvar sem anexo/base64.`);
+          // Remove anexo e base64 da cópia local
+          const respLeve = { ...resposta, anexo: null, anexos: [], base64: null };
+          try {
+            localStorage.setItem(`res_${numCotacao}_${usuario.email.toLowerCase().trim()}`, JSON.stringify(respLeve));
+          } catch (e2) {
+            console.error("❌ Impossível salvar no cache local (Quota Totalmente Cheia).", e2);
+          }
+        }
+      }
 
       // OTIMIZAÇÃO DE QUOTA: Remove Base64 do array global (mantém apenas no res_ individual e Docs)
       if (cotacao.respostasFornecedores) {
