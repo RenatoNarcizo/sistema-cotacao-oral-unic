@@ -5980,12 +5980,27 @@
     listaDiv.innerHTML = "";
 
     if (pendentes.length === 0) {
+      // DEBUG VISUAL PARA O USUÁRIO (TEMP)
+      const usuario = getUsuarioLogado(); // Assuming getUsuarioLogado() is available
+      const debugInfo = `
+          <div style="margin-top:20px; padding:10px; border:1px dashed #444; color:#888; font-size:12px; text-align:left;">
+             <strong>🐛 Debug Info (Suporte):</strong><br>
+             Usuário: ${usuario ? usuario.email : 'N/A'} (${usuario ? usuario.tipo : 'N/A'})<br>
+             Total Cotações no Sistema: ${cotacoes.length}<br>
+             Status Filtro: aprovacao, respondida (statusAprovacao: pendente)<br>
+             Permissão Relaxada: ATIVADA (Mostra todas abertas)<br>
+             
+             <em>Se você vê "Total: 0", o banco de dados local está vazio. Tente recarregar (F5).</em>
+          </div>
+        `;
+
       listaDiv.innerHTML = `
-        <div style="text-align:center; color:#ccc; padding:20px;">
-          <i class="fa-solid fa-folder-open" style="font-size:30px; margin-bottom:10px; color:#555;"></i>
-          <p>Nenhuma cotação aguardando aprovação na nuvem.</p>
-        </div>
-      `;
+          <div style="text-align:center; padding:40px; color:#666;">
+             <i class="fa-solid fa-inbox" style="font-size:40px; margin-bottom:15px; opacity:0.5;"></i>
+             <p>Nenhuma cotação encontrada nesta aba.</p>
+             <small>Verifique se você foi convidado para cotações recentes.</small>
+             ${debugInfo}
+          </div>`;
       return;
     }
 
@@ -12666,95 +12681,119 @@
   /* ======================================================
      PREMIUM SUPPLIER SELECTION (RESTORED LAYOUT)
   ====================================================== */
+  /* ======================================================
+     SUPPLIER SELECTION (SIMPLE LIST - RESTORED)
+  ====================================================== */
   window.renderizarFornecedoresModal = function (filtro = '') {
     const container = document.getElementById('listaFornecedoresModal');
     if (!container) return;
 
     container.innerHTML = '';
 
-    // Estilo Grid Premium
-    container.style.display = 'grid';
-    container.style.gridTemplateColumns = 'repeat(auto-fill, minmax(280px, 1fr))';
-    container.style.gap = '15px';
-    container.style.maxHeight = '300px';
-    container.style.overflowY = 'auto';
+    // Reset estilos container para lista simples
+    container.style.display = 'block';
+    container.style.gridTemplateColumns = '';
+    container.style.gap = '';
     container.style.padding = '10px';
-    container.style.border = '1px solid #333';
-    container.style.borderRadius = '8px';
-    container.style.background = '#0a0a0a';
+    container.style.border = '1px solid #444';
+    container.style.borderRadius = '5px';
+    container.style.background = '#1a1a1a';
 
     const fornecedores = JSON.parse(localStorage.getItem('fornecedores')) || [];
 
     if (fornecedores.length === 0) {
-      container.innerHTML = '<p style="color:#aaa; grid-column:1/-1; text-align:center; padding:20px;">Nenhum fornecedor cadastrado.</p>';
+      container.innerHTML = '<p style="color:#aaa; text-align:center;">Nenhum fornecedor cadastrado.</p>';
       return;
     }
 
     fornecedores.forEach(f => {
       const div = document.createElement('div');
-      // Card Style
-      div.style.background = '#1a1a1a';
-      div.style.border = '1px solid #333';
-      div.style.borderRadius = '8px';
-      div.style.padding = '15px';
+      // Simple Row Style
       div.style.display = 'flex';
       div.style.alignItems = 'center';
-      div.style.gap = '15px';
-      div.style.cursor = 'pointer';
-      div.style.transition = 'all 0.2s';
-      div.style.position = 'relative'; // Para o checkbox overlay
-
-      div.onmouseover = () => { div.style.borderColor = '#661155'; div.style.background = '#222'; };
-      div.onmouseout = () => { if (!checkbox.checked) { div.style.borderColor = '#333'; div.style.background = '#1a1a1a'; } };
+      div.style.gap = '10px';
+      div.style.padding = '8px';
+      div.style.borderBottom = '1px solid #333';
 
       const checkbox = document.createElement('input');
       checkbox.type = 'checkbox';
       checkbox.value = f.email;
       checkbox.dataset.nome = f.nome;
       checkbox.checked = true;
-      checkbox.style.width = '18px';
-      checkbox.style.height = '18px';
-      checkbox.style.accentColor = '#661155';
       checkbox.style.cursor = 'pointer';
 
-      // Icone
-      const icon = document.createElement('div');
-      icon.innerHTML = '<i class="fa-solid fa-truck-fast"></i>';
-      icon.style.color = '#661155';
-      icon.style.fontSize = '20px';
-
-      // Info
-      const info = document.createElement('div');
-      info.style.flex = '1';
-
-      const nome = document.createElement('strong');
-      nome.textContent = f.nome;
-      nome.style.display = 'block';
-      nome.style.color = 'white';
-      nome.style.fontSize = '14px';
-
-      const email = document.createElement('small');
-      email.textContent = f.email;
-      email.style.color = '#888';
-      email.style.fontSize = '11px';
-
-      info.appendChild(nome);
-      info.appendChild(email);
+      const label = document.createElement('label');
+      label.textContent = f.nome;
+      label.style.cursor = 'pointer';
+      label.style.color = 'white';
+      label.style.flex = '1';
 
       div.onclick = (e) => {
-        if (e.target !== checkbox) checkbox.checked = !checkbox.checked;
-        if (checkbox.checked) {
-          div.style.borderColor = '#00ff99';
-          div.style.background = '#111';
-        } else {
-          div.style.borderColor = '#333';
-        }
+        if (e.target !== checkbox && e.target !== label) checkbox.click();
       };
+      label.onclick = () => checkbox.click();
 
       div.appendChild(checkbox);
-      div.appendChild(icon);
-      div.appendChild(info);
+      div.appendChild(label);
       container.appendChild(div);
+    });
+  }; div.style.alignItems = 'center';
+  div.style.gap = '15px';
+  div.style.cursor = 'pointer';
+  div.style.transition = 'all 0.2s';
+  div.style.position = 'relative'; // Para o checkbox overlay
+
+  div.onmouseover = () => { div.style.borderColor = '#661155'; div.style.background = '#222'; };
+  div.onmouseout = () => { if (!checkbox.checked) { div.style.borderColor = '#333'; div.style.background = '#1a1a1a'; } };
+
+  const checkbox = document.createElement('input');
+  checkbox.type = 'checkbox';
+  checkbox.value = f.email;
+  checkbox.dataset.nome = f.nome;
+  checkbox.checked = true;
+  checkbox.style.width = '18px';
+  checkbox.style.height = '18px';
+  checkbox.style.accentColor = '#661155';
+  checkbox.style.cursor = 'pointer';
+
+  // Icone
+  const icon = document.createElement('div');
+  icon.innerHTML = '<i class="fa-solid fa-truck-fast"></i>';
+  icon.style.color = '#661155';
+  icon.style.fontSize = '20px';
+
+  // Info
+  const info = document.createElement('div');
+  info.style.flex = '1';
+
+  const nome = document.createElement('strong');
+  nome.textContent = f.nome;
+  nome.style.display = 'block';
+  nome.style.color = 'white';
+  nome.style.fontSize = '14px';
+
+  const email = document.createElement('small');
+  email.textContent = f.email;
+  email.style.color = '#888';
+  email.style.fontSize = '11px';
+
+  info.appendChild(nome);
+  info.appendChild(email);
+
+  div.onclick = (e) => {
+    if (e.target !== checkbox) checkbox.checked = !checkbox.checked;
+    if (checkbox.checked) {
+      div.style.borderColor = '#00ff99';
+      div.style.background = '#111';
+    } else {
+      div.style.borderColor = '#333';
+    }
+  };
+
+  div.appendChild(checkbox);
+  div.appendChild(icon);
+  div.appendChild(info);
+  container.appendChild(div);
     });
   };
 
