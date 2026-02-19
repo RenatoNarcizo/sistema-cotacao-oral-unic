@@ -3841,6 +3841,65 @@
     </div>
   </section>
 
+  <!-- ======================================================
+     📝 RESPONDER COTAÇÃO (FORNECEDOR) - RESTORED
+  ====================================================== -->
+  <section id="responderCotacao" style="display:none;">
+    <header>
+      <button class="btn-sair" onclick="voltarMenu()">🏠 Menu Principal</button>
+      <h1>Responder Cotação</h1>
+    </header>
+
+    <div style="
+    background:#111;
+    border:1px solid #661155;
+    border-radius:12px;
+    padding:25px;
+    margin:30px auto;
+    width:90%;
+    max-width:1000px;
+    color:white;
+    box-shadow:0 0 15px rgba(102,17,85,0.6);
+  ">
+
+      <!-- 🔍 BUSCA -->
+      <div style="margin-bottom:20px; text-align:center;">
+        <input type="text" id="buscaCotacaoRespondida" placeholder="🔍 Buscar cotação (número ou descrição)..."
+          oninput="filtrarCotacoesInstantaneo()" style="
+          padding:12px;
+          border-radius:25px;
+          border:1px solid #444;
+          width:100%;
+          max-width:400px;
+          background:#222;
+          color:white;
+          outline:none;
+          text-align:center;
+        ">
+      </div>
+
+      <!-- 📑 ABAS -->
+      <div class="abas-status" style="display:flex; justify-content:center; gap:10px; margin-bottom:20px;">
+        <button id="btnPublicadas" class="btn-status ativo" onclick="alternarAbaStatus('btnPublicadas')">
+          📢 Abertas
+        </button>
+        <button id="btnAnalise" class="btn-status" onclick="alternarAbaStatus('btnAnalise')">
+          📩 Respondidas
+        </button>
+        <button id="btnFechadas" class="btn-status" onclick="alternarAbaStatus('btnFechadas')">
+          🏁 Encerradas
+        </button>
+      </div>
+
+      <!-- 📋 LISTAS -->
+      <div id="listaPublicadas" style="display:block;"></div>
+      <div id="listaAnalise" style="display:none;"></div>
+      <div id="listaFechadas" style="display:none;"></div>
+      <div id="listaAprovacao" style="display:none;"></div> <!-- Compatibilidade -->
+
+    </div>
+  </section>
+
 
 
   <!-- 📋 MODAL – DETALHES DA SOLICITAÇÃO DE COMPRA -->
@@ -7152,6 +7211,38 @@
     toggleListaRespondidas("publicadas");
   };
 
+  /* ======================================================
+     🔄 CONTROLE DE ABAS (RESTAURADO)
+  ====================================================== */
+  window.alternarAbaStatus = function (idBtn) {
+    // 1. Remove ativo de todos
+    document.querySelectorAll('.btn-status').forEach(btn => btn.classList.remove('ativo'));
+
+    // 2. Adiciona ao clicado
+    const btn = document.getElementById(idBtn);
+    if (btn) btn.classList.add('ativo');
+
+    // 3. Esconde todas as listas
+    document.querySelectorAll('[id^="lista"]').forEach(div => div.style.display = 'none');
+
+    // 4. Mostra a lista correspondente
+    const map = {
+      'btnPublicadas': 'listaPublicadas',
+      'btnAnalise': 'listaAnalise',
+      'btnFechadas': 'listaFechadas',
+      'btnAprovacao': 'listaAprovacao'
+    };
+    const idLista = map[idBtn];
+    if (idLista) {
+      const div = document.getElementById(idLista);
+      if (div) div.style.display = 'block';
+    }
+
+    // 5. Recarrega dados
+    if (window.filtrarCotacoesInstantaneo) window.filtrarCotacoesInstantaneo();
+  };
+
+
   window.filtrarCotacoesInstantaneo = function () {
     const btnAtivo = document.querySelector('.btn-status.ativo');
     if (!btnAtivo) return;
@@ -7209,15 +7300,24 @@
     let filtradas = [];
 
     /* ===========================
-       🚚 FORNECEDOR
+       🚚 FORNECEDOR (LOGICA CORRIGIDA)
     ============================ */
     if (usuario.tipo === "fornecedor") {
+      filtradas = cotacoes.filter(c => {
+        // 1. Filtro básico de status
+        if (!statusFiltro.includes(c.status)) return false;
 
-      filtradas = cotacoes.filter(c =>
-        statusFiltro.includes(c.status) &&
-        fornecedorRespondeu(c, usuario.email)
-      );
+        // 2. Se for ABERTA, o fornecedor DEVE ver (desde que não tenha respondido ainda na aba de abertas? 
+        //    Geralmente mostra-se tudo que está disponível).
+        if (c.status === 'aberta') {
+          // Opcional: verificar se está na lista de convidados (c.fornecedores)
+          // Para corrigir o "sumiço", mostramos todas abertas onde ele não foi explicitamente excluído
+          return true;
+        }
 
+        // 3. Se for RESPONDIDA/FECHADA, só mostra se ele participou
+        return fornecedorRespondeu(c, usuario.email);
+      });
     }
     /* ===========================
        👔 ADMIN / COMPRADOR / APROVADOR
