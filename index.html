@@ -6957,7 +6957,7 @@
       <td style="text-align: center;">${p.marca || "-"}</td>
       <td style="text-align: center;">${p.quantidade}</td>
       <td style="text-align: center;">
-        <input type="number" min="0" step="0.01" id="preco_${i}" style="width: 80px; text-align: center;">
+        <input type="number" min="0" step="0.01" id="preco_${i}" class="preco-input" data-produto="${p.nome}" style="width: 80px; text-align: center; background:#222; border:1px solid #444; color:#fff; border-radius:3px;">
       </td>
     `;
       tbody.appendChild(tr);
@@ -7007,10 +7007,34 @@
 
     if (respostaRaw) {
       const resposta = JSON.parse(respostaRaw);
-      (resposta.itens || []).forEach((item, i) => {
-        const input = document.getElementById("preco_" + i);
-        if (input) input.value = item.preco ?? 0;
+
+      // 1. Restaurar Preços Robustamente (por nome do produto)
+      (resposta.itens || []).forEach((item) => {
+        // Encontra o index do produto na cotação atual
+        const idx = cotacao.produtos.findIndex(p => p.nome === item.produto || p.nome === item.nome);
+        if (idx !== -1) {
+          const input = document.getElementById("preco_" + idx);
+          if (input) input.value = item.preco ?? item.valor ?? 0;
+        }
       });
+
+      // 2. Mostrar Anexo Atual se existir
+      if (resposta.anexo && (resposta.anexo.url || resposta.anexo.base64)) {
+        const linkElem = document.createElement("div");
+        linkElem.id = "respAnexoAtual";
+        linkElem.style = "margin-top:10px; padding:8px; background:#222; border:1px solid #444; border-radius:4px;";
+
+        const url = resposta.anexo.url || (resposta.anexo.base64 ? "#" : "");
+        const nome = resposta.anexo.nome || "Ver Anexo Enviado";
+
+        linkElem.innerHTML = `
+          <span style="color:#bbb; font-size:12px; display:block; margin-bottom:4px;">📎 Anexo já enviado:</span>
+          <a href="${url}" ${resposta.anexo.url ? 'target="_blank"' : `onclick="abrirArquivoAnexo('${resposta.anexo.base64}', '${nome}'); return false;"`} style="color:#00ff99; text-decoration:none; font-weight:bold;">
+            <i class="fa-solid fa-file-pdf"></i> ${nome}
+          </a>
+        `;
+        if (containerAnexo) containerAnexo.appendChild(linkElem);
+      }
     }
 
     // 🔑 CONTROLE DE MODO DEFINITIVO
@@ -12187,52 +12211,80 @@
     container.innerHTML = "<p>Carregando documentos...</p>";
     modal.style.display = "flex";
 
-    // 1. Busca TODAS as respostas locais
-    const respostas = [];
+    // 1. Busca TODAS as respostas (Combina Cotações Locais + Respostas Individuais)
+    let respostas = [];
+    const hash = new Set(); // Para de-duplicar por email
+
+    // A. Busca na lista mestre de cotações (Visão do Comprador)
+    const todasCotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
+    const cotacaoMestre = todasCotacoes.find(c => String(c.numero) === String(idCotacao) || String(c.id) === String(idCotacao));
+
+    if (cotacaoMestre && Array.isArray(cotacaoMestre.respostasFornecedores)) {
+      cotacaoMestre.respostasFornecedores.forEach(r => {
+        const email = (r.email || "").toLowerCase().trim();
+        if (email && !hash.has(email)) {
+          respostas.push(r);
+          hash.add(email);
+        }
+      });
+    }
+
+    // B. Busca nas respostas individuais locais (Visão de Rascunho/Fornecedor)
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      // Busca flexível por prefixo
       if (key.includes(`res_${idCotacao}`) || key.includes(`resposta_${idCotacao}`)) {
         try {
           const r = JSON.parse(localStorage.getItem(key));
+          const email = (r.email || "").toLowerCase().trim();
 
-          // 🔒 FILTRO DE SEGURANÇA: Se tiver ID vinculado, valida!
-          if (r.cotacaoId && String(r.cotacaoId) !== String(idCotacao)) {
-            console.warn("⛔ Ignorando resposta com ID incompatível (Cross-talk prevention):", r);
-            continue;
+          if (email && !hash.has(email)) {
+            // 🔒 Valida ID se existir
+            if (r.cotacaoId && String(r.cotacaoId) !== String(idCotacao)) continue;
+            respostas.push(r);
+            hash.add(email);
           }
-          respostas.push(r);
         } catch (e) { }
       }
     }
 
-    // 2. Filtra por fornecedor se especificado
-    const displayItems = emailFornecedor
-      ? respostas.filter(r => (r.email || "").toLowerCase().trim() === (emailFornecedor || "").toLowerCase().trim())
-      : respostas;
+    // 2. Filtra por fornecedor se for um histórico individual
+    if (emailFornecedor) {
+      respostas = respostas.filter(r => (r.email || "").toLowerCase().trim() === (emailFornecedor || "").toLowerCase().trim());
+    }
 
     container.innerHTML = "";
 
-    if (displayItems.length === 0) {
-      container.innerHTML = "<p style='color:#ccc; text-align:center;'>Nenhum documento encontrado.</p>";
+    if (respostas.length === 0) {
+      container.innerHTML = `
+        <div style="text-align:center; padding:30px; color:#666;">
+          <i class="fa-solid fa-folder-open" style="font-size:40px; margin-bottom:10px; opacity:0.3;"></i>
+          <p>Nenhum documento anexado para esta cotação.</p>
+        </div>`;
       return;
     }
 
-    // 3. Renderiza
-    displayItems.forEach(r => {
+    // 3. Renderiza com Layout Profissional
+    respostas.forEach(r => {
       const anexos = r.anexos || (r.anexo ? [r.anexo] : []);
       const temBase64 = r.base64 && r.base64.length > 100;
 
       if (anexos.length === 0 && !temBase64) return;
 
       const div = document.createElement("div");
-      div.style.marginBottom = "15px";
-      div.style.padding = "10px";
-      div.style.border = "1px solid #444";
-      div.style.borderRadius = "5px";
-      div.style.backgroundColor = "#111";
+      div.className = "documento-fornecedor-item";
+      div.style = "margin-bottom:20px; padding:12px; border:1px solid #333; border-radius:8px; background-color:#1a1a1a; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);";
 
-      div.innerHTML = `<strong style="color:#00ff99; display:block; margin-bottom:5px;">${r.fornecedor || r.email}</strong>`;
+      div.innerHTML = `
+        <div style="display:flex; align-items:center; gap:10px; border-bottom:1px solid #333; padding-bottom:8px; margin-bottom:10px;">
+          <div style="width:32px; height:32px; background:#661155; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:bold;">
+            ${(r.fornecedor || "?").charAt(0).toUpperCase()}
+          </div>
+          <div>
+            <strong style="color:#00ff99; display:block;">${r.fornecedor || "Fornecedor"}</strong>
+            <small style="color:#777; font-size:11px;">${r.email || ""}</small>
+          </div>
+        </div>
+      `;
 
       let achouArquivo = false;
 
@@ -12241,18 +12293,26 @@
         if (link) {
           achouArquivo = true;
           div.innerHTML += `
-                    <a href="${link}" target="_blank" style="color:#3ab9b6; text-decoration:none; display:flex; align-items:center; gap:8px; margin-top:5px; padding:5px; border:1px solid #333; border-radius:4px;">
-                       <i class="fa-solid fa-cloud-arrow-down"></i> ${anexo.nome || "Documento Anexado"} (Nuvem)
-                    </a>`;
+            <a href="${link}" target="_blank" style="color:#3ab9b6; text-decoration:none; display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:8px; padding:10px; background:#111; border:1px solid #222; border-radius:6px; transition: 0.2s;">
+               <span style="display:flex; align-items:center; gap:10px;">
+                 <i class="fa-solid fa-file-pdf" style="color:#ff4444; font-size:18px;"></i> 
+                 <span>${anexo.nome || "Anexo Enviado"}</span>
+               </span>
+               <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:12px; opacity:0.5;"></i>
+            </a>`;
         }
       });
 
       // Fallback Base64 (Legacy)
       if (temBase64 && !achouArquivo) {
         div.innerHTML += `
-                <a href="#" onclick="abrirBase64('${r.base64}'); return false;" style="color:#fbbf24; text-decoration:none; display:flex; align-items:center; gap:8px; margin-top:5px; padding:5px; border:1px solid #333; border-radius:4px;">
-                   <i class="fa-solid fa-file-pdf"></i> ⚠️ Documento Salvo Localmente (Base64)
-                </a>`;
+            <a href="#" onclick="abrirBase64('${r.base64}'); return false;" style="color:#fbbf24; text-decoration:none; display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:8px; padding:10px; background:#111; border:1px solid #222; border-radius:6px;">
+               <span style="display:flex; align-items:center; gap:10px;">
+                 <i class="fa-solid fa-file-code" style="color:#fbbf24; font-size:18px;"></i> 
+                 <span>Documento Local (Base64)</span>
+               </span>
+               <i class="fa-solid fa-eye" style="font-size:12px; opacity:0.5;"></i>
+            </a>`;
       }
 
       container.appendChild(div);
