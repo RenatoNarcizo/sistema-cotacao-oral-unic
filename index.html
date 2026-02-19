@@ -6952,12 +6952,21 @@
       tbody.appendChild(tr);
     });
 
-    // 🧹 LIMPEZA DE ARQUIVO (EFICAZ PARA NOVO UPLOAD)
+    // 🧹 LIMPEZA RIGOROSA DE UI (ANTI-REPLICAÇÃO)
     const inputAnexo = document.getElementById("respAnexo");
-    if (inputAnexo) inputAnexo.value = "";
+    if (inputAnexo) {
+      inputAnexo.value = "";
+      inputAnexo.setAttribute("value", "");
+    }
+    const labelAnexo = document.getElementById("respAnexoAtual");
+    if (labelAnexo) {
+      labelAnexo.style.display = "none";
+      labelAnexo.innerText = "";
+    }
 
     const email = usuario.email.toLowerCase().trim();
-    const chave = `resposta_${numero}_${email}`;
+    // PADRONIZAÇÃO DE CHAVE: Usar 'res_' consistentemente
+    const chave = `res_${numero}_${email}`;
     const respostaRaw = localStorage.getItem(chave);
 
     if (respostaRaw) {
