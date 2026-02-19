@@ -6956,8 +6956,11 @@
       <td style="text-align: left; padding-left: 12px;">${p.nome}</td>
       <td style="text-align: center;">${p.marca || "-"}</td>
       <td style="text-align: center;">${p.quantidade}</td>
-      <td style="text-align: center; color: #00ff99; font-weight: bold;">
-        R$ <input type="number" min="0" step="0.01" id="preco_${i}" class="preco-input" data-produto="${p.nome}" style="width: 80px; text-align: center; background:#222; border:1px solid #444; color:#fff; border-radius:3px; font-weight: normal;">
+      <td style="text-align: center;">
+        <div style="display:flex; align-items:center; background:#1a1a1a; border:1px solid #444; border-radius:4px; padding:0 8px; width:110px; margin:0 auto;">
+          <span style="color:#777; font-size:12px; margin-right:4px;">R$</span>
+          <input type="number" min="0" step="0.01" id="preco_${i}" class="preco-input" data-produto="${p.nome}" style="width: 100%; border:none; background:transparent; color:#fff; text-align:right; font-size:14px; outline:none; padding:6px 0;">
+        </div>
       </td>
     `;
       tbody.appendChild(tr);
@@ -12067,8 +12070,14 @@
             if (!current.respostasFornecedores) current.respostasFornecedores = [];
             let resps = Array.isArray(current.respostasFornecedores) ? current.respostasFornecedores : Object.values(current.respostasFornecedores);
             // Atualiza ou insere
+            // 🔥 CRÍTICO: Limpar Base64 para evitar limite de tamanho
+            const resSegura = JSON.parse(JSON.stringify(resposta));
+            if (resSegura.anexo) delete resSegura.anexo.base64;
+            if (resSegura.anexos) resSegura.anexos.forEach(a => delete a.base64);
+            delete resSegura.base64;
+
             resps = resps.filter(r => (r.email || "").toLowerCase().trim() !== usuario.email.toLowerCase().trim());
-            resps.push(resposta);
+            resps.push(resSegura);
             current.respostasFornecedores = resps;
             return current;
           }),
@@ -12079,21 +12088,43 @@
 
       console.log("☁️ Sincronizando com Firestore...");
       if (typeof db !== "undefined") {
-        // A. Sincroniza Objeto Cotação
+        // 🔥 CRÍTICO: Limpar Base64 ANTES de salvar no objeto compartilhado (Evita 1MB limit)
+        const respostaSegura = JSON.parse(JSON.stringify(resposta));
+        if (respostaSegura.anexo) delete respostaSegura.anexo.base64;
+        if (respostaSegura.anexos) respostaSegura.anexos.forEach(a => delete a.base64);
+        delete respostaSegura.base64; // redundância
+
         if (!cotacao.respostasFornecedores) cotacao.respostasFornecedores = [];
         cotacao.respostasFornecedores = cotacao.respostasFornecedores.filter(r => (r.email || "").toLowerCase().trim() !== usuario.email.toLowerCase().trim());
-        cotacao.respostasFornecedores.push(resposta);
+        cotacao.respostasFornecedores.push(respostaSegura);
 
-        await comTimeout(
-          db.collection("cotacoes").doc(String(numCotacao)).set(cotacao, { merge: true }),
-          10000,
-          "Sync Firestore"
-        );
+        // A. Sincroniza Objeto Cotação (Documentos Grandes podem falhar, então usamos try-catch)
+        try {
+          await comTimeout(
+            db.collection("cotacoes").doc(String(numCotacao)).set({
+              respostasFornecedores: cotacao.respostasFornecedores
+            }, { merge: true }),
+            10000,
+            "Sync Firestore"
+          );
+        } catch (e) {
+          console.warn("⚠️ Falha ao salvar no documento principal (Provável limite de 1MB). Usando Coleção de Respostas Alternativa.");
+          // Fallback: Salva como documento individual se o principal falhar
+          await db.collection("cotacoes").doc(String(numCotacao)).collection("respostas_individuais").doc(usuario.email.toLowerCase().trim()).set(respostaSegura);
+        }
 
         // B. Se houver anexo (URL ou Base64), salva na coleção global de documentos
         if (anexoDados.url || anexoDados.base64) {
-          const docRef = db.collection("documentos_cotacao").doc(`docs_${numCotacao}`);
-          const snap = await db.collection("documentos_cotacao").doc(`docs_${numCotacao}`).get();
+          const docRef = db.collection("cotacoes").doc(String(numCotacao)).collection("respostas").doc(usuario.email.toLowerCase().trim());
+          const respostaFirestore = JSON.parse(JSON.stringify(resposta));
+          if (respostaFirestore.anexo) delete respostaFirestore.anexo.base64;
+          if (respostaFirestore.anexos) respostaFirestore.anexos.forEach(a => delete a.base64);
+
+          await docRef.set(respostaFirestore, { merge: true });
+
+          // C. Salva na coleção global de documentos (para o log geral)
+          const globalDocRef = db.collection("documentos_cotacao").doc(`docs_${numCotacao}`);
+          const snap = await globalDocRef.get();
           let arquivos = snap.exists ? (snap.data().arquivos || []) : [];
 
           const novoAnexo = {
@@ -12251,7 +12282,22 @@
       }
     }
 
-    // Filtro por fornecedor se necessário
+    // C. Fonte 3: Firestore Subcollection (Verdade absoluta no Cloud)
+    if (typeof db !== "undefined") {
+      try {
+        const querySnapshot = await db.collection("cotacoes").doc(String(idCotacao)).collection("respostas").get();
+        querySnapshot.forEach(doc => {
+          const r = doc.data();
+          const key = (r.email || r.fornecedor || "").toLowerCase();
+          if (key && !hash.has(key)) {
+            todasRespostas.push(r);
+            hash.add(key);
+          }
+        });
+      } catch (e) { console.warn("Erro ao buscar subcoleção de respostas:", e); }
+    }
+
+    // 2. Filtra por fornecedor se for um histórico individual
     if (emailFornecedor) {
       todasRespostas = todasRespostas.filter(r => (r.email || "").toLowerCase().trim() === emailFornecedor.toLowerCase().trim());
     }
