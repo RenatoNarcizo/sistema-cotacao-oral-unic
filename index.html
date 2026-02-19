@@ -6958,11 +6958,14 @@
     });
 
     // 🧹 LIMPEZA TOTAL (Substituição de DOM)
+    // 🧹 LIMPEZA TOTAL (NUCLEAR OPTION)
     const containerAnexo = document.getElementById("containerAnexoResponder");
     if (containerAnexo) {
+      // Cria um ID único para o input para garantir que o browser não restaure estado
+      const novoId = "respAnexo_" + Date.now();
       containerAnexo.innerHTML = `
             <label>Anexar Orçamento (PDF ou imagem):</label>
-            <input type="file" id="respAnexo" accept=".pdf,image/*" style="
+            <input type="file" id="respAnexo" data-unique-id="${novoId}" accept=".pdf,image/*" style="
               width:100%;
               background:#1a1a1a;
               border:1px solid #661155;
@@ -6970,6 +6973,7 @@
               color:white;
               padding:8px;
             ">`;
+      console.log("🔥 Input de anexo recriado: " + novoId);
     }
 
     const email = usuario.email.toLowerCase().trim();
