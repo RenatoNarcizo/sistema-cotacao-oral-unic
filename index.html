@@ -3502,122 +3502,6 @@
     </div>
   </div>
 
-  <!-- 🆕 MODAL - NOVA COTAÇÃO (RESTORED) -->
-  <div id="modalCotacao" class="modal" style="display:none;">
-    <div class="modal-content" style="max-width:900px; background:#111; border:1px solid #661155; color:white;">
-      <button class="close-btn" onclick="fecharModalCotacao()"
-        style="position:absolute; right:15px; top:15px; background:none; border:none; color:white; font-size:24px; cursor:pointer;">&times;</button>
-
-      <h2 style="color:#661155; margin-bottom:20px; text-align:center;">🆕 Nova Cotação</h2>
-
-      <div style="margin-bottom:15px;">
-        <label style="display:block; margin-bottom:5px;">Descrição / Título</label>
-        <input type="text" id="novaDescricao" placeholder="Ex: Cotação de Materiais Elétricos"
-          style="width:100%; padding:10px; background:#1a1a1a; color:white; border:1px solid #444; border-radius:5px;">
-      </div>
-
-      <div style="margin-bottom:15px;">
-        <label style="display:block; margin-bottom:5px;">Data de Encerramento</label>
-        <input type="date" id="novaDataFim"
-          style="width:100%; padding:10px; background:#1a1a1a; color:white; border:1px solid #444; border-radius:5px;">
-      </div>
-
-      <h3 style="color:#661155; margin-top:20px; margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:5px;">
-        📦 Itens da Cotação</h3>
-      <table style="width:100%; margin-bottom:10px; border-collapse:collapse;">
-        <thead>
-          <tr style="background:#333; color:white; text-align:left;">
-            <th style="padding:8px;">Produto / Serviço</th>
-            <th style="padding:8px;">Marca (Opcional)</th>
-            <th style="padding:8px; width:80px; text-align:center;">Qtd</th>
-            <th style="padding:8px; width:50px; text-align:center;">Ação</th>
-          </tr>
-        </thead>
-        <tbody id="tabelaItensCorpo">
-          <!-- Items go here -->
-        </tbody>
-      </table>
-
-      <button onclick="adicionarItem()"
-        style="background:#222; border:1px dashed #661155; color:white; width:100%; padding:10px; margin-bottom:20px; cursor:pointer; border-radius:5px; transition:0.2s;">
-        + Adicionar Item
-      </button>
-
-      <h3 style="color:#661155; margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:5px;">🚚 Selecione os
-        Fornecedores</h3>
-      <div id="listaFornecedoresModal" style="
-        max-height:200px; 
-        overflow-y:auto; 
-        background:#1a1a1a; 
-        border:1px solid #444; 
-        padding:15px; 
-        display:grid; 
-        grid-template-columns: 1fr 1fr; 
-        gap:10px;
-        border-radius:5px;
-      ">
-        <!-- Rendered by JS -->
-      </div>
-
-      <div style="text-align:center; margin-top:25px;">
-        <button onclick="salvarCotacao()"
-          style="background:#661155; color:white; padding:12px 30px; border:none; border-radius:8px; font-weight:bold; font-size:16px; cursor:pointer; box-shadow:0 0 10px rgba(102,17,85,0.5);">
-          🚀 Publicar Cotação
-        </button>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- 📝 MODAL - RESPONDER COTAÇÃO (RESTORED) -->
-  <div id="modalResponder" class="modal" style="display:none;">
-    <div class="modal-content" style="max-width:900px; background:#111; border:1px solid #661155; color:white;">
-      <button class="close-btn" onclick="fecharModalResponder()"
-        style="position:absolute; right:15px; top:15px; background:none; border:none; color:white; font-size:24px; cursor:pointer;">&times;</button>
-
-      <h2 style="color:#661155; margin-bottom:10px; text-align:center;">📝 Responder Cotação</h2>
-      <h3 id="respNumero" style="color:#ccc; text-align:center; margin-bottom:20px;">COT-0000</h3>
-
-      <div style="margin-bottom:20px; text-align:center; color:#aaa; font-style:italic;">
-        Preencha os valores unitários para os itens abaixo.
-      </div>
-
-      <table style="width:100%; margin-bottom:20px; border-collapse:collapse;">
-        <thead>
-          <tr style="background:#333; color:white;">
-            <th style="padding:10px;">Produto</th>
-            <th style="padding:10px; width:80px; text-align:center;">Qtd</th>
-            <th style="padding:10px; width:120px;">Preço Unit. (R$)</th>
-          </tr>
-        </thead>
-        <tbody id="tabelaResponderCorpo">
-          <!-- Items go here -->
-        </tbody>
-      </table>
-
-      <div style="margin-top:20px; border-top:1px solid #333; padding-top:15px;">
-        <label style="display:block; margin-bottom:5px;">Anexar Arquivo (Opcional)</label>
-        <div style="display:flex; gap:10px;">
-          <input type="file" id="respAnexo"
-            style="flex:1; background:#1a1a1a; color:white; border:1px solid #444; padding:8px; border-radius:5px;">
-          <span id="respAnexoAtual" style="display:none; color:#00ff99; align-self:center;">📎 Arquivo Anexado</span>
-        </div>
-      </div>
-
-      <div style="text-align:center; margin-top:25px;">
-        <button id="btnEnviarResposta" onclick="salvarRespostaComAnexo()"
-          style="background:#661155; color:white; padding:12px 30px; border:none; border-radius:8px; font-weight:bold; font-size:16px; cursor:pointer; box-shadow:0 0 10px rgba(102,17,85,0.5);">
-          🚀 Enviar Resposta
-        </button>
-        <button id="btnEditarResposta" onclick="habilitarEdicaoResposta()"
-          style="background:#333; color:white; padding:12px 30px; border:1px solid #661155; border-radius:8px; font-weight:bold; font-size:16px; cursor:pointer; display:none; margin-top:10px;">
-          ✏️ Editar Resposta
-        </button>
-      </div>
-
-    </div>
-  </div>
-
   <!-- ❌ MODAL – REJEIÇÃO NA APROVAÇÃO -->
   <div id="modalRejeicaoAprovacao" class="modal" style="display:none;">
     <div class="modal-content" style="max-width:500px; position:relative;">
@@ -3953,65 +3837,6 @@
       </h2>
 
       <div id="listaPendentesAprovacao" style="margin-top:25px;"></div>
-
-    </div>
-  </section>
-
-  <!-- ======================================================
-     📝 RESPONDER COTAÇÃO (FORNECEDOR) - RESTORED
-  ====================================================== -->
-  <section id="responderCotacao" style="display:none;">
-    <header>
-      <button class="btn-sair" onclick="voltarMenu()">🏠 Menu Principal</button>
-      <h1>Responder Cotação</h1>
-    </header>
-
-    <div style="
-    background:#111;
-    border:1px solid #661155;
-    border-radius:12px;
-    padding:25px;
-    margin:30px auto;
-    width:90%;
-    max-width:1000px;
-    color:white;
-    box-shadow:0 0 15px rgba(102,17,85,0.6);
-  ">
-
-      <!-- 🔍 BUSCA -->
-      <div style="margin-bottom:20px; text-align:center;">
-        <input type="text" id="buscaCotacaoRespondida" placeholder="🔍 Buscar cotação (número ou descrição)..."
-          oninput="filtrarCotacoesInstantaneo()" style="
-          padding:12px;
-          border-radius:25px;
-          border:1px solid #444;
-          width:100%;
-          max-width:400px;
-          background:#222;
-          color:white;
-          outline:none;
-          text-align:center;
-        ">
-      </div>
-
-      <!-- 📑 ABAS -->
-      <div class="abas-status" style="display:flex; justify-content:center; gap:10px; margin-bottom:20px;">
-        <button id="btnPublicadas" class="btn-status ativo" onclick="alternarAbaStatus('btnPublicadas')">
-          📢 Abertas
-        </button>
-        <button id="btnAnalise" class="btn-status" onclick="alternarAbaStatus('btnAnalise')">
-          📩 Respondidas
-        </button>
-        <button id="btnFechadas" class="btn-status" onclick="alternarAbaStatus('btnFechadas')">
-          🏁 Encerradas
-        </button>
-      </div>
-
-      <!-- 📋 LISTAS -->
-      <div id="listaPublicadas" style="display:block;"></div>
-      <div id="listaAnalise" style="display:none;"></div>
-      <div id="listaFechadas" style="display:none;"></div>
-      <div id="listaAprovacao" style="display:none;"></div> <!-- Compatibilidade -->
 
     </div>
   </section>
@@ -5398,10 +5223,7 @@
     if (btnEnviar) btnEnviar.style.display = 'none';
     if (btnEditar) btnEditar.style.display = 'none';
     inputs.forEach(i => i.disabled = true);
-    if (fileInput) {
-      fileInput.disabled = true;
-      fileInput.value = ""; // 🧹 Garante que o input comece vazio (Fix Replicação)
-    }
+    if (fileInput) fileInput.disabled = true;
 
     if (modo === 'novo') {
       // Modo NOVO: Apenas Enviar, Campos Abertos
@@ -5980,27 +5802,12 @@
     listaDiv.innerHTML = "";
 
     if (pendentes.length === 0) {
-      // DEBUG VISUAL PARA O USUÁRIO (TEMP)
-      const usuario = getUsuarioLogado(); // Assuming getUsuarioLogado() is available
-      const debugInfo = `
-          <div style="margin-top:20px; padding:10px; border:1px dashed #444; color:#888; font-size:12px; text-align:left;">
-             <strong>🐛 Debug Info (Suporte):</strong><br>
-             Usuário: ${usuario ? usuario.email : 'N/A'} (${usuario ? usuario.tipo : 'N/A'})<br>
-             Total Cotações no Sistema: ${cotacoes.length}<br>
-             Status Filtro: aprovacao, respondida (statusAprovacao: pendente)<br>
-             Permissão Relaxada: ATIVADA (Mostra todas abertas)<br>
-             
-             <em>Se você vê "Total: 0", o banco de dados local está vazio. Tente recarregar (F5).</em>
-          </div>
-        `;
-
       listaDiv.innerHTML = `
-          <div style="text-align:center; padding:40px; color:#666;">
-             <i class="fa-solid fa-inbox" style="font-size:40px; margin-bottom:15px; opacity:0.5;"></i>
-             <p>Nenhuma cotação encontrada nesta aba.</p>
-             <small>Verifique se você foi convidado para cotações recentes.</small>
-             ${debugInfo}
-          </div>`;
+        <div style="text-align:center; color:#ccc; padding:20px;">
+          <i class="fa-solid fa-folder-open" style="font-size:30px; margin-bottom:10px; color:#555;"></i>
+          <p>Nenhuma cotação aguardando aprovação na nuvem.</p>
+        </div>
+      `;
       return;
     }
 
@@ -7131,78 +6938,26 @@
       <td style="text-align: center;">${p.marca || "-"}</td>
       <td style="text-align: center;">${p.quantidade}</td>
       <td style="text-align: center;">
-        <input type="number" min="0" step="0.01" id="preco_${i}" data-produto="${p.nome}" style="width: 80px; text-align: center;">
+        <input type="number" min="0" step="0.01" id="preco_${i}" style="width: 80px; text-align: center;">
       </td>
     `;
       tbody.appendChild(tr);
     });
 
-    // 🧹 LIMPEZA DE ARQUIVO ULTRA-FORÇADA (CLONE NODE)
+    // 🧹 LIMPEZA DE ARQUIVO (EFICAZ PARA NOVO UPLOAD)
     const inputAnexo = document.getElementById("respAnexo");
-    const labelAnexo = document.getElementById("labelAnexoAtual"); // Novo elemento para mostrar anexo
-
-    // Cria label se não existir
-    if (!labelAnexo && inputAnexo) {
-      const divAnexo = inputAnexo.parentNode;
-      const p = document.createElement("p");
-      p.id = "labelAnexoAtual";
-      p.style.fontSize = "12px";
-      p.style.color = "#0dcaf0";
-      p.style.marginTop = "5px";
-      divAnexo.appendChild(p);
-    }
-
-    if (inputAnexo) {
-      try {
-        const novoInput = inputAnexo.cloneNode(true);
-        novoInput.value = "";
-        inputAnexo.parentNode.replaceChild(novoInput, inputAnexo);
-      } catch (e) { inputAnexo.value = ""; }
-    }
-
-    // Limpa label
-    if (document.getElementById("labelAnexoAtual")) {
-      document.getElementById("labelAnexoAtual").innerHTML = "";
-    }
+    if (inputAnexo) inputAnexo.value = "";
 
     const email = usuario.email.toLowerCase().trim();
-    // Tenta achar na cotação (Cloud/Local)
-    let respostaSalva = cotacao.respostasFornecedores?.find(r =>
-      (r.email || "").toLowerCase().trim() === email
-    );
+    const chave = `resposta_${numero}_${email}`;
+    const respostaRaw = localStorage.getItem(chave);
 
-    // Se não achar, tenta no LocalStorage individual (Fallback)
-    if (!respostaSalva) {
-      const key = `res_${numero}_${email}`;
-      try {
-        respostaSalva = JSON.parse(localStorage.getItem(key));
-      } catch (e) { }
-    }
-
-    if (respostaSalva) {
-      if (respostaSalva.itens) {
-        respostaSalva.itens.forEach(item => {
-          // Tenta por data-produto (Mais robusto)
-          let input = document.querySelector(`#tabelaResponderCorpo input[data-produto="${item.produto}"]`);
-          // Fallback por ID (Compatibilidade)
-          if (!input) {
-            // Tenta achar pelo index se o produto bater
-            const index = cotacao.produtos.findIndex(p => p.nome === item.produto);
-            if (index !== -1) input = document.getElementById("preco_" + index);
-          }
-
-          if (input) input.value = item.preco ?? 0;
-        });
-      }
-
-      // Mostra anexo existente
-      const anexoAtual = respostaSalva.anexo || (respostaSalva.anexos ? respostaSalva.anexos[0] : null);
-      if (anexoAtual && (anexoAtual.url || anexoAtual.base64 || anexoAtual.nome)) {
-        const lbl = document.getElementById("labelAnexoAtual");
-        if (lbl) {
-          lbl.innerHTML = `📎 Arquivo atual: <strong>${anexoAtual.nome}</strong> (Será mantido se não enviar outro)`;
-        }
-      }
+    if (respostaRaw) {
+      const resposta = JSON.parse(respostaRaw);
+      (resposta.itens || []).forEach((item, i) => {
+        const input = document.getElementById("preco_" + i);
+        if (input) input.value = item.preco ?? 0;
+      });
     }
 
     // 🔑 CONTROLE DE MODO DEFINITIVO
@@ -7342,38 +7097,6 @@
     toggleListaRespondidas("publicadas");
   };
 
-  /* ======================================================
-     🔄 CONTROLE DE ABAS (RESTAURADO)
-  ====================================================== */
-  window.alternarAbaStatus = function (idBtn) {
-    // 1. Remove ativo de todos
-    document.querySelectorAll('.btn-status').forEach(btn => btn.classList.remove('ativo'));
-
-    // 2. Adiciona ao clicado
-    const btn = document.getElementById(idBtn);
-    if (btn) btn.classList.add('ativo');
-
-    // 3. Esconde todas as listas
-    document.querySelectorAll('[id^="lista"]').forEach(div => div.style.display = 'none');
-
-    // 4. Mostra a lista correspondente
-    const map = {
-      'btnPublicadas': 'listaPublicadas',
-      'btnAnalise': 'listaAnalise',
-      'btnFechadas': 'listaFechadas',
-      'btnAprovacao': 'listaAprovacao'
-    };
-    const idLista = map[idBtn];
-    if (idLista) {
-      const div = document.getElementById(idLista);
-      if (div) div.style.display = 'block';
-    }
-
-    // 5. Recarrega dados
-    if (window.filtrarCotacoesInstantaneo) window.filtrarCotacoesInstantaneo();
-  };
-
-
   window.filtrarCotacoesInstantaneo = function () {
     const btnAtivo = document.querySelector('.btn-status.ativo');
     if (!btnAtivo) return;
@@ -7405,13 +7128,6 @@
     const cotacoes = getCotacoes(); // TODAS
     const usuario = getUsuarioLogado();
 
-    if (!usuario) {
-      // Se chamado via sync antes do login ou session perdida
-      console.warn("⚠️ carregarRespondidas: Usuário não logado ou sessão expirada.");
-      container.innerHTML = "<p style='text-align:center;'>Aguardando login...</p>";
-      return;
-    }
-
     container.innerHTML = "";
 
     // 🔑 normaliza status para array
@@ -7438,33 +7154,23 @@
     let filtradas = [];
 
     /* ===========================
-       🚚 FORNECEDOR (LOGICA CORRIGIDA & ROBUSTA)
+       🚚 FORNECEDOR
     ============================ */
-    const tipoUsuario = String(usuario.tipo || "").toLowerCase().trim();
+    if (usuario.tipo === "fornecedor") {
 
-    if (tipoUsuario === "fornecedor") {
-      filtradas = cotacoes.filter(c => {
-        const sCotacao = String(c.status).toLowerCase().trim();
-        const sFiltro = statusFiltro.map(s => String(s).toLowerCase().trim());
+      filtradas = cotacoes.filter(c =>
+        statusFiltro.includes(c.status) &&
+        fornecedorRespondeu(c, usuario.email)
+      );
 
-        if (!sFiltro.includes(sCotacao)) return false;
-
-        // Se ABERTA -> Mostra (convite implícito)
-        if (sCotacao === 'aberta') return true;
-
-        // Se RESPONDIDA -> Checa participação
-        return fornecedorRespondeu(c, usuario.email);
-      });
     }
     /* ===========================
        👔 ADMIN / COMPRADOR / APROVADOR
     ============================ */
     else {
-      filtradas = cotacoes.filter(c => {
-        const sCotacao = String(c.status).toLowerCase().trim();
-        const sFiltro = statusFiltro.map(s => String(s).toLowerCase().trim());
-        return sFiltro.includes(sCotacao);
-      });
+      filtradas = cotacoes.filter(c =>
+        statusFiltro.includes(c.status)
+      );
     }
 
     // Aplica o filtro de busca final
@@ -7472,22 +7178,28 @@
 
     if (filtradas.length === 0) {
       container.innerHTML =
-        `<p style='text-align:center;'>Nenhuma cotação encontrada. (Total no sistema: ${cotacoes.length})</p>`;
+        "<p style='text-align:center;'>Nenhuma cotação encontrada.</p>";
       return;
     }
 
     // List each quotation
     filtradas.forEach(c => {
-      const respostas = Array.isArray(c.respostasFornecedores) ? c.respostasFornecedores : [];
-      const qtdRespostas = tipoUsuario === "fornecedor" ? 1 : respostas.length;
-      const qtdConvidados = Array.isArray(c.fornecedores) ? c.fornecedores.length : 0; // Fix duplicate var if strictly needed or just reuse
 
-      const STATUS_NORMALIZADO = String(c.status).toLowerCase().trim();
+      const respostas = Array.isArray(c.respostasFornecedores) ? c.respostasFornecedores : [];
+      const qtdRespostas = usuario.tipo === "fornecedor" ? 1 : respostas.length;
+      const qtdConvidados = Array.isArray(c.fornecedores) ? c.fornecedores.length : 0;
+      /* cleanup start */
+      /* cleaning... */
+      /* cleanup point 1 */
+      /* line removed */
+
+      /* line removed */
+      /* line removed */
 
       const bloco = document.createElement("div");
       bloco.className = "linha-cotacao";
 
-      if (STATUS_NORMALIZADO === "aberta") {
+      if (c.status === "aberta") {
         const agora = new Date();
         // 🛠️ FIX: Usa o parser global para evitar Invalid Date
         const fim = window.parseDateBR ? window.parseDateBR(c.dataFechamento) : new Date(c.dataFechamento);
@@ -7559,33 +7271,9 @@
         `;
       }
 
-      // List each quotation
       container.appendChild(bloco);
     });
   }
-
-  /* ======================================================
-     🔄 ALIAS DE COMPATIBILIDADE (AUTO-LOAD)
-  ====================================================== */
-  window.renderizarListaFornecedor = function (aba = 'abertas') {
-    const map = {
-      'abertas': 'btnPublicadas',
-      'respondidas': 'btnAnalise',
-      'encerradas': 'btnFechadas'
-    };
-    const btnId = map[aba] || 'btnPublicadas';
-    if (window.alternarAbaStatus) window.alternarAbaStatus(btnId);
-  };
-
-  // 🚀 AUTO-INICIALIZAÇÃO (GARANTIA DE LISTA)
-  document.addEventListener("DOMContentLoaded", () => {
-    const usuario = JSON.parse(sessionStorage.getItem("usuario_logado"));
-    if (usuario && usuario.tipo === 'fornecedor') {
-      setTimeout(() => {
-        if (window.alternarAbaStatus) window.alternarAbaStatus('btnPublicadas');
-      }, 500); // Pequeno delay garante carga do DOM
-    }
-  });
 
 
   /* function abrirTela movida para consolidação no final do script */
@@ -12174,20 +11862,14 @@
       let itensRespondidos = [];
       linhas.forEach(tr => {
         const input = tr.querySelector("input");
-        if (input) {
-          // Robustez: Troca vírgula por ponto (caso navegador permita)
-          const valStr = String(input.value).replace(',', '.');
-          const valFloat = parseFloat(valStr);
-
-          if (valFloat > 0) {
-            const produto = tr.cells[0]?.innerText.trim() || "Produto";
-            itensRespondidos.push({
-              produto: produto,
-              nome: produto,
-              preco: valFloat,
-              valor: valFloat
-            });
-          }
+        if (input && (parseFloat(input.value) || 0) > 0) {
+          const produto = tr.cells[0]?.innerText.trim() || "Produto";
+          itensRespondidos.push({
+            produto: produto,
+            nome: produto,
+            preco: parseFloat(input.value),
+            valor: parseFloat(input.value)
+          });
         }
       });
 
@@ -12254,30 +11936,6 @@
               }
             }
           }
-        }
-      }
-
-      // 🔄 PRESERVAÇÃO DE ANEXO (Se não houve novo upload)
-      if (!anexoDados.url && !anexoDados.base64 && !anexoDados.nome) {
-        let respAnterior = cotacao.respostasFornecedores?.find(r =>
-          (r.email || "").toLowerCase().trim() === usuario.email.toLowerCase().trim()
-        );
-
-        // Fallback: Tenta buscar no LocalStorage individual se não achar na lista
-        if (!respAnterior) {
-          try {
-            const keyLS = `res_${numCotacao}_${usuario.email.toLowerCase().trim()}`;
-            const savedLS = JSON.parse(localStorage.getItem(keyLS));
-            if (savedLS) respAnterior = savedLS;
-          } catch (e) { }
-        }
-
-        // Verifica se existe anexo no objeto encontrado
-        const oldAnexo = respAnterior ? (respAnterior.anexo || (respAnterior.anexos && respAnterior.anexos[0])) : null;
-
-        if (oldAnexo && (oldAnexo.url || oldAnexo.base64)) {
-          console.log("♻️ Mantendo anexo anterior:", oldAnexo);
-          anexoDados = oldAnexo;
         }
       }
 
@@ -12630,427 +12288,6 @@
   // Inicia assim que possível
   iniciarOuvinteRTDB();
   window.iniciarOuvinteRTDB = iniciarOuvinteRTDB;
-
-  /* ======================================================
-     🆕 NOVA COTAÇÃO (LOGIC RESTORED)
-  ====================================================== */
-  window.abrirModalCotacao = function () {
-    const modal = document.getElementById('modalCotacao');
-    if (modal) {
-      modal.style.display = 'flex';
-      // Limpa campos
-      if (document.getElementById('novaDescricao')) document.getElementById('novaDescricao').value = '';
-      if (document.getElementById('novaDataFim')) document.getElementById('novaDataFim').value = '';
-
-      // Reseta tabela
-      const tbody = document.getElementById('tabelaItensCorpo');
-      if (tbody) {
-        tbody.innerHTML = '';
-        adicionarItem(); // 1 item vazio
-      }
-
-      // Carrega fornecedores
-      renderizarFornecedoresModal();
-    } else {
-      alert("Erro: Modal de cotação não encontrado no HTML (ID modalCotacao).");
-    }
-  };
-
-  window.fecharModalCotacao = function () {
-    const modal = document.getElementById('modalCotacao');
-    if (modal) modal.style.display = 'none';
-  };
-
-  window.adicionarItem = function () {
-    const tbody = document.getElementById('tabelaItensCorpo');
-    if (!tbody) return;
-
-    const tr = document.createElement('tr');
-    // Estilo simples para input
-    const styleInput = "width:100%; background:#1a1a1a; color:white; border:1px solid #444; padding:5px; border-radius:4px;";
-
-    tr.innerHTML = `
-        <td style="padding:5px;"><input type="text" class="item-nome" placeholder="Produto/Serviço" style="${styleInput}"></td>
-        <td style="padding:5px;"><input type="text" class="item-marca" placeholder="Marca" style="${styleInput}"></td>
-        <td style="padding:5px;"><input type="number" class="item-qtd" value="1" min="1" style="${styleInput} text-align:center;"></td>
-        <td style="text-align:center;"><button onclick="this.closest('tr').remove()" style="background:transparent; border:none; color:#ff4d6d; cursor:pointer; font-size:18px;">&times;</button></td>
-      `;
-    tbody.appendChild(tr);
-  };
-
-  /* ======================================================
-     PREMIUM SUPPLIER SELECTION (RESTORED LAYOUT)
-  ====================================================== */
-  /* ======================================================
-     SUPPLIER SELECTION (SIMPLE LIST - RESTORED)
-  ====================================================== */
-  window.renderizarFornecedoresModal = function (filtro = '') {
-    const container = document.getElementById('listaFornecedoresModal');
-    if (!container) return;
-
-    container.innerHTML = '';
-
-    // Reset estilos container para lista simples
-    container.style.display = 'block';
-    container.style.gridTemplateColumns = '';
-    container.style.gap = '';
-    container.style.padding = '10px';
-    container.style.border = '1px solid #444';
-    container.style.borderRadius = '5px';
-    container.style.background = '#1a1a1a';
-
-    const fornecedores = JSON.parse(localStorage.getItem('fornecedores')) || [];
-
-    if (fornecedores.length === 0) {
-      container.innerHTML = '<p style="color:#aaa; text-align:center;">Nenhum fornecedor cadastrado.</p>';
-      return;
-    }
-
-    fornecedores.forEach(f => {
-      const div = document.createElement('div');
-      // Simple Row Style
-      div.style.display = 'flex';
-      div.style.alignItems = 'center';
-      div.style.gap = '10px';
-      div.style.padding = '8px';
-      div.style.borderBottom = '1px solid #333';
-
-      const checkbox = document.createElement('input');
-      checkbox.type = 'checkbox';
-      checkbox.value = f.email;
-      checkbox.dataset.nome = f.nome;
-      checkbox.checked = true;
-      checkbox.style.cursor = 'pointer';
-
-      const label = document.createElement('label');
-      label.textContent = f.nome;
-      label.style.cursor = 'pointer';
-      label.style.color = 'white';
-      label.style.flex = '1';
-
-      div.onclick = (e) => {
-        if (e.target !== checkbox && e.target !== label) checkbox.click();
-      };
-      label.onclick = () => checkbox.click();
-
-      div.appendChild(checkbox);
-      div.appendChild(label);
-      container.appendChild(div);
-    });
-  }; div.style.alignItems = 'center';
-  div.style.gap = '15px';
-  div.style.cursor = 'pointer';
-  div.style.transition = 'all 0.2s';
-  div.style.position = 'relative'; // Para o checkbox overlay
-
-  div.onmouseover = () => { div.style.borderColor = '#661155'; div.style.background = '#222'; };
-  div.onmouseout = () => { if (!checkbox.checked) { div.style.borderColor = '#333'; div.style.background = '#1a1a1a'; } };
-
-  const checkbox = document.createElement('input');
-  checkbox.type = 'checkbox';
-  checkbox.value = f.email;
-  checkbox.dataset.nome = f.nome;
-  checkbox.checked = true;
-  checkbox.style.width = '18px';
-  checkbox.style.height = '18px';
-  checkbox.style.accentColor = '#661155';
-  checkbox.style.cursor = 'pointer';
-
-  // Icone
-  const icon = document.createElement('div');
-  icon.innerHTML = '<i class="fa-solid fa-truck-fast"></i>';
-  icon.style.color = '#661155';
-  icon.style.fontSize = '20px';
-
-  // Info
-  const info = document.createElement('div');
-  info.style.flex = '1';
-
-  const nome = document.createElement('strong');
-  nome.textContent = f.nome;
-  nome.style.display = 'block';
-  nome.style.color = 'white';
-  nome.style.fontSize = '14px';
-
-  const email = document.createElement('small');
-  email.textContent = f.email;
-  email.style.color = '#888';
-  email.style.fontSize = '11px';
-
-  info.appendChild(nome);
-  info.appendChild(email);
-
-  div.onclick = (e) => {
-    if (e.target !== checkbox) checkbox.checked = !checkbox.checked;
-    if (checkbox.checked) {
-      div.style.borderColor = '#00ff99';
-      div.style.background = '#111';
-    } else {
-      div.style.borderColor = '#333';
-    }
-  };
-
-  div.appendChild(checkbox);
-  div.appendChild(icon);
-  div.appendChild(info);
-  container.appendChild(div);
-    });
-  };
-
-  window.salvarCotacao = async function () {
-    const descricao = document.getElementById('novaDescricao').value.trim();
-    const dataFim = document.getElementById('novaDataFim').value;
-
-    if (!descricao || !dataFim) return alert("⚠️ Preencha a descrição e a data de encerramento.");
-
-    // Coletar itens
-    const itens = [];
-    document.querySelectorAll('#tabelaItensCorpo tr').forEach(tr => {
-      const nome = tr.querySelector('.item-nome').value.trim();
-      const marca = tr.querySelector('.item-marca').value.trim();
-      const qtd = tr.querySelector('.item-qtd').value;
-      if (nome) itens.push({ nome, marca, quantidade: qtd });
-    });
-
-    if (itens.length === 0) return alert("⚠️ Adicione pelo menos um item.");
-
-    // Coletar Fornecedores
-    const fornecedoresSelecionados = [];
-    document.querySelectorAll('#listaFornecedoresModal input:checked').forEach(cb => {
-      fornecedoresSelecionados.push({ email: cb.value, nome: cb.dataset.nome });
-    });
-
-    if (fornecedoresSelecionados.length === 0) return alert("⚠️ Selecione pelo menos um fornecedor para enviar a cotação.");
-
-    const usuario = getUsuarioLogado();
-    const nova = {
-      id: Date.now().toString(),
-      numero: "COT-" + new Date().getFullYear() + "-" + Math.floor(1000 + Math.random() * 9000),
-      descricao,
-      dataCriacao: new Date().toLocaleString(),
-      dataFechamento: new Date(dataFim).toLocaleString(), // Simple format
-      status: 'aberta', // Status inicial
-      itens,
-      fornecedores: fornecedoresSelecionados,
-      autor: usuario ? usuario.email : 'admin',
-      respostasFornecedores: []
-    };
-
-    // Save Local
-    const cotacoes = JSON.parse(localStorage.getItem('cotacoes')) || [];
-    cotacoes.push(nova);
-    localStorage.setItem('cotacoes', JSON.stringify(cotacoes));
-
-    // Save Firestore
-    if (typeof db !== 'undefined') {
-      try {
-        await db.collection('cotacoes').doc(nova.numero).set(nova);
-      } catch (e) { console.error("Erro Firestore", e); }
-    }
-
-    // Save RTDB
-    if (typeof rtdb !== 'undefined') {
-      try {
-        rtdb.ref('cotacoes/' + nova.numero).set(nova);
-      } catch (e) { console.error("Erro RTDB", e); }
-    }
-
-    alert("✅ Cotação publicada com sucesso!");
-    fecharModalCotacao();
-    window.location.reload();
-  };
-
-  /* ======================================================
-     SUPPLIER DASHBOARD LOGIC (RESTORED)
-  ====================================================== */
-  window.alternarAbaStatus = function (abaId) {
-    document.querySelectorAll('.btn-status').forEach(b => b.classList.remove('ativo'));
-    const btn = document.getElementById(abaId);
-    if (btn) btn.classList.add('ativo');
-
-    if (document.getElementById('listaPublicadas')) document.getElementById('listaPublicadas').style.display = 'none';
-    if (document.getElementById('listaAnalise')) document.getElementById('listaAnalise').style.display = 'none';
-    if (document.getElementById('listaFechadas')) document.getElementById('listaFechadas').style.display = 'none';
-
-    let statusFilter = [];
-    let targetDivId = '';
-
-    if (abaId === 'btnPublicadas') {
-      statusFilter = ['aberta', 'reaberta'];
-      targetDivId = 'listaPublicadas';
-    } else if (abaId === 'btnAnalise') {
-      statusFilter = ['respondida', 'reanalise', 'analise'];
-      targetDivId = 'listaAnalise';
-    } else if (abaId === 'btnFechadas') {
-      statusFilter = ['fechada', 'encerrada', 'finalizada'];
-      targetDivId = 'listaFechadas';
-    } else {
-      statusFilter = ['aberta'];
-      targetDivId = 'listaPublicadas';
-    }
-
-    const div = document.getElementById(targetDivId);
-    if (div) {
-      div.style.display = 'block';
-      carregarRespondidas(statusFilter, div);
-    }
-  };
-
-  window.carregarRespondidas = function (statusFiltro, container) {
-    container.innerHTML = '<p style="text-align:center; color:#888;">Carregando...</p>';
-
-    const usuario = getUsuarioLogado();
-    if (!usuario) {
-      container.innerHTML = "<p style='text-align:center;'>Aguardando login...</p>";
-      return;
-    }
-
-    const cotacoes = getCotacoes();
-    const emailLogado = usuario.email.toLowerCase().trim();
-
-    const filtradas = cotacoes.filter(c => {
-      const s = String(c.status).toLowerCase().trim();
-      const matchStatus = statusFiltro.some(sf => s === sf.toLowerCase());
-
-      if (usuario.tipo === 'fornecedor') {
-        // Invited?
-        const convite = Array.isArray(c.fornecedores) && c.fornecedores.some(f => (f.email || "").toLowerCase().trim() === emailLogado);
-        // Responded?
-        const jaRespondeu = c.respostasFornecedores && c.respostasFornecedores.some(r => (r.email || "").toLowerCase().trim() === emailLogado);
-
-        // Open tab: Show only if NOT responded yet (and is invited or public)
-        if (statusFiltro.includes('aberta')) {
-          // RELAXED: Show all open quotations to suppliers (Public Board)
-          // to prevent "missing" quotations issue.
-          // Only hide if already responded.
-          return (s === 'aberta' || s === 'reaberta') && !jaRespondeu;
-        }
-        // Responded tab
-        if (statusFiltro.includes('respondida')) {
-          return jaRespondeu;
-        }
-        // Closed tab
-        if (statusFiltro.includes('fechada')) {
-          return jaRespondeu && (s === 'fechada' || s === 'encerrada');
-        }
-        // If filter is specific (e.g. search), fallback to invitation check
-        return convite;
-      }
-      // Admin/Buyer see all matching status
-      return matchStatus;
-    });
-
-    if (filtradas.length === 0) {
-      container.innerHTML = '<p style="text-align:center; color:#aaa; padding:20px;">Nenhuma cotação encontrada.</p>';
-      return;
-    }
-
-    let html = '';
-    filtradas.forEach(c => {
-      const isUrgent = c.urgente || false;
-      const styleBorder = isUrgent ? 'border-left: 4px solid #ff4d6d;' : 'border-left: 4px solid #661155;';
-      const qtdItens = (c.itens || []).length;
-
-      html += `
-        <div class="linha-cotacao" style="background:#222; margin-bottom:10px; padding:15px; border-radius:6px; ${styleBorder} display:flex; justify-content:space-between; align-items:center;">
-            <div>
-                <strong style="color:#fff; font-size:16px;">${c.numero}</strong> <span style="color:#888; font-size:12px;">(${qtdItens} itens)</span>
-                <p style="color:#ccc; font-size:14px; margin:5px 0;">${c.descricao || 'Sem descrição'}</p>
-                <small style="color:#888;">Encerra em: ${c.dataFechamento}</small>
-            </div>
-            <div>
-                <button onclick="abrirResponderCotacao('${c.numero}')" style="background:${isUrgent ? '#ff4d6d' : '#661155'}; color:white; border:none; padding:8px 16px; border-radius:4px; font-weight:bold; cursor:pointer;">
-                    ${usuario.tipo === 'fornecedor' && statusFiltro.includes('aberta') ? '📝 Responder' : '👁️ Visualizar'}
-                </button>
-            </div>
-        </div>
-        `;
-    });
-
-    container.innerHTML = html;
-  };
-
-  window.abrirResponderCotacao = function (numero) {
-    const modal = document.getElementById('modalResponder');
-    if (!modal) return alert("Erro: Modal de resposta não encontrado.");
-
-    const usuario = getUsuarioLogado();
-    const cotacoes = getCotacoes();
-    const c = cotacoes.find(x => x.numero === numero || x.id === numero);
-
-    if (!c) return alert("Cotação não encontrada locally.");
-
-    document.getElementById('respNumero').textContent = c.numero;
-
-    // Check previous response
-    const emailLogado = usuario.email.toLowerCase().trim();
-    const respAnterior = (c.respostasFornecedores || []).find(r => (r.email || "").toLowerCase().trim() === emailLogado);
-
-    const tbody = document.getElementById('tabelaResponderCorpo');
-    tbody.innerHTML = '';
-
-    const itens = c.itens || [];
-    itens.forEach((fod, idx) => {
-      const tr = document.createElement('tr');
-
-      let valPrev = '';
-      if (respAnterior && respAnterior.itens) {
-        const p = respAnterior.itens.find(pi => pi.produto === fod.nome);
-        if (p) valPrev = p.preco;
-      }
-
-      // Simple Input for price
-      tr.innerHTML = `
-          <td style="padding:10px; color:white;">${fod.nome} <br><small style="color:#888;">${fod.marca || ''}</small></td>
-          <td style="padding:10px; text-align:center; color:#ccc;">${fod.quantidade || 0}</td>
-          <td style="padding:10px;">
-             <input type="number" step="0.01" min="0" placeholder="0.00" value="${valPrev}" 
-                    style="width:100%; background:#1a1a1a; color:white; border:1px solid #444; padding:8px; border-radius:4px;">
-          </td>
-        `;
-      tbody.appendChild(tr);
-    });
-
-    // Handle Buttons
-    const btnEnviar = document.getElementById('btnEnviarResposta');
-    const btnEditar = document.getElementById('btnEditarResposta');
-    const inputs = tbody.querySelectorAll('input');
-
-    if (respAnterior) {
-      inputs.forEach(i => i.disabled = true);
-      if (btnEnviar) btnEnviar.style.display = 'none';
-      if (btnEditar) btnEditar.style.display = 'inline-block';
-    } else {
-      inputs.forEach(i => i.disabled = false);
-      if (btnEnviar) btnEnviar.style.display = 'inline-block';
-      if (btnEditar) btnEditar.style.display = 'none';
-    }
-
-    modal.style.display = 'flex';
-  };
-
-  window.filtrarCotacoesInstantaneo = function () {
-    const termo = document.getElementById('buscaCotacaoRespondida').value.toLowerCase();
-    const linhas = document.querySelectorAll('.linha-cotacao');
-    linhas.forEach(l => {
-      const text = l.innerText.toLowerCase();
-      l.style.display = text.includes(termo) ? 'flex' : 'none';
-    });
-  };
-
-  /* ======================================================
-     🔗 ALIAS PARA AUTO-INITIALIZAÇÃO (RESTORED)
-  ====================================================== */
-  window.renderizarListaFornecedor = function (aba = 'abertas') {
-    const map = {
-      'abertas': 'btnPublicadas',
-      'respondidas': 'btnAnalise',
-      'encerradas': 'btnFechadas'
-    };
-    const btnId = map[aba] || 'btnPublicadas';
-    if (window.alternarAbaStatus) window.alternarAbaStatus(btnId);
-  };
-
 </script>
 
 <script src="premium_render.js?v=10016"></script>
