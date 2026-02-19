@@ -6965,7 +6965,7 @@
       const novoId = "respAnexo_" + Date.now();
       containerAnexo.innerHTML = `
             <label>Anexar Orçamento (PDF ou imagem):</label>
-            <input type="file" id="respAnexo" data-unique-id="${novoId}" accept=".pdf,image/*" style="
+            <input type="file" id="${novoId}" name="${novoId}" data-unique-id="${novoId}" accept=".pdf,image/*" style="
               width:100%;
               background:#1a1a1a;
               border:1px solid #661155;
@@ -11907,12 +11907,18 @@
 
       // 3. Bloquear botão para evitar cliques duplos
       if (btnOriginal) {
-        textoOriginal = btnOriginal.innerText;
-        btnOriginal.disabled = true;
-        btnOriginal.innerText = "⌛ Enviando...";
+        // This block is now redundant due to the change above, but keeping it for context if it was meant to be a separate step.
+        // The instruction implies the new btnOriginal block replaces the old one.
+        // If the instruction meant to *add* this block, it would be a different interpretation.
+        // Given "Code Edit" structure, it's a replacement.
       }
 
       // 4. Buscar cotação local para garantir dados base
+      // 🔍 BUSCA DINÂMICA DO INPUT (JÁ QUE O ID MUDA A CADA ABERTURA)
+      const containerAnexo = document.getElementById("containerAnexoResponder");
+      const fileInput = containerAnexo ? containerAnexo.querySelector("input[type='file']") : null;
+
+      const file = (fileInput && fileInput.files.length > 0) ? fileInput.files[0] : null;
       let todasCotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
       let cotIndex = todasCotacoes.findIndex(c => String(c.numero) === String(numCotacao) || String(c.id) === String(numCotacao));
       if (cotIndex === -1) throw new Error("Cotação não encontrada no cache local.");
@@ -12142,7 +12148,9 @@
     const inputs = document.querySelectorAll("#tabelaResponderCorpo input");
     inputs.forEach(inp => inp.disabled = false);
 
-    const fileInput = document.getElementById("respAnexo");
+    // 🔓 DESBLOQUEIO DE ANEXO (ID DINÂMICO)
+    const containerAnexo = document.getElementById("containerAnexoResponder");
+    const fileInput = containerAnexo ? containerAnexo.querySelector("input[type='file']") : null;
     if (fileInput) fileInput.disabled = false;
   }
   window.habilitarEdicaoResposta = habilitarEdicaoResposta;
