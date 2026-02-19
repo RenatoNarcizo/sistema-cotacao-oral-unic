@@ -12172,7 +12172,7 @@
 
           if (!existe) {
             arquivos.push(novoAnexo);
-            await docRef.set({ arquivos: arquivos }, { merge: true });
+            await globalDocRef.set({ arquivos: arquivos }, { merge: true });
           }
         }
       }
@@ -12256,7 +12256,7 @@
      👁️ VISUALIZAR DOCUMENTOS (STRICT MODE - ISOLADO)
      Garante que só abrimos documentos desta cotação específica.
   ====================================================== */
-  window.visualizarDocumentos = function (idCotacao, emailFornecedor) {
+  window.visualizarDocumentos = async function (idCotacao, emailFornecedor) {
     console.log(`👁️ Abrindo documentos: COT ${idCotacao}`);
 
     let modal = document.getElementById("modalVisualizarDocumentos");
