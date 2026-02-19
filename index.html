@@ -5223,7 +5223,10 @@
     if (btnEnviar) btnEnviar.style.display = 'none';
     if (btnEditar) btnEditar.style.display = 'none';
     inputs.forEach(i => i.disabled = true);
-    if (fileInput) fileInput.disabled = true;
+    if (fileInput) {
+      fileInput.disabled = true;
+      fileInput.value = ""; // 🧹 Garante que o input comece vazio (Fix Replicação)
+    }
 
     if (modo === 'novo') {
       // Modo NOVO: Apenas Enviar, Campos Abertos
@@ -6945,8 +6948,20 @@
     });
 
     // 🧹 LIMPEZA DE ARQUIVO (EFICAZ PARA NOVO UPLOAD)
+    // 🧹 LIMPEZA DE ARQUIVO ULTRA-FORÇADA (CLONE NODE)
+    // Isso remove referências internas do navegador que o .value="" às vezes falha em limpar
     const inputAnexo = document.getElementById("respAnexo");
-    if (inputAnexo) inputAnexo.value = "";
+    if (inputAnexo) {
+      try {
+        const novoInput = inputAnexo.cloneNode(true);
+        novoInput.value = "";
+        inputAnexo.parentNode.replaceChild(novoInput, inputAnexo);
+        console.log("🧹 Input de anexo recriado e limpo.");
+      } catch (e) {
+        console.warn("Falha ao clonar input, tentando limpeza padrão", e);
+        inputAnexo.value = "";
+      }
+    }
 
     const email = usuario.email.toLowerCase().trim();
     const chave = `resposta_${numero}_${email}`;
@@ -11936,6 +11951,30 @@
               }
             }
           }
+        }
+      }
+
+      // 🔄 PRESERVAÇÃO DE ANEXO (Se não houve novo upload)
+      if (!anexoDados.url && !anexoDados.base64 && !anexoDados.nome) {
+        let respAnterior = cotacao.respostasFornecedores?.find(r =>
+          (r.email || "").toLowerCase().trim() === usuario.email.toLowerCase().trim()
+        );
+
+        // Fallback: Tenta buscar no LocalStorage individual se não achar na lista
+        if (!respAnterior) {
+          try {
+            const keyLS = `res_${numCotacao}_${usuario.email.toLowerCase().trim()}`;
+            const savedLS = JSON.parse(localStorage.getItem(keyLS));
+            if (savedLS) respAnterior = savedLS;
+          } catch (e) { }
+        }
+
+        // Verifica se existe anexo no objeto encontrado
+        const oldAnexo = respAnterior ? (respAnterior.anexo || (respAnterior.anexos && respAnterior.anexos[0])) : null;
+
+        if (oldAnexo && (oldAnexo.url || oldAnexo.base64)) {
+          console.log("♻️ Mantendo anexo anterior:", oldAnexo);
+          anexoDados = oldAnexo;
         }
       }
 
