@@ -7343,18 +7343,13 @@
       const respostas = Array.isArray(c.respostasFornecedores) ? c.respostasFornecedores : [];
       const qtdRespostas = usuario.tipo === "fornecedor" ? 1 : respostas.length;
       const qtdConvidados = Array.isArray(c.fornecedores) ? c.fornecedores.length : 0;
-      /* cleanup start */
-      /* cleaning... */
-      /* cleanup point 1 */
-      /* line removed */
 
-      /* line removed */
-      /* line removed */
+      const STATUS_NORMALIZADO = String(c.status).toLowerCase().trim();
 
       const bloco = document.createElement("div");
       bloco.className = "linha-cotacao";
 
-      if (c.status === "aberta") {
+      if (STATUS_NORMALIZADO === "aberta") {
         const agora = new Date();
         // 🛠️ FIX: Usa o parser global para evitar Invalid Date
         const fim = window.parseDateBR ? window.parseDateBR(c.dataFechamento) : new Date(c.dataFechamento);
@@ -7426,9 +7421,33 @@
         `;
       }
 
+      // List each quotation
       container.appendChild(bloco);
     });
   }
+
+  /* ======================================================
+     🔄 ALIAS DE COMPATIBILIDADE (AUTO-LOAD)
+  ====================================================== */
+  window.renderizarListaFornecedor = function (aba = 'abertas') {
+    const map = {
+      'abertas': 'btnPublicadas',
+      'respondidas': 'btnAnalise',
+      'encerradas': 'btnFechadas'
+    };
+    const btnId = map[aba] || 'btnPublicadas';
+    if (window.alternarAbaStatus) window.alternarAbaStatus(btnId);
+  };
+
+  // 🚀 AUTO-INICIALIZAÇÃO (GARANTIA DE LISTA)
+  document.addEventListener("DOMContentLoaded", () => {
+    const usuario = JSON.parse(sessionStorage.getItem("usuario_logado"));
+    if (usuario && usuario.tipo === 'fornecedor') {
+      setTimeout(() => {
+        if (window.alternarAbaStatus) window.alternarAbaStatus('btnPublicadas');
+      }, 500); // Pequeno delay garante carga do DOM
+    }
+  });
 
 
   /* function abrirTela movida para consolidação no final do script */
