@@ -7009,17 +7009,7 @@
      Redireciona para renderizarTabelaAnalise para garantir
      lógica única e correção de bugs visuais.
   ====================================================== */
-  window.analisarCotacao = function (numero) {
-    const modal = document.getElementById("modalAnaliseCotacao");
-    if (modal) {
-      // Garante estado inicial
-      modal.style.display = "flex";
-      document.body.style.overflow = "hidden"; // 🔒 Lock background scroll
-
-      // Renderiza usando a função principal mais completa
-      renderizarTabelaAnalise(numero);
-    }
-  };
+  /* window.analisarCotacao foi movida para a seção de consolidação final */
 
   window.fecharModalAnalise = function () {
     document.getElementById("modalAnaliseCotacao").style.display = "none";
@@ -8290,11 +8280,7 @@
 
 <script>
 
-  function abrirAnaliseCotacao(id) {
-    document.getElementById('modalAnaliseCotacao').style.display = 'flex';
-    renderizarTabelaAnalise(id);
-  }
-  window.analisarCotacao = abrirAnaliseCotacao;
+  /* abrirAnaliseCotacao foi removida por redundância */
 
   function fecharModalAnalise() {
     document.getElementById('modalAnaliseCotacao').style.display = 'none';
@@ -12254,7 +12240,7 @@
   window.iniciarOuvinteRTDB = iniciarOuvinteRTDB;
 </script>
 
-<script src="premium_render.js?v=10016"></script>
+<script src="premium_render.js?v=10020"></script>
 </body>
 
 </html>
