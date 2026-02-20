@@ -6879,11 +6879,20 @@
     const email = usuario.email.toLowerCase().trim();
     // PADRONIZAÇÃO DE CHAVE: Usar 'res_' consistentemente
     const chave = `res_${numero}_${email}`;
-    const respostaRaw = localStorage.getItem(chave);
+    let respostaRaw = localStorage.getItem(chave);
+    let resposta = respostaRaw ? JSON.parse(respostaRaw) : null;
 
-    if (respostaRaw) {
-      const resposta = JSON.parse(respostaRaw);
+    // 🔴 MELHORIA: Se não achou no localStorage, busca no objeto da cotação (Nuvem)
+    if (!resposta && cotacao.respostasFornecedores) {
+      console.log("🔍 Resposta não encontrada no LocalStorage. Buscando nos dados da cotação...");
+      const respNuvem = cotacao.respostasFornecedores.find(r => (r.email || "").toLowerCase().trim() === email);
+      if (respNuvem) {
+        resposta = respNuvem;
+        console.log("✅ Resposta encontrada nos dados da cotação.");
+      }
+    }
 
+    if (resposta) {
       // 1. Restaurar Preços Robustamente (por nome do produto)
       (resposta.itens || []).forEach((item) => {
         // Encontra o index do produto na cotação atual
@@ -6906,20 +6915,25 @@
         const linkElem = document.createElement("div");
         linkElem.id = "respAnexoAtual";
         linkElem.className = "anexo-persistente-link"; // Nova classe para escapar do Janitor Script
-        linkElem.style = "margin-top:15px; padding:12px; background:rgba(0, 255, 153, 0.05); border:1px dashed #00ff99; border-radius:8px; text-align:center;";
+        linkElem.style = "margin-top:15px; padding:12px; background:rgba(0, 255, 153, 0.1); border:2px solid #00ff99; border-radius:8px; text-align:center; box-shadow: 0 0 10px rgba(0, 255, 153, 0.2);";
 
         const url = resposta.anexo.url || (resposta.anexo.base64 ? "#" : "");
         const nome = resposta.anexo.nome || "Documento Enviado";
 
         linkElem.innerHTML = `
-          <div style="color:#00ff99; font-size:13px; margin-bottom:8px; font-weight:bold;">
-            <i class="fa-solid fa-paperclip"></i> SEU ANEXO ATUAL
+          <div style="color:#00ff99; font-size:14px; margin-bottom:10px; font-weight:bold; text-transform:uppercase; letter-spacing:1px;">
+            <i class="fa-solid fa-paperclip"></i> SEU ANEXO ATUAL:
           </div>
-          <a href="${url}" ${resposta.anexo.url ? 'target="_blank"' : `onclick="abrirArquivoAnexo('${resposta.anexo.base64}', '${nome}'); return false;"`} 
-             style="display:inline-block; background:#00ff99; color:#000; padding:6px 15px; border-radius:20px; text-decoration:none; font-weight:bold; font-size:12px; transition:0.3s;">
-            <i class="fa-solid fa-file-pdf"></i> ${nome}
-          </a>
-          <div style="color:#777; font-size:10px; margin-top:8px;">(Selecione um novo arquivo para substituir este)</div>
+          <div style="display:flex; align-items:center; justify-content:center; gap:10px;">
+            <a href="${url}" ${resposta.anexo.url ? 'target="_blank"' : `onclick="abrirArquivoAnexo('${resposta.anexo.base64}', '${nome}'); return false;"`} 
+               style="display:inline-block; background:#00ff99; color:#000; padding:8px 20px; border-radius:25px; text-decoration:none; font-weight:bold; font-size:13px; transition:0.3s; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+              <i class="fa-solid fa-file-pdf"></i> ${nome}
+            </a>
+            <span style="font-size:11px; color:#aaa;">(Enviado em ${resposta.data ? new Date(resposta.data).toLocaleDateString() : 'data ignorada'})</span>
+          </div>
+          <div style="color:#888; font-size:11px; margin-top:10px; border-top:1px solid #333; padding-top:8px;">
+            Deseja trocar? Selecione um novo arquivo acima.
+          </div>
         `;
         if (containerAnexo) containerAnexo.appendChild(linkElem);
       }
@@ -7751,18 +7765,10 @@
         botaoAcao = `<button onclick="abrirResponderCotacao('${cot.numero}', 'visualizar')" style="background:#555;">👁️ Detalhes</button>`;
       }
 
-      // Busca o anexo na resposta salva
-      const chaveRes = `res_${cot.numero}_${usuario.email.toLowerCase().trim()}`;
-      const respostaLocal = JSON.parse(localStorage.getItem(chaveRes));
-      const anexoInfo = (respostaLocal && respostaLocal.anexo && respostaLocal.anexo.nome)
-        ? `<div style="margin-top:4px; font-size:12px; color:#10b981;"><i class="fa-solid fa-paperclip"></i> Anexo: ${respostaLocal.anexo.nome}</div>`
-        : "";
-
       card.innerHTML = `
         <div class="info">
           <strong style="font-size:16px;">${cot.descricao || "Cotação #" + cot.numero}</strong> ${statusTexto}<br>
           <small style="color:#bbb;">Prazo: ${cot.dataFechamento}</small>
-          ${anexoInfo}
         </div>
         <div class="acoes">
            ${botaoAcao}
