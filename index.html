@@ -9803,20 +9803,25 @@
       'fechada': { listId: 'listaFechadas', btnId: 'btnFechadas' }
     };
 
-    const target = map[status];
-    if (!target) return;
-
-    const listEl = document.getElementById(target.listId);
-    const btnEl = document.getElementById(target.btnId);
-
-    // 1. Verifica se JÁ está aberto para fechar (Toggle OFF)
-    if (listEl && listEl.style.display === "block") {
-      listEl.style.display = "none";
-      if (btnEl) btnEl.classList.remove("ativo");
-      return; // Encerra aqui
+    // 🔑 Se chamado sem status, tenta encontrar o botão ativo
+    if (!status) {
+      const btnAtivo = document.querySelector('.btn-status.ativo');
+      if (btnAtivo) {
+        status = Object.keys(map).find(k => map[k].btnId === btnAtivo.id);
+      }
     }
 
-    // 2. Se não estava aberto, fecha todos os outros primeiro
+    const target = map[status];
+    if (!target) {
+      // Fallback: se não achou nada, força 'publicadas'
+      status = 'publicadas';
+    }
+
+    const currentTarget = map[status];
+    const listEl = document.getElementById(currentTarget.listId);
+    const btnEl = document.getElementById(currentTarget.btnId);
+
+    // 1. Se estivemos abrindo um NOVO status (ou refresh forçado), fecha outros
     Object.values(map).forEach(item => {
       const l = document.getElementById(item.listId);
       const b = document.getElementById(item.btnId);
@@ -9824,7 +9829,7 @@
       if (b) b.classList.remove("ativo");
     });
 
-    // 3. Abre o alvo (Toggle ON)
+    // 2. Abre o alvo (Toggle ON)
     if (listEl) {
       listEl.style.display = "block";
       if (btnEl) btnEl.classList.add("ativo");
@@ -9839,6 +9844,19 @@
       } else if (status === "fechada") {
         carregarRespondidas("fechada", listEl);
       }
+    }
+  };
+
+  /**
+   * 🔄 REFRESH DASHBOARD (BRIDGE)
+   * Redireciona para a aba ativa se estiver visível
+   */
+  window.carregarCotacoes = function () {
+    console.log("🔄 carregarCotacoes (Refresh Bridge) acionado...");
+    const dashRespondidas = document.getElementById("cotacoesRespondidas");
+    if (dashRespondidas && dashRespondidas.style.display !== "none") {
+      // Refresh da aba ativa
+      toggleListaRespondidas();
     }
   };
 
@@ -11397,12 +11415,6 @@
   // 🔄 OVERRIDE RUNTIME
   window.publicarCotacao = publicarCotacaoV2;
 
-  // 🛡️ HELPER GET (Garante lista)
-  window.getCotacoes = function () {
-    try {
-      return JSON.parse(localStorage.getItem("cotacoes")) || [];
-    } catch (e) { return []; }
-  };
   console.log("🚀 PATCH V2 APLICADO: Funcionalidade de publicação otimizada.");
 
   /* ======================================================
