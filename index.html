@@ -11948,15 +11948,15 @@
       modal.id = "modalVisualizarDocumentos";
       modal.className = "modal";
       modal.innerHTML = `
-            <div class="modal-content" style="max-width: 850px; background:#000; color:#fff; border:1px solid #661155; border-radius:12px; padding:0; overflow:hidden; box-shadow: 0 0 40px rgba(0,0,0,0.9);">
-                <div style="background:#500a40; padding:15px 20px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #661155;">
-                   <h2 style="color:#fff; margin:0; font-size:18px; display:flex; align-items:center; gap:10px;">
-                      <i class="fa-solid fa-folder-tree" style="color:#00ff99;"></i> 
+            <div class="modal-content" style="max-width: 900px; width: 95%; background:#000; color:#fff; border:1px solid #661155; border-radius:12px; padding:0; overflow:hidden; box-shadow: 0 0 30px rgba(102,17,85,0.4); font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;">
+                <div style="background:#500a40; padding:18px 25px; display:flex; justify-content:space-between; align-items:center;">
+                   <h2 style="color:#fff; margin:0; font-size:18px; font-weight:700; display:flex; align-items:center; gap:12px; letter-spacing: 0.5px;">
+                      <i class="fa-solid fa-folder-open" style="color:#3ab9b6;"></i> 
                       Documentos da Cotação #${idCotacao}
                    </h2>
-                   <span class="close" onclick="document.getElementById('modalVisualizarDocumentos').style.display='none'" style="color:#fff; font-size:24px; cursor:pointer; opacity:0.8; transition:0.2s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.8">&times;</span>
+                   <span class="close" onclick="document.getElementById('modalVisualizarDocumentos').style.display='none'" style="color:#fff; font-size:28px; cursor:pointer; opacity:0.7; transition:0.2s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.7">&times;</span>
                 </div>
-                <div id="listaDocumentosAnexados" style="padding:20px; max-height:70vh; overflow-y:auto;"></div>
+                <div id="listaDocumentosAnexados" style="padding:0; padding-bottom:20px; max-height:75vh; overflow-y:auto; background:#111;"></div>
             </div>`;
       document.body.appendChild(modal);
     }
@@ -12022,80 +12022,73 @@
     }
 
     if (todasRespostas.length === 0) {
-      container.innerHTML = "<p style='text-align:center; color:#777; padding:40px;'>Nenhuma resposta ou anexo encontrado para esta cotação.</p>";
+      container.innerHTML = "<p style='text-align:center; color:#777; padding:60px; font-weight:600;'>Nenhuma resposta ou anexo detectado para esta cotação.</p>";
+      console.warn(`⚠️ [DOCS] Nenhuma resposta encontrada para COT ${idCotacao}`);
       return;
     }
 
-    // 2. RENDER (TABLE PATTERN - PREMIUM)
+    // 2. RENDER (TABLE PATTERN - PIXEL PERFECT)
     let tableHTML = `
-      <table style="width:100%; border-collapse:collapse; color:#eee; font-size:14px; background:#0a0a0a;">
+      <table style="width:100%; border-collapse:collapse; color:#fff; font-size:13px; background:#111; table-layout: fixed; border: 1px solid #222;">
         <thead>
-          <tr style="background:#1a1a1a; border-bottom:2px solid #333; color:#aaa; text-transform:uppercase; font-size:11px; letter-spacing:1px;">
-            <th style="padding:15px; text-align:left;">Fornecedor</th>
-            <th style="padding:15px; text-align:center;">Arquivo(s) Detectado(s)</th>
-            <th style="padding:15px; text-align:right;">Ação</th>
+          <tr style="background:#1a1a1a; border-bottom:2px solid #333; color:#999; text-transform:uppercase; font-size:11px; font-weight:800; letter-spacing:1px;">
+            <th style="padding:18px 25px; text-align:left; width: 40%;">FONTE / FORNECEDOR</th>
+            <th style="padding:18px 25px; text-align:center; width: 40%;">ARQUIVOS DETECTADOS</th>
+            <th style="padding:18px 25px; text-align:right; width: 20%;">AÇÕES</th>
           </tr>
         </thead>
         <tbody>
     `;
 
-    todasRespostas.forEach(r => {
-      // 🛠️ Extração robusta de anexos
-      let validAnexos = [];
+    console.log(`🔍 [DOCS] Renderizando ${todasRespostas.length} respostas para COT ${idCotacao}`);
 
-      // Caso 1: Array de anexos
+    todasRespostas.forEach((r, idx) => {
+      let validAnexos = [];
       if (Array.isArray(r.anexos)) {
         r.anexos.forEach(a => { if (a && (a.url || a.base64 || a.link)) validAnexos.push(a); });
       }
-
-      // Caso 2: Objeto único de anexo
       if (r.anexo && (r.anexo.url || r.anexo.base64 || r.anexo.link)) {
-        // Evita duplicatas se já estiver no array
         const jaExiste = validAnexos.some(a => (a.url && a.url === r.anexo.url) || (a.base64 && a.base64 === r.anexo.base64));
         if (!jaExiste) validAnexos.push(r.anexo);
       }
-
-      // Caso 3: Base64 direto na raiz
       if (r.base64 && !validAnexos.some(a => a.base64 === r.base64)) {
-        validAnexos.push({ nome: r.anexoNome || r.nomeAnexo || "Arquivo Local", base64: r.base64 });
+        validAnexos.push({ nome: r.anexoNome || r.nomeAnexo || "Documento Local", base64: r.base64 });
       }
 
-      // Se mesmo após a varredura não houver nada, não renderiza a linha
-      if (validAnexos.length === 0) return;
+      if (validAnexos.length === 0) {
+        console.log(`   - Paticipante [${idx}] ${r.fornecedor || r.email} ok, mas sem anexos.`);
+        return;
+      }
 
-      const fornecedorNome = r.fornecedor || r.email || "Desconhecido";
+      const fornecedorNome = r.fornecedor || r.email || "Fornecedor Desconhecido";
 
       tableHTML += `
-        <tr style="border-bottom:1px solid #222; transition: 0.2s;" onmouseover="this.style.background='#151515'" onmouseout="this.style.background='transparent'">
-          <td style="padding:15px;">
-            <div style="font-weight:bold; color:#00ff99; font-size:15px;">${fornecedorNome}</div>
-            <div style="font-size:11px; color:#666;">${r.email || ""}</div>
+        <tr style="border-bottom:1px solid #222; transition: 0.2s;">
+          <td style="padding:18px 25px; vertical-align: top;">
+            <div style="font-weight:800; color:#3ab9b6; font-size:14px; margin-bottom:4px; text-transform: uppercase;">${fornecedorNome}</div>
+            <div style="font-size:11px; color:#555; word-break: break-all;">${r.email || "E-mail não informado"}</div>
           </td>
-          <td style="padding:15px; text-align:center;">
+          <td style="padding:18px 25px; text-align:center; vertical-align: middle;">
       `;
 
-      // Renderiza os nomes/icones dos anexos
       validAnexos.forEach(anexo => {
         const nome = anexo.nome || "Anexo";
         const isBase64 = !!(anexo.base64 && !anexo.url);
-
         tableHTML += `
-          <div style="margin:6px 0; display:flex; align-items:center; justify-content:center; gap:8px;">
-            <i class="fa-solid ${isBase64 ? 'fa-file-shield' : 'fa-file-pdf'}" style="color:${isBase64 ? '#fbbf24' : '#ff4444'};"></i> 
-            <span style="font-size:12px; color:#ccc;">${nome}</span>
-            ${isBase64 ? '<small style="color:#777; font-size:9px;">(LOCAL)</small>' : ''}
+          <div style="margin:6px 0; display:flex; align-items:center; justify-content:center; gap:10px;">
+            <i class="fa-solid ${isBase64 ? 'fa-file-shield' : 'fa-file-pdf'}" style="color:${isBase64 ? '#fbbf24' : '#ff4444'}; font-size:16px;"></i> 
+            <span style="font-size:12px; color:#fff; font-weight:600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 250px;" title="${nome}">${nome}</span>
           </div>`;
       });
 
-      tableHTML += `</td><td style="padding:15px; text-align:right;">`;
+      tableHTML += `</td><td style="padding:18px 25px; text-align:right; vertical-align: middle;">`;
 
-      // Renderiza os botões de ação
       validAnexos.forEach(anexo => {
         if (anexo.url || anexo.link) {
           const url = anexo.url || anexo.link;
-          tableHTML += `<a href="${url}" target="_blank" class="btn-premium-mini" title="Abrir em Nuvem" style="background:#3ab9b6; color:#000; padding:6px 10px; border-radius:6px; font-size:12px; text-decoration:none; margin-left:6px; display:inline-flex; align-items:center; gap:4px; font-weight:bold;"><i class="fa-solid fa-cloud-arrow-down"></i> ABRIR</a>`;
+          tableHTML += `<a href="${url}" target="_blank" style="background:#3ab9b6; color:#000; padding:6px 14px; border-radius:6px; font-size:10px; text-decoration:none; margin-left:8px; display:inline-flex; align-items:center; gap:6px; font-weight:900; text-transform:uppercase; box-shadow: 0 2px 0 #2a8f8c;"><i class="fa-solid fa-cloud-arrow-down"></i> ABRIR</a>`;
         } else if (anexo.base64) {
-          tableHTML += `<button onclick="window.abrirArquivoDireto('${anexo.base64}', '${anexo.nome || 'Anexo'}')" class="btn-premium-mini" title="Visualizar Arquivo Local" style="background:#fbbf24; color:#000; padding:6px 10px; border-radius:6px; border:none; cursor:pointer; font-size:12px; margin-left:6px; display:inline-flex; align-items:center; gap:4px; font-weight:bold;"><i class="fa-solid fa-eye"></i> VER</button>`;
+          tableHTML += `<button onclick="window.abrirArquivoDireto('${anexo.base64}', '${anexo.nome || 'Anexo'}')" style="background:#fbbf24; color:#000; padding:6px 14px; border-radius:6px; border:none; cursor:pointer; font-size:10px; margin-left:8px; display:inline-flex; align-items:center; gap:6px; font-weight:900; text-transform:uppercase; box-shadow: 0 2px 0 #b4891b;"><i class="fa-solid fa-eye"></i> VER</button>`;
         }
       });
 
