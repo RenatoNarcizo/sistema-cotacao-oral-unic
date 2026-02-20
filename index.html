@@ -6706,365 +6706,6 @@
 
 
 
-  /* As funções mostrarAbaCotacao e carregarCotacoes foram removidas desta seção para evitar conflitos com as versões unificadas localizadas mais abaixo no arquivo. */
-
-
-
-
-  /* ======================================================
-     🚚 FORNECEDOR — ABRIR COTAÇÃO (RESPONDER / DETALHES)
-  ====================================================== */
-
-  let cotacaoRespostaAtual = null;
-
-  function verDetalhesCotacao(numero) {
-    // Reutiliza a função de abrir em modo de visualização
-    abrirResponderCotacao(numero, 'visualizar');
-  }
-
-  function abrirResponderCotacao(numero, modo = "novo") {
-    const usuario = getUsuarioLogado();
-    if (!usuario || !usuario.email) {
-      alert("Usuário não identificado.");
-      return;
-    }
-
-    const cotacoes = getCotacoes();
-    const cotacao = cotacoes.find(c => c.numero === numero);
-
-    if (!cotacao) {
-      alert("Cotação não encontrada.");
-      return;
-    }
-
-    cotacaoRespostaAtual = numero;
-
-    // 🔴 FIX: Limpar anexo anterior para evitar replicação
-    const containerParaLimpar = document.getElementById("containerAnexoResponder");
-    const anexoInput = containerParaLimpar ? containerParaLimpar.querySelector("input[type='file']") : null;
-    if (anexoInput) { try { anexoInput.value = ''; } catch (e) { } }
-
-    // Limpa labels e links fantasmas
-    const ghostLabel = document.getElementById("respAnexoAtual");
-    if (ghostLabel) { ghostLabel.innerText = ''; ghostLabel.style.display = 'none'; }
-    const resAnexoLabel = document.getElementById('respAnexoLabel');
-    if (resAnexoLabel) resAnexoLabel.innerText = '';
-
-    console.log(`Abrindo resposta para: ${numero} (Anexos limpos)`);
-
-    document.getElementById("respNumero").innerText = cotacao.numero;
-    document.getElementById("respDescricao").innerText = cotacao.descricao || "-";
-    document.getElementById("respDataCriacao").innerText = cotacao.dataCriacao || "-";
-    document.getElementById("respDataFechamento").innerText =
-      formatarDataHoraBR(cotacao.dataFechamento);
-
-    /* ======================================================
-       ⏳ LÓGICA DO TIMER
-    ====================================================== */
-    const timerDisplay = document.getElementById("timerDisplay");
-
-    // Limpa timer anterior se houver
-    if (window.timerCotacaoInterval) {
-      clearInterval(window.timerCotacaoInterval);
-    }
-
-    function atualizarTimer() {
-      if (!cotacao.dataFechamento) {
-        if (timerDisplay) timerDisplay.innerText = "--";
-        return;
-      }
-
-      // Parser seguro da data (considerando o formato BR ou ISO)
-      let dataFim;
-      const valor = String(cotacao.dataFechamento).trim();
-      if (valor.includes('/')) {
-        const [data, hora] = valor.split(',');
-        const [dia, mes, ano] = data.trim().split('/');
-        const horaLimpa = (hora || "00:00:00").trim();
-        dataFim = new Date(`${ano}-${mes}-${dia}T${horaLimpa}`);
-      } else {
-        dataFim = new Date(valor);
-      }
-
-      const agora = new Date();
-      const diff = dataFim - agora;
-
-      if (diff <= 0) {
-        if (timerDisplay) {
-          timerDisplay.innerText = "EXPIRADO";
-          timerDisplay.style.color = "#ff5555";
-        }
-        clearInterval(window.timerCotacaoInterval);
-        // Opcional: Bloquear inputs se quiser
-        return;
-      }
-
-      const dias = Math.floor(diff / (1000 * 60 * 60 * 24));
-      const horas = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      const minutos = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-      const segundos = Math.floor((diff % (1000 * 60)) / 1000);
-
-      if (timerDisplay) {
-        timerDisplay.innerText = `${dias}d ${horas}h ${minutos}m ${segundos}s`;
-        timerDisplay.style.color = "#00ff99";
-      }
-    }
-
-    // Inicia imediatamente
-    atualizarTimer();
-    window.timerCotacaoInterval = setInterval(atualizarTimer, 1000);
-
-    /* ======================================================
-       FIM TIMER
-    ====================================================== */
-
-    const tbody = document.getElementById("tabelaResponderCorpo");
-    tbody.innerHTML = "";
-
-    cotacao.produtos.forEach((p, i) => {
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-      <td style="text-align: left; padding-left: 12px;">${p.nome}</td>
-      <td style="text-align: center;">${p.marca || "-"}</td>
-      <td style="text-align: center;">${p.quantidade}</td>
-      <td style="text-align: center;">
-        <div style="display:flex; align-items:center; background:#1a1a1a; border:1px solid #444; border-radius:4px; padding:0 12px; width:140px; margin:0 auto;">
-          <input type="text" id="preco_${i}" class="preco-input" data-produto="${p.nome}" 
-            oninput="window.mascararMoeda(this)" 
-            placeholder="R$ 0,00"
-            style="width: 100%; border:none; background:transparent; color:#fff; text-align:center; font-size:14px; outline:none; padding:10px 0; font-family:'Inter', sans-serif;">
-        </div>
-      </td>
-    `;
-      tbody.appendChild(tr);
-    });
-
-    // 🧹 LIMPEZA TOTAL (Substituição de DOM)
-    // 🧹 LIMPEZA TOTAL (NUCLEAR OPTION)
-    const containerAnexo = document.getElementById("containerAnexoResponder");
-    if (containerAnexo) {
-      const novoId = "respAnexo_" + Date.now();
-      containerAnexo.innerHTML = `
-        <label style="display:block; margin-bottom:8px; font-size:14px; color:#eee;">Anexar Orçamento (PDF ou imagem):</label>
-        <div style="display:flex; align-items:center; background:#111; border:1px solid #661155; border-radius:5px; padding:4px 10px; min-height:38px; width:100%; box-sizing:border-box;">
-          <!-- Botão PEQUENO (Estilo padrão solicitado) -->
-          <button type="button" id="btnFakeAnexo" onclick="document.getElementById('${novoId}').click()" style="
-            display:inline-block !important;
-            width:auto !important;
-            background:#efefef; 
-            color:#000; 
-            border:1px solid #767676; 
-            border-radius:2px; 
-            padding:2px 10px; 
-            font-size:13px; 
-            font-family: Arial, sans-serif;
-            cursor:pointer;
-            white-space:nowrap;
-            margin-right:12px;
-            box-sizing:border-box;
-          ">Escolher arquivo</button>
-          
-          <!-- Texto ao lado do botão -->
-          <span id="labelLocal_${novoId}" class="file-name-label" style="
-            font-size:13px; 
-            color:#aaa; 
-            font-family: Arial, sans-serif;
-            white-space:nowrap; 
-            overflow:hidden; 
-            text-overflow:ellipsis;
-            flex:1;
-          ">Nenhum arquivo escolhido</span>
-
-          <!-- Input Real (Escondido) -->
-          <input type="file" id="${novoId}" name="${novoId}" accept=".pdf,image/*" style="display:none;" 
-            onchange="const span = document.getElementById('labelLocal_${novoId}'); if(this.files.length){ span.innerText = this.files[0].name; span.style.color = '#fff'; } else { span.innerText = 'Nenhum arquivo escolhido'; span.style.color = '#aaa'; }">
-        </div>
-      `;
-      console.log("💎 Visual de Anexo restaurado (Layout Compacto): " + novoId);
-    }
-
-    const email = usuario.email.toLowerCase().trim();
-    // PADRONIZAÇÃO DE CHAVE: Usar 'res_' consistentemente
-    const chave = `res_${numero}_${email}`;
-    let respostaRaw = localStorage.getItem(chave);
-    let resposta = respostaRaw ? JSON.parse(respostaRaw) : null;
-
-    // 🔴 MELHORIA: Se não achou no localStorage, busca no objeto da cotação (Nuvem)
-    if (!resposta && cotacao.respostasFornecedores) {
-      console.log("🔍 Resposta não encontrada no LocalStorage. Buscando nos dados da cotação...");
-      const respNuvem = cotacao.respostasFornecedores.find(r => (r.email || "").toLowerCase().trim() === email);
-      if (respNuvem) {
-        resposta = respNuvem;
-        console.log("✅ Resposta encontrada nos dados da cotação.");
-      }
-    }
-
-    if (resposta) {
-      // 1. Restaurar Preços Robustamente (por nome do produto)
-      (resposta.itens || []).forEach((item) => {
-        // Encontra o index do produto na cotação atual
-        const idx = cotacao.produtos.findIndex(p => p.nome === item.produto || p.nome === item.nome);
-        if (idx !== -1) {
-          const input = document.getElementById("preco_" + idx);
-          if (input) {
-            const valNum = item.preco ?? item.valor ?? 0;
-            input.value = window.formatarMoedaBRL(valNum);
-          }
-        }
-      });
-
-      // 2. Mostrar Anexo Atual se existir (Injetar no Local do Texto do Navegador)
-      if (resposta.anexo && (resposta.anexo.url || resposta.anexo.base64)) {
-        const label = containerAnexo.querySelector('span[id^="labelLocal_"]');
-        if (label) {
-          const url = resposta.anexo.url || (resposta.anexo.base64 ? "#" : "");
-          const nome = resposta.anexo.nome || "Documento Enviado";
-
-          label.style.color = "#00ff99";
-          label.style.fontWeight = "bold";
-          label.style.cursor = "pointer";
-          label.innerHTML = `
-            <span onclick="event.stopPropagation(); ${resposta.anexo.url ? `window.open('${url}','_blank')` : `abrirArquivoAnexo('${resposta.anexo.base64}', '${nome}')`}" 
-               style="color:#00ff99; text-decoration:underline; pointer-events:auto;">
-              ${nome}
-            </span>
-          `;
-          label.title = "Clique para visualizar o arquivo atual";
-          label.onclick = (e) => { e.stopPropagation(); };
-        }
-      }
-    }
-
-    // 🧹 LIMPEZA DE "FANTASMAS" (Garantia de que nada extra aparece)
-    try {
-      const respAnexoAtual = document.getElementById("respAnexoAtual");
-      if (respAnexoAtual) respAnexoAtual.remove();
-    } catch (e) { }
-
-    // 🔑 CONTROLE DE MODO DEFINITIVO (Baseado no objeto 'resposta' unificado)
-    if (cotacao.prazoEncerrado) {
-      configurarModalResposta("encerrada");
-    } else if (resposta) { // 🔴 CORREÇÃO: Usa 'resposta' (Local ou Nuvem) em vez de 'respostaRaw'
-      configurarModalResposta("respondida");
-    } else {
-      configurarModalResposta("novo");
-    }
-
-    document.getElementById("modalResponder").style.display = "flex";
-  }
-
-
-
-  /* ======================================================
-     🔁 ALIAS DE COMPATIBILIDADE (NÃO REMOVER)
-  ====================================================== */
-  window.abrirPainelResponderCotacao = function (numero) {
-    abrirResponderCotacao(numero, "novo");
-  };
-
-  /* ======================================================
-     ❌ FECHAR MODAL RESPONDER (DEFINITIVO)
-  ====================================================== */
-  function fecharModalResponder() {
-    const modal = document.getElementById("modalResponder");
-    if (!modal) {
-      console.warn("modalResponder não encontrado");
-      return;
-    }
-
-    modal.style.display = "none";
-    document.body.style.overflow = "auto"; // 🔓 Unlock background scroll
-    cotacaoRespostaAtual = null;
-
-    // 🛑 Para o timer
-    if (window.timerCotacaoInterval) {
-      clearInterval(window.timerCotacaoInterval);
-      window.timerCotacaoInterval = null;
-    }
-
-    // 🔒 limpeza opcional
-    document
-      .querySelectorAll("#tabelaResponderCorpo input")
-      .forEach(inp => {
-        inp.value = "";
-        inp.disabled = false;
-      });
-  }
-
-  // 🔑 garante acesso global (IMPORTANTE)
-  window.fecharModalResponder = fecharModalResponder;
-
-
-  function habilitarEdicaoResposta() {
-    // libera inputs
-    document
-      .querySelectorAll("#tabelaResponderCorpo input")
-      .forEach(inp => inp.disabled = false);
-
-    const containerAnexo = document.getElementById("containerAnexoResponder");
-    const anexo = containerAnexo ? containerAnexo.querySelector("input[type='file']") : null;
-    if (anexo) anexo.disabled = false;
-
-    const btnFake = document.getElementById("btnFakeAnexo");
-    if (btnFake) {
-      btnFake.disabled = false;
-      btnFake.style.opacity = "1";
-      btnFake.style.cursor = "pointer";
-    }
-
-    // troca botões
-    document.getElementById("btnEditarResposta").style.display = "none";
-    document.getElementById("btnEnviarResposta").style.display = "inline-block";
-  }
-
-  function configurarModalResposta(modo = "novo") {
-    const inputs = document.querySelectorAll("#tabelaResponderCorpo input");
-    const btnEditar = document.getElementById("btnEditarResposta");
-    const btnEnviar = document.getElementById("btnEnviarResposta");
-
-    if (!btnEditar || !btnEnviar) return;
-
-    // reset
-    btnEditar.style.display = "none";
-    btnEnviar.style.display = "none";
-
-    const btnFake = document.getElementById("btnFakeAnexo");
-
-    if (modo === "novo") {
-      // 📬 ABERTA
-      inputs.forEach(i => i.disabled = false);
-      if (btnFake) { btnFake.disabled = false; btnFake.style.opacity = "1"; }
-      btnEnviar.style.display = "inline-block";
-      btnEnviar.innerText = "📤 Enviar Resposta";
-    }
-
-    if (modo === "respondida") {
-      // 📤 RESPONDIDA (VISUALIZA, MAS PODE EDITAR)
-      inputs.forEach(i => i.disabled = true);
-      if (btnFake) { btnFake.disabled = true; btnFake.style.opacity = "0.5"; btnFake.style.cursor = "not-allowed"; }
-      btnEditar.style.display = "inline-block";
-    }
-
-    if (modo === "editar") {
-      // ✏️ EDITANDO
-      inputs.forEach(i => i.disabled = false);
-      if (btnFake) { btnFake.disabled = false; btnFake.style.opacity = "1"; btnFake.style.cursor = "pointer"; }
-      btnEnviar.style.display = "inline-block";
-      btnEnviar.innerText = "📤 Enviar Resposta Editada";
-    }
-
-    if (modo === "encerrada") {
-      // 🔒 HISTÓRICO
-      inputs.forEach(i => i.disabled = true);
-      if (btnFake) { btnFake.disabled = true; btnFake.style.opacity = "0.5"; btnFake.style.cursor = "not-allowed"; }
-      // nenhum botão aparece
-    }
-  }
-  /* ======================================================
-     📋 CARREGAR COTAÇÕES RESPONDIDAS (AJUSTADA)
-     - Aceita string ou array de status
-     - Suporta: respondida / reanalise / aprovacao / fechada
-  ====================================================== */
   window.encerrarCotacaoManualmente = function (numero) {
     if (!confirm(`Deseja realmente encerrar a cotação #${numero} agora? Ela será movida para Análise.`)) return;
 
@@ -12064,40 +11705,173 @@
   }
   window.salvarRespostaComAnexo = salvarRespostaComAnexo;
 
+
   /* ======================================================
-     ✏️ HABILITAR EDIÇÃO DE RESPOSTA (VERSÃO CORRIGIDA)
-     ====================================================== */
-  function habilitarEdicaoResposta() {
-    console.log("✏️ Habilitando edição de resposta...");
+     🚚 FORNECEDOR — ABRIR COTAÇÃO (RESPONDER / DETALHES)
+     Versão Consolidada e Sanitizada
+  ====================================================== */
+  let cotacaoRespostaAtual = null;
+
+  window.abrirResponderCotacao = async function (numero, modo = "novo") {
+    console.log(`📂 Abrindo Painel de Resposta: COT ${numero} (Modo: ${modo})`);
+
+    const usuarioPre = sessionStorage.getItem("usuario_logado");
+    if (!usuarioPre) { alert("Usuário não logado."); return; }
+    const usuario = JSON.parse(usuarioPre);
+
+    const cotacoes = getCotacoes();
+    const cotacao = cotacoes.find(c => String(c.numero) === String(numero) || String(c.id) === String(numero));
+    if (!cotacao) { alert("Cotação não encontrada!"); return; }
+
+    cotacaoRespostaAtual = cotacao;
+
+    document.getElementById("respNumero").innerText = String(numero);
+    document.getElementById("respDescricao").innerText = cotacao.descricao || "-";
+
+    // ⏳ TIMER
+    const timerDisplay = document.getElementById("timerDisplay");
+    if (window.timerCotacaoInterval) clearInterval(window.timerCotacaoInterval);
+    function atualizarTimer() {
+      if (!cotacao.dataFechamento) { if (timerDisplay) timerDisplay.innerText = "--"; return; }
+      const dataFim = window.parseDateBR(cotacao.dataFechamento);
+      const agora = new Date();
+      const diff = dataFim - agora;
+      if (diff <= 0) {
+        if (timerDisplay) { timerDisplay.innerText = "EXPIRADO"; timerDisplay.style.color = "#ff5555"; }
+        clearInterval(window.timerCotacaoInterval);
+        return;
+      }
+      const dias = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const horas = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutos = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const segundos = Math.floor((diff % (1000 * 60)) / 1000);
+      if (timerDisplay) { timerDisplay.innerText = `${dias}d ${horas}h ${minutos}m ${segundos}s`; timerDisplay.style.color = "#00ff99"; }
+    }
+    atualizarTimer();
+    window.timerCotacaoInterval = setInterval(atualizarTimer, 1000);
+
+    // Tabela de Itens
+    const tbody = document.getElementById("tabelaResponderCorpo");
+    tbody.innerHTML = "";
+    (cotacao.produtos || []).forEach((p, i) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td style="text-align: left; padding-left: 12px;">${p.nome}</td>
+        <td style="text-align: center;">${p.marca || "-"}</td>
+        <td style="text-align: center;">${p.quantidade}</td>
+        <td style="text-align: center;">
+          <div style="display:flex; align-items:center; background:#1a1a1a; border:1px solid #444; border-radius:4px; padding:0 12px; width:140px; margin:0 auto;">
+            <input type="text" id="preco_${i}" class="preco-input" data-produto="${p.nome}" 
+              oninput="window.mascararMoeda(this)" 
+              placeholder="R$ 0,00"
+              style="width: 100%; border:none; background:transparent; color:#fff; text-align:center; font-size:14px; outline:none; padding:10px 0; font-family:'Inter', sans-serif;">
+          </div>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    // Sanitização e Recriação do Container de Anexo
+    const containerAnexo = document.getElementById("containerAnexoResponder");
+    if (containerAnexo) {
+      const novoId = "respAnexo_" + Date.now();
+      containerAnexo.innerHTML = `
+        <label style="display:block; margin-bottom:8px; font-size:14px; color:#eee;">Anexar Orçamento (PDF ou imagem):</label>
+        <div style="display:flex; align-items:center; background:#111; border:1px solid #661155; border-radius:5px; padding:4px 10px; min-height:38px; width:100%; box-sizing:border-box;">
+          <button type="button" id="btnFakeAnexo" onclick="document.getElementById('${novoId}').click()" style="
+            display:inline-block !important;
+            width:auto !important;
+            background:#efefef; 
+            color:#000; 
+            border:1px solid #767676; 
+            border-radius:2px; 
+            padding:2px 10px; 
+            font-size:13px; 
+            font-family: Arial, sans-serif;
+            cursor:pointer;
+            white-space:nowrap;
+            margin-right:12px;
+            box-sizing:border-box;
+          ">Escolher arquivo</button>
+          <span id="labelLocal_${novoId}" class="file-name-label" style="font-size:13px; color:#aaa; font-family: Arial, sans-serif; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1;">Nenhum arquivo escolhido</span>
+          <input type="file" id="${novoId}" name="${novoId}" accept=".pdf,image/*" style="display:none;" 
+            onchange="const span = document.getElementById('labelLocal_${novoId}'); if(this.files.length){ span.innerText = this.files[0].name; span.style.color = '#fff'; } else { span.innerText = 'Nenhum arquivo escolhido'; span.style.color = '#aaa'; }">
+        </div>
+      `;
+    }
+
+    // Recuperação da Resposta
+    const email = usuario.email.toLowerCase().trim();
+    const chave = `res_${numero}_${email}`;
+    let resposta = JSON.parse(localStorage.getItem(chave));
+    if (!resposta && cotacao.respostasFornecedores) {
+      resposta = cotacao.respostasFornecedores.find(r => (r.email || "").toLowerCase().trim() === email);
+    }
+
+    if (resposta) {
+      (resposta.itens || []).forEach(item => {
+        const idx = (cotacao.produtos || []).findIndex(p => p.nome === item.produto || p.nome === item.nome);
+        if (idx !== -1) {
+          const input = document.getElementById("preco_" + idx);
+          if (input) input.value = window.formatarMoedaBRL(item.preco ?? item.valor ?? 0);
+        }
+      });
+      if (resposta.anexo && (resposta.anexo.url || resposta.anexo.base64)) {
+        const label = containerAnexo ? containerAnexo.querySelector('span[id^="labelLocal_"]') : null;
+        if (label) {
+          const url = resposta.anexo.url || (resposta.anexo.base64 ? "#" : "");
+          const nome = resposta.anexo.nome || "Documento Enviado";
+          label.innerHTML = `<span onclick="event.stopPropagation(); ${resposta.anexo.url ? `window.open('${url}','_blank')` : `abrirArquivoAnexo('${resposta.anexo.base64}', '${nome}')`}" style="color:#00ff99; text-decoration:underline; font-weight:bold; cursor:pointer;">${nome}</span>`;
+        }
+      }
+    }
+
+    const m = (cotacao.prazoEncerrado) ? "encerrada" : (resposta ? (modo === "novo" ? "respondida" : modo) : "novo");
+    configurarModalResposta(m);
+    document.getElementById("modalResponder").style.display = "flex";
+  }
+
+  window.fecharModalResponder = function () {
+    const modal = document.getElementById("modalResponder");
+    if (modal) modal.style.display = 'none';
+    document.body.style.overflow = "auto";
+    if (window.timerCotacaoInterval) clearInterval(window.timerCotacaoInterval);
+  }
+
+  function configurarModalResposta(modo) {
     const btnEdit = document.getElementById("btnEditarResposta");
     const btnSend = document.getElementById("btnEnviarResposta");
-
-    if (btnEdit) btnEdit.style.display = 'none';
-    if (btnSend) {
-      btnSend.style.display = 'inline-block';
-      btnSend.innerText = "📤 Enviar Resposta Editada";
-    }
-
-    // Libera inputs da tabela
     const inputs = document.querySelectorAll("#tabelaResponderCorpo input");
-    inputs.forEach(inp => inp.disabled = false);
-
-    // 🔓 DESBLOQUEIO DE ANEXO (Visual e Real)
     const btnFake = document.getElementById("btnFakeAnexo");
-    if (btnFake) {
-      btnFake.disabled = false;
-      btnFake.style.opacity = "1";
-      btnFake.style.cursor = "pointer";
+
+    if (!btnEdit || !btnSend) return;
+    btnEdit.style.display = "none";
+    btnSend.style.display = "none";
+
+    if (modo === "novo") {
+      inputs.forEach(i => i.disabled = false);
+      btnSend.style.display = "inline-block";
+      btnSend.innerText = "📤 Enviar Resposta";
+      if (btnFake) { btnFake.disabled = false; btnFake.style.opacity = "1"; }
+    } else if (modo === "respondida") {
+      inputs.forEach(i => i.disabled = true);
+      btnEdit.style.display = "inline-block";
+      if (btnFake) { btnFake.disabled = true; btnFake.style.opacity = "0.5"; btnFake.style.cursor = "not-allowed"; }
+    } else if (modo === "editar") {
+      inputs.forEach(i => i.disabled = false);
+      btnSend.style.display = "inline-block";
+      btnSend.innerText = "📤 Enviar Resposta Editada";
+      if (btnFake) { btnFake.disabled = false; btnFake.style.opacity = "1"; btnFake.style.cursor = "pointer"; }
+    } else if (modo === "encerrada") {
+      inputs.forEach(i => i.disabled = true);
+      if (btnFake) { btnFake.disabled = true; btnFake.style.opacity = "0.5"; }
     }
-
-    const containerAnexo = document.getElementById("containerAnexoResponder");
-    const fileInput = containerAnexo ? containerAnexo.querySelector("input[type='file']") : null;
-    if (fileInput) fileInput.disabled = false;
   }
-  window.habilitarEdicaoResposta = habilitarEdicaoResposta;
 
-  /* ======================================================
-     👁️ VISUALIZAR DOCUMENTOS (STRICT MODE - ISOLADO)
+  window.habilitarEdicaoResposta = function () {
+    configurarModalResposta("editar");
+  }
+
      Garante que só abrimos documentos desta cotação específica.
   ====================================================== */
   window.visualizarDocumentos = async function (idCotacao, emailFornecedor) {
