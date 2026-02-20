@@ -7160,93 +7160,8 @@
 
 
   /* ======================================================
-     TOGGLE LISTA RESPONDIDAS (FILTRO)
-  ====================================================== */
-  window.toggleListaRespondidas = async function (modo, skipSync = false) {
-    const usuario = getUsuarioLogado();
-    if (!usuario) return;
-
-    // 🔥 Guarda a última aba acessada para recarga inteligente
-    window.ultimaAbaRespondidas = modo;
-
-    // 🔥 SINCRONIZA COTAÇÕES COM FIRESTORE ANTES DE RENDERIZAR (Opcional se skipSync)
-    if (!skipSync) {
-      try {
-        if (typeof sincronizarCotacoesAgora === "function") {
-          await sincronizarCotacoesAgora();
-        } else {
-          const snapshot = await db.collection("cotacoes").get();
-          const listaCotacoes = snapshot.docs.map(doc => doc.data());
-          localStorage.setItem("cotacoes", JSON.stringify(listaCotacoes));
-        }
-        console.log("✅ Cotações sincronizadas para listagem");
-      } catch (e) {
-        console.warn("⚠️ Usando dados locais para listagem:", e);
-      }
-    }
-
-    // 1. Reset buttons
-    document.querySelectorAll('.btn-status').forEach(btn => btn.classList.remove('ativo'));
-
-    // 2. Hide all lists
-    const listas = ['listaPublicadas', 'listaAnalise', 'listaAprovacao', 'listaFechadas'];
-    listas.forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.style.display = 'none';
-    });
-
-    // 3. Setup based on mode
-    let targetId = '';
-    let statusFiltro = '';
-    let btnId = '';
-
-    switch (modo) {
-      case 'publicadas':
-        targetId = 'listaPublicadas';
-        statusFiltro = 'aberta';
-        btnId = 'btnPublicadas';
-        break;
-      case 'analise':
-        targetId = 'listaAnalise';
-        statusFiltro = ['analise', 'reanalise', 'respondida'];
-        btnId = 'btnAnalise';
-        break;
-      case 'aprovacao':
-        targetId = 'listaAprovacao';
-        statusFiltro = 'aprovacao';
-        btnId = 'btnAprovacao';
-        break;
-      case 'fechada':
-        targetId = 'listaFechadas';
-        statusFiltro = 'fechada';
-        btnId = 'btnFechadas';
-        break;
-      default:
-        // Fallback para analise se modo for inválido
-        targetId = 'listaAnalise';
-        statusFiltro = ['analise', 'reanalise', 'respondida'];
-        btnId = 'btnAnalise';
-    }
-
-    const container = document.getElementById(targetId);
-    const btn = document.getElementById(btnId);
-
-    if (container) {
-      container.style.display = 'block';
-      if (btn) btn.classList.add('ativo');
-      carregarRespondidas(statusFiltro, container);
-    }
-  };
-
-  // Garante que getCotacoes esteja no escopo global para todos os scripts
-  window.getCotacoes = function () {
-    try {
-      return JSON.parse(localStorage.getItem("cotacoes")) || [];
-    } catch (e) {
-      console.error("Erro ao ler cotações:", e);
-      return [];
-    }
-  };
+     🔐 STORAGE HELPERS (REMOVIDO DUPLICATA - USANDO GLOBAL)
+     ====================================================== */
 
   /* A função renderizarListaParaFornecedor foi removida por ser uma duplicata legada. */
 
@@ -9813,74 +9728,61 @@
 
 
   /* ======================================================
-     ⏳ TOGGLE – COTAÇÕES RESPONDIDAS (CORRIGIDO)
-     - Analise mostra: respondida + reanalise
+     ⏳ TOGGLE – COTAÇÕES RESPONDIDAS (DEFINITIVO)
+     - Gerencia abas e sincronização da UI
   ====================================================== */
-  // Toggling tabs - CORRIGIDO PARA FECHAR SE ESTIVER ABERTO
-  window.toggleListaRespondidas = function (status) {
+  window.toggleListaRespondidas = async function (modo, skipSync = false) {
+    const usuario = getUsuarioLogado();
+    if (!usuario) return;
+
+    // 🔥 Guarda a última aba para recarga inteligente
+    window.ultimaAbaRespondidas = modo || 'analise';
+
+    // 🔄 SINCRONIZAÇÃO (RTDB + FIRESTORE)
+    if (!skipSync) {
+      if (typeof sincronizarCotacoesAgora === "function") {
+        await sincronizarCotacoesAgora();
+      }
+    }
 
     // Mapeamento de status para IDs
     const map = {
-      'publicadas': { listId: 'listaPublicadas', btnId: 'btnPublicadas' },
-      'analise': { listId: 'listaAnalise', btnId: 'btnAnalise' },
-      'aprovacao': { listId: 'listaAprovacao', btnId: 'btnAprovacao' },
-      'fechada': { listId: 'listaFechadas', btnId: 'btnFechadas' }
+      'publicadas': { listId: 'listaPublicadas', btnId: 'btnPublicadas', status: 'aberta' },
+      'analise': { listId: 'listaAnalise', btnId: 'btnAnalise', status: ["analise", "reanalise", "respondida"] },
+      'aprovacao': { listId: 'listaAprovacao', btnId: 'btnAprovacao', status: 'aprovacao' },
+      'fechada': { listId: 'listaFechadas', btnId: 'btnFechadas', status: 'fechada' }
     };
 
-    // 🔑 Se chamado sem status, tenta encontrar o botão ativo
-    if (!status) {
-      const btnAtivo = document.querySelector('.btn-status.ativo');
-      if (btnAtivo) {
-        status = Object.keys(map).find(k => map[k].btnId === btnAtivo.id);
-      }
-    }
+    const target = map[window.ultimaAbaRespondidas] || map['analise'];
 
-    const target = map[status];
-    if (!target) {
-      // Fallback: se não achou nada, força 'publicadas'
-      status = 'publicadas';
-    }
-
-    const currentTarget = map[status];
-    const listEl = document.getElementById(currentTarget.listId);
-    const btnEl = document.getElementById(currentTarget.btnId);
-
-    // 1. Se estivemos abrindo um NOVO status (ou refresh forçado), fecha outros
-    Object.values(map).forEach(item => {
-      const l = document.getElementById(item.listId);
-      const b = document.getElementById(item.btnId);
-      if (l) l.style.display = "none";
-      if (b) b.classList.remove("ativo");
+    // 1. Reset da UI
+    document.querySelectorAll('.btn-status').forEach(btn => btn.classList.remove('ativo'));
+    ['listaPublicadas', 'listaAnalise', 'listaAprovacao', 'listaFechadas'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = "none";
     });
 
-    // 2. Abre o alvo (Toggle ON)
+    // 2. Ativação do Alvo
+    const listEl = document.getElementById(target.listId);
+    const btnEl = document.getElementById(target.btnId);
+
     if (listEl) {
       listEl.style.display = "block";
       if (btnEl) btnEl.classList.add("ativo");
-
-      // Lógica específica de carregamento para cada tipo
-      if (status === "publicadas") {
-        carregarRespondidas("aberta", listEl);
-      } else if (status === "analise") {
-        carregarRespondidas(["respondida", "reanalise", "analise"], listEl);
-      } else if (status === "aprovacao") {
-        carregarRespondidas("aprovacao", listEl);
-      } else if (status === "fechada") {
-        carregarRespondidas("fechada", listEl);
-      }
+      carregarRespondidas(target.status, listEl);
     }
   };
 
   /**
-   * 🔄 REFRESH DASHBOARD (BRIDGE)
+   * 🔄 REFRESH DASHBOARD (DEFINITIVO)
    * Redireciona para a aba ativa se estiver visível
    */
   window.carregarCotacoes = function () {
     console.log("🔄 carregarCotacoes (Refresh Bridge) acionado...");
     const dashRespondidas = document.getElementById("cotacoesRespondidas");
     if (dashRespondidas && dashRespondidas.style.display !== "none") {
-      // Refresh da aba ativa
-      toggleListaRespondidas();
+      // Refresh da aba ativa sem novo sync para evitar loops
+      toggleListaRespondidas(window.ultimaAbaRespondidas, true);
     }
   };
 
@@ -12226,16 +12128,7 @@
     return new Date(s); // Fallback ISO/USA
   };
 
-  /* 🛠️ HELPER NORMALIZAR EMAIL */
-  window.normalizarEmail = function (e) {
-    return (e || "").toLowerCase().trim();
-  };
-
-  /* 🛠️ HELPER SALVAR COTAÇÕES */
-  window.salvarCotacoes = function (lista) {
-    if (!Array.isArray(lista)) return;
-    localStorage.setItem("cotacoes", JSON.stringify(lista));
-  };
+  /* 🛠️ HELPERS GLOBAIS (USANDO DEFINIÇÕES DO CABEÇALHO) */
 
   window.reabrirCotacao = async function (id) {
     if (!confirm("⚠️ Deseja REABRIR esta cotação?\n\nIsso estenderá o prazo de fechamento em 3 dias para tentar atrair novos fornecedores.")) return;
