@@ -6846,34 +6846,42 @@
       // Cria um ID único para o input para garantir que o browser não restaure estado
       const novoId = "respAnexo_" + Date.now();
       containerAnexo.innerHTML = `
-            <label>Anexar Orçamento (PDF ou imagem):</label>
-            <input type="file" id="${novoId}" name="${novoId}" data-unique-id="${novoId}" accept=".pdf,image/*" style="
-              width:100%;
-              background:#1a1a1a;
-              border:1px solid #661155;
-              border-radius:5px;
-              color:white;
-              padding:8px;
-            ">`;
-      console.log("🔥 Input de anexo recriado: " + novoId);
+        <label style="display:block; margin-bottom:8px; font-size:14px; font-weight:bold; color:#eee;">Anexar Orçamento (PDF ou imagem):</label>
+        <div class="custom-file-box" style="
+          display:flex; 
+          align-items:center; 
+          background:#1a1a1a; 
+          border:1px solid #661155; 
+          border-radius:5px; 
+          padding:6px 12px;
+          min-height:38px;
+        ">
+          <button type="button" onclick="document.getElementById('${novoId}').click()" style="
+            background: #efefef;
+            color: #000;
+            border: 1px solid #767676;
+            border-radius: 2px;
+            padding: 2px 10px;
+            font-size: 13px;
+            cursor:pointer;
+            white-space:nowrap;
+          ">Escolher arquivo</button>
+          
+          <span id="label_${novoId}" class="file-name-label" style="
+            margin-left:12px; 
+            font-size:13px; 
+            color:#888; 
+            flex:1; 
+            white-space:nowrap; 
+            overflow:hidden; 
+            text-overflow:ellipsis;
+          ">Nenhum arquivo escolhido</span>
 
-      // 🧹 LIMPEZA DE "FANTASMAS" VISUAIS (Janitor Script)
-      try {
-        const divPai = containerAnexo.parentElement; // Onde os fantasmas moram
-        if (divPai) {
-          const links = divPai.querySelectorAll('a, span.anexo-link');
-          links.forEach(el => {
-            if (el.innerText && (el.innerText.includes("Anexo") || el.innerText.includes("Arquivo"))) {
-              console.log("👻 Removendo link fantasma:", el);
-              el.style.display = 'none';
-              el.innerHTML = '';
-            }
-          });
-        }
-        // Tenta achar qualquer elemento com ID suspeito
-        const ghostLabel = document.getElementById("respAnexoAtual");
-        if (ghostLabel) { ghostLabel.style.display = 'none'; ghostLabel.innerHTML = ''; }
-      } catch (e) { console.warn("Erro ao limpar fantasmas:", e); }
+          <input type="file" id="${novoId}" name="${novoId}" accept=".pdf,image/*" style="display:none;" 
+            onchange="const span = document.getElementById('label_${novoId}'); if(this.files.length){ span.innerText = this.files[0].name; span.style.color = '#00ff99'; } else { span.innerText = 'Nenhum arquivo escolhido'; span.style.color = '#888'; }">
+        </div>
+      `;
+      console.log("🛠️ Componente de anexo customizado criado: " + novoId);
     }
 
     const email = usuario.email.toLowerCase().trim();
@@ -6906,36 +6914,23 @@
         }
       });
 
-      // 2. Mostrar Anexo Atual se existir
+      // 2. Mostrar Anexo Atual se existir (Injetar no Custom Label)
       if (resposta.anexo && (resposta.anexo.url || resposta.anexo.base64)) {
-        // Remove qualquer aviso antigo para não duplicar
-        const antigo = document.getElementById("respAnexoAtual");
-        if (antigo) antigo.remove();
+        const label = containerAnexo.querySelector(".file-name-label");
+        if (label) {
+          const url = resposta.anexo.url || (resposta.anexo.base64 ? "#" : "");
+          const nome = resposta.anexo.nome || "Documento Enviado";
 
-        const linkElem = document.createElement("div");
-        linkElem.id = "respAnexoAtual";
-        linkElem.className = "anexo-persistente-link"; // Nova classe para escapar do Janitor Script
-        linkElem.style = "margin-top:15px; padding:12px; background:rgba(0, 255, 153, 0.1); border:2px solid #00ff99; border-radius:8px; text-align:center; box-shadow: 0 0 10px rgba(0, 255, 153, 0.2);";
-
-        const url = resposta.anexo.url || (resposta.anexo.base64 ? "#" : "");
-        const nome = resposta.anexo.nome || "Documento Enviado";
-
-        linkElem.innerHTML = `
-          <div style="color:#00ff99; font-size:14px; margin-bottom:10px; font-weight:bold; text-transform:uppercase; letter-spacing:1px;">
-            <i class="fa-solid fa-paperclip"></i> SEU ANEXO ATUAL:
-          </div>
-          <div style="display:flex; align-items:center; justify-content:center; gap:10px;">
+          label.style.color = "#00ff99";
+          label.style.fontWeight = "bold";
+          label.innerHTML = `
+            <i class="fa-solid fa-paperclip"></i> 
             <a href="${url}" ${resposta.anexo.url ? 'target="_blank"' : `onclick="abrirArquivoAnexo('${resposta.anexo.base64}', '${nome}'); return false;"`} 
-               style="display:inline-block; background:#00ff99; color:#000; padding:8px 20px; border-radius:25px; text-decoration:none; font-weight:bold; font-size:13px; transition:0.3s; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-              <i class="fa-solid fa-file-pdf"></i> ${nome}
-            </a>
-            <span style="font-size:11px; color:#aaa;">(Enviado em ${resposta.data ? new Date(resposta.data).toLocaleDateString() : 'data ignorada'})</span>
-          </div>
-          <div style="color:#888; font-size:11px; margin-top:10px; border-top:1px solid #333; padding-top:8px;">
-            Deseja trocar? Selecione um novo arquivo acima.
-          </div>
-        `;
-        if (containerAnexo) containerAnexo.appendChild(linkElem);
+               style="color:#00ff99; text-decoration:underline;">
+              ${nome}
+            </a> (Enviado em ${resposta.data ? new Date(resposta.data).toLocaleDateString() : 'data'})
+          `;
+        }
       }
     }
 
