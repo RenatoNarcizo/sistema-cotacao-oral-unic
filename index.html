@@ -3963,10 +3963,31 @@
     firebase.initializeApp(firebaseConfig);
   }
 
+  // 🚀 OTIMIZAÇÃO DE CONEXÃO: Força Long Polling e Persistência
+  // Isso evita timeouts de 25s em redes instáveis ou com firewalls/proxies.
   const db = firebase.firestore();
+
+  try {
+    db.settings({
+      experimentalForceLongPolling: true, // Estabiliza a conexão em redes que matam WebSockets
+      cacheSizeBytes: firebase.firestore.CACHE_SIZE_UNLIMITED
+    });
+
+    db.enablePersistence({ synchronizeTabs: true }).catch(err => {
+      if (err.code === 'failed-precondition') {
+        console.warn("⚠️ Firestore Persistence: Múltiplas abas abertas.");
+      } else if (err.code === 'unimplemented') {
+        console.warn("⚠️ Firestore Persistence: Navegador não suporta.");
+      }
+    });
+    console.log("⚡ Firestore otimizado com Long Polling e Persistência.");
+  } catch (e) {
+    console.warn("⚠️ Falha ao aplicar Firestore Settings:", e);
+  }
+
   const auth = firebase.auth();
   const storage = firebase.storage();
-  const rtdb = firebase.database(); // ✅ Realtime Database (substitui Firestore para cotações)
+  const rtdb = firebase.database(); // ✅ Realtime Database
 
   console.log("🔥 Firebase inicializado com sucesso! RTDB:", rtdb.app.options.databaseURL);
 
@@ -6112,6 +6133,20 @@
       }
     } else {
       alert("⚠️ O conteúdo deste arquivo não está disponível na nuvem nem localmente.");
+    }
+  };
+
+  /**
+   * 📄 Helper para abrir arquivos Base64 diretamente (sem busca em listas)
+   */
+  window.abrirArquivoDireto = function (base64, nome) {
+    if (!base64 || base64.trim() === "") return alert("Conteúdo do arquivo não encontrado.");
+    const win = window.open();
+    if (win) {
+      win.document.title = nome || "Visualizar Arquivo";
+      win.document.write(`<iframe src="${base64}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`);
+    } else {
+      alert('🚫 Pop-up bloqueado! Permita pop-ups.');
     }
   };
 
@@ -11512,9 +11547,17 @@
       // 6. Upload de Anexo (com Timeout e Fallback Inteligente)
       let anexoDados = { nome: "", url: "", base64: "" };
 
-      // 🔴 PERSISTÊNCIA: Se não selecionou arquivo novo, manter o que já existia na cotação para este fornecedor
-      const respondidas = cotacao.respostasFornecedores || [];
-      const respAntiga = respondidas.find(r => (r.email || "").toLowerCase().trim() === usuario.email.toLowerCase().trim());
+      // 🔴 PERSISTÊNCIA: Se não selecionou arquivo novo, manter o que já existia
+      // PRIORIDADE: Tenta pegar da chave individual (que preserva o Base64)
+      const chaveIndiv = `res_${numCotacao}_${usuario.email.toLowerCase().trim()}`;
+      let respAntiga = JSON.parse(localStorage.getItem(chaveIndiv));
+
+      // Fallback: Tenta pegar da lista global (onde o Base64 pode estar removido)
+      if (!respAntiga) {
+        const respondidas = cotacao.respostasFornecedores || [];
+        respAntiga = respondidas.find(r => (r.email || "").toLowerCase().trim() === usuario.email.toLowerCase().trim());
+      }
+
       if (respAntiga && respAntiga.anexo) {
         anexoDados = { ...respAntiga.anexo };
         console.log(`♻️ [DEBUG] Mantendo anexo anterior: ${anexoDados.nome} (URL: ${!!anexoDados.url}, B64: ${!!anexoDados.base64})`);
@@ -11837,7 +11880,7 @@
           const temLink = !!(resposta.anexo.url || resposta.anexo.base64);
 
           if (temLink) {
-            label.innerHTML = `<span onclick="event.stopPropagation(); ${resposta.anexo.url ? `window.open('${url}','_blank')` : `abrirArquivoAnexo('${resposta.anexo.base64}', '${nome}')`}" style="color:#00ff99; text-decoration:underline; font-weight:bold; cursor:pointer;" title="Clique para visualizar">${nome}</span>`;
+            label.innerHTML = `<span onclick="event.stopPropagation(); ${resposta.anexo.url ? `window.open('${url}','_blank')` : `window.abrirArquivoDireto('${resposta.anexo.base64}', '${nome}')`}" style="color:#00ff99; text-decoration:underline; font-weight:bold; cursor:pointer;" title="Clique para visualizar">${nome}</span>`;
           } else {
             label.innerText = nome + " (Upload Pendente/Falhou)";
             label.style.color = "#f39c12";
