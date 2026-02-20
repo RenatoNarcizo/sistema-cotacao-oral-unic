@@ -11948,10 +11948,15 @@
       modal.id = "modalVisualizarDocumentos";
       modal.className = "modal";
       modal.innerHTML = `
-            <div class="modal-content" style="max-width: 800px; background:#1a1a1a; color:#fff; border:2px solid #661155; border-radius:12px; box-shadow: 0 0 30px rgba(0,0,0,0.8);">
-                <span class="close" onclick="document.getElementById('modalVisualizarDocumentos').style.display='none'" style="color:#661155; font-size:28px;">&times;</span>
-                <h2 style="color:#00ff99; border-bottom:1px solid #333; padding-bottom:15px; margin-top:0;">📄 Documentos da Cotação #${idCotacao}</h2>
-                <div id="listaDocumentosAnexados" style="margin-top:20px; max-height:500px; overflow-y:auto;"></div>
+            <div class="modal-content" style="max-width: 850px; background:#000; color:#fff; border:1px solid #661155; border-radius:12px; padding:0; overflow:hidden; box-shadow: 0 0 40px rgba(0,0,0,0.9);">
+                <div style="background:#500a40; padding:15px 20px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #661155;">
+                   <h2 style="color:#fff; margin:0; font-size:18px; display:flex; align-items:center; gap:10px;">
+                      <i class="fa-solid fa-folder-tree" style="color:#00ff99;"></i> 
+                      Documentos da Cotação #${idCotacao}
+                   </h2>
+                   <span class="close" onclick="document.getElementById('modalVisualizarDocumentos').style.display='none'" style="color:#fff; font-size:24px; cursor:pointer; opacity:0.8; transition:0.2s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.8">&times;</span>
+                </div>
+                <div id="listaDocumentosAnexados" style="padding:20px; max-height:70vh; overflow-y:auto;"></div>
             </div>`;
       document.body.appendChild(modal);
     }
@@ -12021,69 +12026,78 @@
       return;
     }
 
-    // 2. RENDER (TABLE PATTERN)
+    // 2. RENDER (TABLE PATTERN - PREMIUM)
     let tableHTML = `
-      <table style="width:100%; border-collapse:collapse; color:#eee; font-size:14px;">
+      <table style="width:100%; border-collapse:collapse; color:#eee; font-size:14px; background:#0a0a0a;">
         <thead>
-          <tr style="background:#222; border-bottom:2px solid #333;">
-            <th style="padding:12px; text-align:left;">Fornecedor</th>
-            <th style="padding:12px; text-align:center;">Arquivo(s)</th>
-            <th style="padding:12px; text-align:right;">Ação</th>
+          <tr style="background:#1a1a1a; border-bottom:2px solid #333; color:#aaa; text-transform:uppercase; font-size:11px; letter-spacing:1px;">
+            <th style="padding:15px; text-align:left;">Fornecedor</th>
+            <th style="padding:15px; text-align:center;">Arquivo(s) Detectado(s)</th>
+            <th style="padding:15px; text-align:right;">Ação</th>
           </tr>
         </thead>
         <tbody>
     `;
 
     todasRespostas.forEach(r => {
-      const anexosList = r.anexos || (r.anexo ? [r.anexo] : []);
-      const linkBase64 = r.base64 || (r.anexo && r.anexo.base64 ? r.anexo.base64 : null);
+      // 🛠️ Extração robusta de anexos
+      let validAnexos = [];
+
+      // Caso 1: Array de anexos
+      if (Array.isArray(r.anexos)) {
+        r.anexos.forEach(a => { if (a && (a.url || a.base64 || a.link)) validAnexos.push(a); });
+      }
+
+      // Caso 2: Objeto único de anexo
+      if (r.anexo && (r.anexo.url || r.anexo.base64 || r.anexo.link)) {
+        // Evita duplicatas se já estiver no array
+        const jaExiste = validAnexos.some(a => (a.url && a.url === r.anexo.url) || (a.base64 && a.base64 === r.anexo.base64));
+        if (!jaExiste) validAnexos.push(r.anexo);
+      }
+
+      // Caso 3: Base64 direto na raiz
+      if (r.base64 && !validAnexos.some(a => a.base64 === r.base64)) {
+        validAnexos.push({ nome: r.anexoNome || r.nomeAnexo || "Arquivo Local", base64: r.base64 });
+      }
+
+      // Se mesmo após a varredura não houver nada, não renderiza a linha
+      if (validAnexos.length === 0) return;
 
       const fornecedorNome = r.fornecedor || r.email || "Desconhecido";
 
-      // Se não tem nada de anexo, pula
-      if (anexosList.length === 0 && !linkBase64) return;
-
       tableHTML += `
-        <tr style="border-bottom:1px solid #222;">
-          <td style="padding:12px;">
-            <div style="font-weight:bold; color:#00ff99;">${fornecedorNome}</div>
+        <tr style="border-bottom:1px solid #222; transition: 0.2s;" onmouseover="this.style.background='#151515'" onmouseout="this.style.background='transparent'">
+          <td style="padding:15px;">
+            <div style="font-weight:bold; color:#00ff99; font-size:15px;">${fornecedorNome}</div>
             <div style="font-size:11px; color:#666;">${r.email || ""}</div>
           </td>
-          <td style="padding:12px; text-align:center;">
+          <td style="padding:15px; text-align:center;">
       `;
 
-      // Render links de anexos (Nuvem)
-      anexosList.forEach(anexo => {
-        const url = anexo.url || anexo.link || (anexo.base64 ? "#" : "");
-        if (url) {
-          const isBase64 = url === "#" || url.startsWith("data:");
-          tableHTML += `
-              <div style="margin:4px 0;">
-                <i class="fa-solid fa-file-pdf" style="color:#ff4444;"></i> 
-                <span style="font-size:12px;">${anexo.nome || "Anexo"}</span>
-              </div>`;
-        }
+      // Renderiza os nomes/icones dos anexos
+      validAnexos.forEach(anexo => {
+        const nome = anexo.nome || "Anexo";
+        const isBase64 = !!(anexo.base64 && !anexo.url);
+
+        tableHTML += `
+          <div style="margin:6px 0; display:flex; align-items:center; justify-content:center; gap:8px;">
+            <i class="fa-solid ${isBase64 ? 'fa-file-shield' : 'fa-file-pdf'}" style="color:${isBase64 ? '#fbbf24' : '#ff4444'};"></i> 
+            <span style="font-size:12px; color:#ccc;">${nome}</span>
+            ${isBase64 ? '<small style="color:#777; font-size:9px;">(LOCAL)</small>' : ''}
+          </div>`;
       });
 
-      // Se só tem base64
-      if (anexosList.length === 0 && linkBase64) {
-        tableHTML += `<div><i class="fa-solid fa-file-code" style="color:#fbbf24;"></i> Base64</div>`;
-      }
+      tableHTML += `</td><td style="padding:15px; text-align:right;">`;
 
-      tableHTML += `</td><td style="padding:12px; text-align:right;">`;
-
-      // Botões de Ação
-      anexosList.forEach(anexo => {
-        if (anexo.url) {
-          tableHTML += `<a href="${anexo.url}" target="_blank" class="btn-visualizar-mini" title="Abrir Link" style="background:#3ab9b6; color:#000; padding:4px 8px; border-radius:4px; font-size:11px; text-decoration:none; margin-left:5px;"><i class="fa-solid fa-external-link"></i></a>`;
+      // Renderiza os botões de ação
+      validAnexos.forEach(anexo => {
+        if (anexo.url || anexo.link) {
+          const url = anexo.url || anexo.link;
+          tableHTML += `<a href="${url}" target="_blank" class="btn-premium-mini" title="Abrir em Nuvem" style="background:#3ab9b6; color:#000; padding:6px 10px; border-radius:6px; font-size:12px; text-decoration:none; margin-left:6px; display:inline-flex; align-items:center; gap:4px; font-weight:bold;"><i class="fa-solid fa-cloud-arrow-down"></i> ABRIR</a>`;
         } else if (anexo.base64) {
-          tableHTML += `<button onclick="window.abrirArquivoDireto('${anexo.base64}', '${anexo.nome || 'Anexo'}')" class="btn-visualizar-mini" title="Ver Base64" style="background:#fbbf24; color:#000; padding:4px 8px; border-radius:4px; border:none; cursor:pointer; font-size:11px; margin-left:5px;"><i class="fa-solid fa-eye"></i></button>`;
+          tableHTML += `<button onclick="window.abrirArquivoDireto('${anexo.base64}', '${anexo.nome || 'Anexo'}')" class="btn-premium-mini" title="Visualizar Arquivo Local" style="background:#fbbf24; color:#000; padding:6px 10px; border-radius:6px; border:none; cursor:pointer; font-size:12px; margin-left:6px; display:inline-flex; align-items:center; gap:4px; font-weight:bold;"><i class="fa-solid fa-eye"></i> VER</button>`;
         }
       });
-
-      if (anexosList.length === 0 && linkBase64) {
-        tableHTML += `<button onclick="window.abrirArquivoDireto('${linkBase64}', 'Anexo')" class="btn-visualizar-mini" title="Ver Base64" style="background:#fbbf24; color:#000; padding:4px 8px; border-radius:4px; border:none; cursor:pointer; font-size:11px; margin-left:5px;"><i class="fa-solid fa-eye"></i></button>`;
-      }
 
       tableHTML += `</td></tr>`;
     });
