@@ -3437,50 +3437,22 @@
         </button>
       </div>
 
-      <!-- ✅ AÇÃO DO COMPRADOR -->
-      <div id="contEnviarAprovacao" style="text-align:center;margin-bottom:10px;">
+      <!-- ✅ AÇÃO DO COMPRADOR (Hiddend - Handled by premium_render.js) -->
+      <div id="contEnviarAprovacao" style="display:none; text-align:center;margin-bottom:10px;">
         <button id="btnVerTodosAnexos"
-          onclick="visualizarDocumentos(document.getElementById('analiseNumero').textContent.trim())" style="
-            background:#3ab9b6;
-            color:white;
-            padding:10px 25px;
-            border:none;
-            border-radius:6px;
-            display:none;
-            cursor:pointer;
-            margin-right: 15px; 
-            margin-bottom: 5px;
-          ">
+          onclick="visualizarDocumentos(document.getElementById('analiseNumero').textContent.trim())">
           📂 Ver Todos os Anexos
         </button>
-        <br>
-        <button id="btnEnviarAprovacao" onclick="enviarParaAprovacao()" style="background:#661155;
-               color:white;
-               padding:10px 25px;
-               border:none;
-               border-radius:6px;
-               display:none;
-               cursor:pointer;">
+        <button id="btnEnviarAprovacao" onclick="enviarParaAprovacao()">
           ✅ Enviar para Aprovação
         </button>
       </div>
 
-      <!-- 👁️ MOTIVO DA REJEIÇÃO (SOMENTE VISUALIZAÇÃO EM REANÁLISE) -->
-
+      <!-- 👁️ MOTIVO DA REJEIÇÃO (Btn Hidden - Handled by premium_render.js) -->
       <div id="contMotivoRejeicao" style="margin:15px 0; text-align:center;">
-
-        <button id="btnMotivoRejeicao" onclick="toggleMotivoRejeicao()" style="
-      background:#661155;
-      color:white;
-      border:none;
-      padding:8px 16px;
-      border-radius:6px;
-      cursor:pointer;
-      font-weight:bold;
-    ">
+        <button id="btnMotivoRejeicao" onclick="toggleMotivoRejeicao()" style="display:none;">
           📄 Ver motivo da rejeição
         </button>
-
         <div id="boxMotivoRejeicao" style="display:none; margin-top:10px;">
 
           <label><strong>Motivo da Rejeição</strong></label>
@@ -9783,20 +9755,25 @@
     document.body.style.overflow = "auto";
   }
 
-  function toggleMotivoRejeicao() {
+  window.toggleMotivoRejeicao = function () {
     const box = document.getElementById("boxMotivoRejeicao");
-    const btn = document.getElementById("btnMotivoRejeicao");
+    const btnAnalise = document.getElementById("btnMotivoAnalise");
+    const btnRejeicao = document.getElementById("btnMotivoRejeicao");
+
+    if (!box) return;
 
     const fechado = getComputedStyle(box).display === "none";
 
     if (fechado) {
       box.style.display = "block";
-      btn.innerText = "❌ Ocultar motivo da rejeição";
+      if (btnAnalise) btnAnalise.innerHTML = '<i class="fa-solid fa-eye-slash"></i> Ocultar Motivo';
+      if (btnRejeicao) btnRejeicao.innerText = "❌ Ocultar motivo da rejeição";
     } else {
       box.style.display = "none";
-      btn.innerText = "📄 Ver motivo da rejeição";
+      if (btnAnalise) btnAnalise.innerHTML = '<i class="fa-solid fa-file-invoice"></i> Motivo Rejeição';
+      if (btnRejeicao) btnRejeicao.innerText = "📄 Ver motivo da rejeição";
     }
-  }
+  };
 
 
   /* ======================================================
