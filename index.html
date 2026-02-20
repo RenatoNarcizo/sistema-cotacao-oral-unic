@@ -6846,9 +6846,11 @@
       const novoId = "respAnexo_" + Date.now();
       containerAnexo.innerHTML = `
         <label style="display:block; margin-bottom:8px; font-size:14px; color:#eee;">Anexar Orçamento (PDF ou imagem):</label>
-        <div style="display:flex; align-items:center; background:#111; border:1px solid #661155; border-radius:5px; padding:5px 12px; height:40px; width:100%; box-sizing:border-box;">
-          <!-- Botão Cinza/Branco Padrão -->
+        <div style="display:flex; align-items:center; background:#111; border:1px solid #661155; border-radius:5px; padding:4px 10px; min-height:38px; width:100%; box-sizing:border-box;">
+          <!-- Botão PEQUENO (Estilo padrão solicitado) -->
           <button type="button" id="btnFakeAnexo" onclick="document.getElementById('${novoId}').click()" style="
+            display:inline-block !important;
+            width:auto !important;
             background:#efefef; 
             color:#000; 
             border:1px solid #767676; 
@@ -6859,9 +6861,10 @@
             cursor:pointer;
             white-space:nowrap;
             margin-right:12px;
+            box-sizing:border-box;
           ">Escolher arquivo</button>
           
-          <!-- Texto de Status (Onde entra o nome do arquivo) -->
+          <!-- Texto ao lado do botão -->
           <span id="labelLocal_${novoId}" class="file-name-label" style="
             font-size:13px; 
             color:#aaa; 
@@ -6877,7 +6880,7 @@
             onchange="const span = document.getElementById('labelLocal_${novoId}'); if(this.files.length){ span.innerText = this.files[0].name; span.style.color = '#fff'; } else { span.innerText = 'Nenhum arquivo escolhido'; span.style.color = '#aaa'; }">
         </div>
       `;
-      console.log("💎 Visual Pixel-Perfect criado: " + novoId);
+      console.log("💎 Visual de Anexo restaurado (Layout Compacto): " + novoId);
     }
 
     const email = usuario.email.toLowerCase().trim();
