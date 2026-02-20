@@ -6941,10 +6941,10 @@
       if (respAnexoAtual) respAnexoAtual.remove();
     } catch (e) { }
 
-    // 🔑 CONTROLE DE MODO DEFINITIVO
+    // 🔑 CONTROLE DE MODO DEFINITIVO (Baseado no objeto 'resposta' unificado)
     if (cotacao.prazoEncerrado) {
       configurarModalResposta("encerrada");
-    } else if (respostaRaw) {
+    } else if (resposta) { // 🔴 CORREÇÃO: Usa 'resposta' (Local ou Nuvem) em vez de 'respostaRaw'
       configurarModalResposta("respondida");
     } else {
       configurarModalResposta("novo");
