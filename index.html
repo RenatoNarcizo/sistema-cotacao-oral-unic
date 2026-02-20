@@ -9240,7 +9240,7 @@
           <button
             type="button"
             class="btn-rejeitar"
-            onclick="abrirRejeicaoCotacao('${rejectionUID}')"
+            onclick="abrirRejeicaoCotacao('${cotacao.numero}')"
             style="
           background:#842029;
           color:white;
@@ -9404,7 +9404,17 @@
 
       localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
 
-      // ☁️ SYNC RTDB (CRITICO PARA REJEIÇÃO)
+      // 🔥 SYNC FIRESTORE (CRÍTICO - garante persistência na nuvem)
+      if (typeof db !== "undefined") {
+        db.collection("cotacoes").doc(String(cotacoes[index].numero)).update({
+          status: "reanalise",
+          motivoRejeicao: motivo,
+          dataRejeicao: cotacoes[index].dataRejeicao
+        }).then(() => console.log("✅ Rejeição salva no Firestore."))
+          .catch(e => console.error("❌ Erro ao salvar rejeição no Firestore:", e));
+      }
+
+      // ☁️ SYNC RTDB (CRÍTICO PARA REJEIÇÃO)
       if (typeof rtdb !== "undefined") {
         rtdb.ref("cotacoes/" + cotacoes[index].numero).update({
           status: "reanalise",
