@@ -2222,13 +2222,13 @@
         <p>Adicionar serviços no sistema</p>
       </div>
 
-      <div class="card" onclick="abrirPagina('financeiro'); carregarFinanceiroFornecedor()">
+      <div class="card" onclick="abrirTela('financeiro'); carregarFinanceiroFornecedor()">
         <i class="fa-solid fa-file-invoice-dollar"></i>
         <h3>Gestão Financeira</h3>
         <p>Notas Fiscais e Boletos</p>
       </div>
 
-      <div class="card" onclick="abrirPagina('cotas_recebidas.html')">
+      <div class="card" onclick="abrirTela('responderCotacao')">
         <i class="fa-solid fa-envelope-open-text"></i>
         <h3>Responder Cotação</h3>
         <p>Ver e responder solicitações recebidas</p>
@@ -2243,7 +2243,7 @@
       -->
 
 
-      <div class="card" onclick="abrirPagina('cotacoesRespondidas')">
+      <div class="card" onclick="abrirTela('cotacoesRespondidas')">
         <i class="fa-solid fa-circle-check"></i>
         <h3>Cotações Respondidas</h3>
         <p>Visualizar respostas recebidas dos fornecedores</p>
@@ -2255,7 +2255,7 @@
         <p>Visualizar e aprovar cotações finalizadas</p>
       </div>
 
-      <div class="card" onclick="abrirPagina('usuarios'); carregarUsuarios()">
+      <div class="card" onclick="abrirTela('usuarios'); carregarUsuarios()">
         <i class="fa-solid fa-users-gear"></i>
         <h3>Gerenciar Usuários</h3>
         <p>Adicionar e controlar acessos do sistema</p>
@@ -7162,18 +7162,27 @@
   /* ======================================================
      TOGGLE LISTA RESPONDIDAS (FILTRO)
   ====================================================== */
-  window.toggleListaRespondidas = async function (modo) {
+  window.toggleListaRespondidas = async function (modo, skipSync = false) {
     const usuario = getUsuarioLogado();
     if (!usuario) return;
 
-    // 🔥 SINCRONIZA COTAÇÕES COM FIRESTORE ANTES DE RENDERIZAR
-    try {
-      const snapshot = await db.collection("cotacoes").get();
-      const listaCotacoes = snapshot.docs.map(doc => doc.data());
-      localStorage.setItem("cotacoes", JSON.stringify(listaCotacoes));
-      console.log("✅ Cotações sincronizadas para listagem");
-    } catch (e) {
-      console.warn("⚠️ Usando dados locais para listagem:", e);
+    // 🔥 Guarda a última aba acessada para recarga inteligente
+    window.ultimaAbaRespondidas = modo;
+
+    // 🔥 SINCRONIZA COTAÇÕES COM FIRESTORE ANTES DE RENDERIZAR (Opcional se skipSync)
+    if (!skipSync) {
+      try {
+        if (typeof sincronizarCotacoesAgora === "function") {
+          await sincronizarCotacoesAgora();
+        } else {
+          const snapshot = await db.collection("cotacoes").get();
+          const listaCotacoes = snapshot.docs.map(doc => doc.data());
+          localStorage.setItem("cotacoes", JSON.stringify(listaCotacoes));
+        }
+        console.log("✅ Cotações sincronizadas para listagem");
+      } catch (e) {
+        console.warn("⚠️ Usando dados locais para listagem:", e);
+      }
     }
 
     // 1. Reset buttons
@@ -7199,7 +7208,7 @@
         break;
       case 'analise':
         targetId = 'listaAnalise';
-        statusFiltro = ['analise', 'reanalise'];
+        statusFiltro = ['analise', 'reanalise', 'respondida'];
         btnId = 'btnAnalise';
         break;
       case 'aprovacao':
@@ -7212,6 +7221,11 @@
         statusFiltro = 'fechada';
         btnId = 'btnFechadas';
         break;
+      default:
+        // Fallback para analise se modo for inválido
+        targetId = 'listaAnalise';
+        statusFiltro = ['analise', 'reanalise', 'respondida'];
+        btnId = 'btnAnalise';
     }
 
     const container = document.getElementById(targetId);
@@ -7221,6 +7235,16 @@
       container.style.display = 'block';
       if (btn) btn.classList.add('ativo');
       carregarRespondidas(statusFiltro, container);
+    }
+  };
+
+  // Garante que getCotacoes esteja no escopo global para todos os scripts
+  window.getCotacoes = function () {
+    try {
+      return JSON.parse(localStorage.getItem("cotacoes")) || [];
+    } catch (e) {
+      console.error("Erro ao ler cotações:", e);
+      return [];
     }
   };
 
@@ -11412,8 +11436,32 @@
     }
   }
 
-  // 🔄 OVERRIDE RUNTIME
+  // 🔄 OVERRIDE RUNTIME E FUNÇÕES DE CARGA
   window.publicarCotacao = publicarCotacaoV2;
+
+  /**
+   * 🔄 carregarCotacoes (Ponte de Sincronização)
+   * Recarrega a lista de cotações baseada na seção ativa do dashboard.
+   */
+  window.carregarCotacoes = function (statusForcado) {
+    console.log("🔄 Chamando carregarCotacoes...");
+
+    // 1. Verifica se a tela de Análise/Respondidas está visível
+    const sectionRespondidas = document.getElementById("cotacoesRespondidas");
+    if (sectionRespondidas && sectionRespondidas.style.display !== "none") {
+      // Tenta identificar qual aba está ativa para atualizar
+      const activeTab = window.ultimaAbaRespondidas || "analise";
+      if (typeof toggleListaRespondidas === "function") {
+        toggleListaRespondidas(statusForcado || activeTab, true);
+      }
+    }
+
+    // 2. Verifica se a tela de Aprovação está visível
+    const sectionAprovar = document.getElementById("aprovarCompras");
+    if (sectionAprovar && sectionAprovar.style.display !== "none") {
+      if (typeof carregarListaAprovacao === "function") carregarListaAprovacao();
+    }
+  };
 
   console.log("🚀 PATCH V2 APLICADO: Funcionalidade de publicação otimizada.");
 
