@@ -6845,21 +6845,39 @@
     if (containerAnexo) {
       const novoId = "respAnexo_" + Date.now();
       containerAnexo.innerHTML = `
-        <label style="display:block; margin-bottom:5px;">Anexar Orçamento (PDF ou imagem):</label>
-        <div style="position:relative; width:100%; height:38px; background:#1a1a1a; border:1px solid #661155; border-radius:5px;">
-           <!-- Input Nativo (Invisível mas funcional) -->
-           <input type="file" id="${novoId}" name="${novoId}" accept=".pdf,image/*" 
-             style="position:absolute; top:0; left:0; width:100%; height:100%; opacity:0; z-index:2; cursor:pointer;"
-             onchange="const label = document.getElementById('labelLocal_${novoId}'); if(this.files.length){ label.innerText = this.files[0].name; label.style.color='#fff'; }">
-           
-           <!-- Simulação do Visual Nativo (Fiel ao original) -->
-           <div style="position:absolute; top:0; left:0; width:100%; height:100%; display:flex; align-items:center; padding-left:8px; pointer-events:none; z-index:1;">
-              <button type="button" style="background:#efefef; color:#000; border:1px solid #767676; border-radius:2px; padding:2px 10px; font-size:13px; font-family:sans-serif;">Escolher arquivo</button>
-              <span id="labelLocal_${novoId}" style="margin-left:10px; font-size:13px; color:#aaa; font-family:sans-serif; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:70%;">Nenhum arquivo escolhido</span>
-           </div>
+        <label style="display:block; margin-bottom:8px; font-size:14px; font-weight:bold; color:#eee;">Anexar Orçamento (PDF ou imagem):</label>
+        <div style="display:flex; align-items:center; background:#1a1a1a; border:1px solid #661155; border-radius:5px; padding:6px; min-height:40px; cursor:default;">
+          <!-- Botão Simulado (Estilo Navegador) -->
+          <button type="button" id="btnFakeAnexo" onclick="document.getElementById('${novoId}').click()" style="
+            background:#efefef; 
+            color:#000; 
+            border:1px solid #767676; 
+            border-radius:2px; 
+            padding:3px 12px; 
+            font-size:13px; 
+            font-family: Arial, sans-serif;
+            cursor:pointer;
+            white-space:nowrap;
+            margin-right:12px;
+          ">Escolher arquivo</button>
+          
+          <!-- Texto do Arquivo (Onde entra o nome) -->
+          <span id="labelLocal_${novoId}" class="file-name-label" style="
+            flex:1;
+            font-size:13px; 
+            color:#888; 
+            font-family: Arial, sans-serif;
+            white-space:nowrap; 
+            overflow:hidden; 
+            text-overflow:ellipsis;
+          ">Nenhum arquivo escolhido</span>
+
+          <!-- Input Real (Escondido) -->
+          <input type="file" id="${novoId}" name="${novoId}" accept=".pdf,image/*" style="display:none;" 
+            onchange="const span = document.getElementById('labelLocal_${novoId}'); if(this.files.length){ span.innerText = this.files[0].name; span.style.color = '#fff'; } else { span.innerText = 'Nenhum arquivo escolhido'; span.style.color = '#888'; }">
         </div>
       `;
-      console.log("💎 Input Nativo Simulado recriado: " + novoId);
+      console.log("🛠️ Componente de anexo nativo-simulado criado: " + novoId);
     }
 
     const email = usuario.email.toLowerCase().trim();
@@ -6900,12 +6918,24 @@
           const nome = resposta.anexo.nome || "Documento Enviado";
 
           label.style.color = "#00ff99";
+          label.style.fontWeight = "bold";
           label.style.cursor = "pointer";
-          label.title = "Clique para visualizar o arquivo atual";
-          label.innerHTML = `<span onclick="event.stopPropagation(); ${resposta.anexo.url ? `window.open('${url}','_blank')` : `abrirArquivoAnexo('${resposta.anexo.base64}', '${nome}')`}" style="text-decoration:underline; pointer-events:auto;">${nome}</span>`;
+          label.innerHTML = `
+            <a href="${url}" ${resposta.anexo.url ? 'target="_blank"' : `onclick="event.stopPropagation(); abrirArquivoAnexo('${resposta.anexo.base64}', '${nome}'); return false;"`} 
+               style="color:#00ff99; text-decoration:underline;">
+              ${nome}
+            </a> (Enviado)
+          `;
+          label.onclick = (e) => { e.stopPropagation(); }; // Evita disparar o input ao clicar no link
         }
       }
     }
+
+    // 🧹 LIMPEZA DE "FANTASMAS" (Garantia de que nada extra aparece)
+    try {
+      const respAnexoAtual = document.getElementById("respAnexoAtual");
+      if (respAnexoAtual) respAnexoAtual.remove();
+    } catch (e) { }
 
     // 🔑 CONTROLE DE MODO DEFINITIVO
     if (cotacao.prazoEncerrado) {
@@ -6971,6 +7001,13 @@
     const anexo = containerAnexo ? containerAnexo.querySelector("input[type='file']") : null;
     if (anexo) anexo.disabled = false;
 
+    const btnFake = document.getElementById("btnFakeAnexo");
+    if (btnFake) {
+      btnFake.disabled = false;
+      btnFake.style.opacity = "1";
+      btnFake.style.cursor = "pointer";
+    }
+
     // troca botões
     document.getElementById("btnEditarResposta").style.display = "none";
     document.getElementById("btnEnviarResposta").style.display = "inline-block";
@@ -6987,9 +7024,12 @@
     btnEditar.style.display = "none";
     btnEnviar.style.display = "none";
 
+    const btnFake = document.getElementById("btnFakeAnexo");
+
     if (modo === "novo") {
       // 📬 ABERTA
       inputs.forEach(i => i.disabled = false);
+      if (btnFake) { btnFake.disabled = false; btnFake.style.opacity = "1"; }
       btnEnviar.style.display = "inline-block";
       btnEnviar.innerText = "📤 Enviar Resposta";
     }
@@ -6997,12 +7037,14 @@
     if (modo === "respondida") {
       // 📤 RESPONDIDA (VISUALIZA, MAS PODE EDITAR)
       inputs.forEach(i => i.disabled = true);
+      if (btnFake) { btnFake.disabled = true; btnFake.style.opacity = "0.5"; btnFake.style.cursor = "not-allowed"; }
       btnEditar.style.display = "inline-block";
     }
 
     if (modo === "editar") {
       // ✏️ EDITANDO
       inputs.forEach(i => i.disabled = false);
+      if (btnFake) { btnFake.disabled = false; btnFake.style.opacity = "1"; btnFake.style.cursor = "pointer"; }
       btnEnviar.style.display = "inline-block";
       btnEnviar.innerText = "📤 Enviar Resposta Editada";
     }
@@ -7010,6 +7052,7 @@
     if (modo === "encerrada") {
       // 🔒 HISTÓRICO
       inputs.forEach(i => i.disabled = true);
+      if (btnFake) { btnFake.disabled = true; btnFake.style.opacity = "0.5"; btnFake.style.cursor = "not-allowed"; }
       // nenhum botão aparece
     }
   }
