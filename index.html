@@ -6846,38 +6846,35 @@
       const novoId = "respAnexo_" + Date.now();
       containerAnexo.innerHTML = `
         <label style="display:block; margin-bottom:8px; font-size:14px; font-weight:bold; color:#eee;">Anexar Orçamento (PDF ou imagem):</label>
-        <div style="display:flex; align-items:center; background:#1a1a1a; border:1px solid #661155; border-radius:5px; padding:6px; min-height:40px; cursor:default;">
-          <!-- Botão Simulado (Estilo Navegador) -->
+        <div style="display:flex; align-items:center; background:#000; border:1px solid #444; border-radius:4px; padding:4px 8px; max-width:100%; overflow:hidden;">
           <button type="button" id="btnFakeAnexo" onclick="document.getElementById('${novoId}').click()" style="
             background:#efefef; 
             color:#000; 
             border:1px solid #767676; 
             border-radius:2px; 
-            padding:3px 12px; 
-            font-size:13px; 
+            padding:2px 10px; 
+            font-size:12px; 
             font-family: Arial, sans-serif;
             cursor:pointer;
             white-space:nowrap;
-            margin-right:12px;
+            margin-right:10px;
           ">Escolher arquivo</button>
           
-          <!-- Texto do Arquivo (Onde entra o nome) -->
           <span id="labelLocal_${novoId}" class="file-name-label" style="
-            flex:1;
-            font-size:13px; 
-            color:#888; 
+            font-size:12px; 
+            color:#aaa; 
             font-family: Arial, sans-serif;
             white-space:nowrap; 
             overflow:hidden; 
             text-overflow:ellipsis;
+            max-width:250px;
           ">Nenhum arquivo escolhido</span>
 
-          <!-- Input Real (Escondido) -->
           <input type="file" id="${novoId}" name="${novoId}" accept=".pdf,image/*" style="display:none;" 
-            onchange="const span = document.getElementById('labelLocal_${novoId}'); if(this.files.length){ span.innerText = this.files[0].name; span.style.color = '#fff'; } else { span.innerText = 'Nenhum arquivo escolhido'; span.style.color = '#888'; }">
+            onchange="const span = document.getElementById('labelLocal_${novoId}'); if(this.files.length){ span.innerText = this.files[0].name; span.style.color = '#fff'; } else { span.innerText = 'Nenhum arquivo escolhido'; span.style.color = '#aaa'; }">
         </div>
       `;
-      console.log("🛠️ Componente de anexo nativo-simulado criado: " + novoId);
+      console.log("🛠️ Componente de anexo compacto criado: " + novoId);
     }
 
     const email = usuario.email.toLowerCase().trim();
@@ -11896,8 +11893,15 @@
       }
 
       // 6. Upload de Anexo (com Timeout e Fallback Inteligente)
-      // (fileInput já foi capturado no início da função via querySelector)
       let anexoDados = { nome: "", url: "", base64: "" };
+
+      // 🔴 PERSISTÊNCIA: Se não selecionou arquivo novo, manter o que já existia na cotação para este fornecedor
+      const respondidas = cotacao.respostasFornecedores || [];
+      const respAntiga = respondidas.find(r => (r.email || "").toLowerCase().trim() === usuario.email.toLowerCase().trim());
+      if (respAntiga && respAntiga.anexo) {
+        anexoDados = { ...respAntiga.anexo };
+        console.log("♻️ Mantendo anexo anterior:", anexoDados.nome);
+      }
 
       if (fileInput && fileInput.files.length > 0) {
         const file = fileInput.files[0];
