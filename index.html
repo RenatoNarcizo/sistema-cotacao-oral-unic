@@ -11517,7 +11517,7 @@
       const respAntiga = respondidas.find(r => (r.email || "").toLowerCase().trim() === usuario.email.toLowerCase().trim());
       if (respAntiga && respAntiga.anexo) {
         anexoDados = { ...respAntiga.anexo };
-        console.log("♻️ Mantendo anexo anterior:", anexoDados.nome);
+        console.log(`♻️ [DEBUG] Mantendo anexo anterior: ${anexoDados.nome} (URL: ${!!anexoDados.url}, B64: ${!!anexoDados.base64})`);
       }
 
       if (fileInput && fileInput.files.length > 0) {
@@ -11560,16 +11560,19 @@
             anexoDados.url = url;
             console.log("✅ Upload concluído via Storage:", url);
           } catch (e) {
-            console.warn("⚠️ Falha ou timeout no Storage:", e.message);
+            console.warn("⚠️ [DEBUG] Falha ou timeout no Storage:", e.message);
+            // GARANTE QUE O NOME NÃO SE PERCA NO CATCH
+            if (!anexoDados.nome && file) anexoDados.nome = file.name;
 
             if (file.size > 1024 * 1024) { // 1MB limit for Firestore Base64
               alert("O arquivo é muito grande para o modo alternativo (> 1MB).");
-              if (!confirm("Deseja enviar sem o anexo?")) throw new Error("Abortado.");
+              if (!confirm("Deseja enviar sem o anexo?")) throw new Error("Abortado pelo usuário.");
             } else {
               if (confirm("O envio em nuvem falhou ou está travado.\n\nDeseja usar o 'Envio de Banco Seguro' (Base64)?\n\nIsso garantirá que o comprador receba o documento.")) {
-                console.log("🔄 Ativando Fallback Base64...");
+                console.log("🔄 [DEBUG] Ativando Fallback Base64...");
                 const base64Data = await fileToBase64(file);
                 anexoDados.base64 = base64Data;
+                anexoDados.url = ""; // Limpa URL se falhou o storage
               } else if (!confirm("Deseja enviar a resposta sem o arquivo?")) {
                 throw new Error("Upload cancelado pelo usuário.");
               }
@@ -11804,11 +11807,21 @@
     const email = usuario.email.toLowerCase().trim();
     const chave = `res_${numero}_${email}`;
     let resposta = JSON.parse(localStorage.getItem(chave));
+    console.log(`🔍 [DEBUG] Buscando resposta local (Chave: ${chave}):`, resposta ? "✅ Encontrada" : "❌ Não encontrada");
+
     if (!resposta && cotacao.respostasFornecedores) {
       resposta = cotacao.respostasFornecedores.find(r => (r.email || "").toLowerCase().trim() === email);
+      console.log(`🔍 [DEBUG] Buscando na lista da cotação:`, resposta ? "✅ Encontrada" : "❌ Não encontrada");
     }
 
     if (resposta) {
+      console.log(`📦 [DEBUG] Resposta carregada:`, {
+        fornecedor: resposta.fornecedor,
+        temAnexo: !!resposta.anexo,
+        anexoNome: resposta.anexo?.nome || "n/a",
+        temURL: !!resposta.anexo?.url,
+        temBase64: !!resposta.anexo?.base64
+      });
       (resposta.itens || []).forEach(item => {
         const idx = (cotacao.produtos || []).findIndex(p => p.nome === item.produto || p.nome === item.nome);
         if (idx !== -1) {
@@ -11816,12 +11829,20 @@
           if (input) input.value = window.formatarMoedaBRL(item.preco ?? item.valor ?? 0);
         }
       });
-      if (resposta.anexo && (resposta.anexo.url || resposta.anexo.base64)) {
+      if (resposta.anexo && resposta.anexo.nome) {
         const label = containerAnexo ? containerAnexo.querySelector('span[id^="labelLocal_"]') : null;
         if (label) {
           const url = resposta.anexo.url || (resposta.anexo.base64 ? "#" : "");
           const nome = resposta.anexo.nome || "Documento Enviado";
-          label.innerHTML = `<span onclick="event.stopPropagation(); ${resposta.anexo.url ? `window.open('${url}','_blank')` : `abrirArquivoAnexo('${resposta.anexo.base64}', '${nome}')`}" style="color:#00ff99; text-decoration:underline; font-weight:bold; cursor:pointer;">${nome}</span>`;
+          const temLink = !!(resposta.anexo.url || resposta.anexo.base64);
+
+          if (temLink) {
+            label.innerHTML = `<span onclick="event.stopPropagation(); ${resposta.anexo.url ? `window.open('${url}','_blank')` : `abrirArquivoAnexo('${resposta.anexo.base64}', '${nome}')`}" style="color:#00ff99; text-decoration:underline; font-weight:bold; cursor:pointer;" title="Clique para visualizar">${nome}</span>`;
+          } else {
+            label.innerText = nome + " (Upload Pendente/Falhou)";
+            label.style.color = "#f39c12";
+          }
+          console.log(`🎨 [DEBUG] Label do anexo injetada: ${nome} (Link: ${temLink})`);
         }
       }
     }
