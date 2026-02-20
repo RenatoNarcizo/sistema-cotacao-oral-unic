@@ -7751,10 +7751,18 @@
         botaoAcao = `<button onclick="abrirResponderCotacao('${cot.numero}', 'visualizar')" style="background:#555;">👁️ Detalhes</button>`;
       }
 
+      // Busca o anexo na resposta salva
+      const chaveRes = `res_${cot.numero}_${usuario.email.toLowerCase().trim()}`;
+      const respostaLocal = JSON.parse(localStorage.getItem(chaveRes));
+      const anexoInfo = (respostaLocal && respostaLocal.anexo && respostaLocal.anexo.nome)
+        ? `<div style="margin-top:4px; font-size:12px; color:#10b981;"><i class="fa-solid fa-paperclip"></i> Anexo: ${respostaLocal.anexo.nome}</div>`
+        : "";
+
       card.innerHTML = `
         <div class="info">
           <strong style="font-size:16px;">${cot.descricao || "Cotação #" + cot.numero}</strong> ${statusTexto}<br>
           <small style="color:#bbb;">Prazo: ${cot.dataFechamento}</small>
+          ${anexoInfo}
         </div>
         <div class="acoes">
            ${botaoAcao}
