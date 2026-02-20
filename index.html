@@ -11940,7 +11940,11 @@
      Garante que só abrimos documentos desta cotação específica.
   ====================================================== */
   window.visualizarDocumentos = async function (idCotacao, emailFornecedor) {
-    console.log(`👁️ Abrindo documentos: COT ${idCotacao}`);
+    if (!idCotacao) return;
+
+    // 🧼 Normalização Crítica: Remove #, COT- e espaços
+    const idLimpo = String(idCotacao).replace(/#/g, "").replace(/COT-/gi, "").trim();
+    console.log(`📂 [DOCS] Abrindo modal para Cotação: ${idCotacao} (ID Final: ${idLimpo})`);
 
     let modal = document.getElementById("modalVisualizarDocumentos");
     if (!modal) {
@@ -11948,57 +11952,52 @@
       modal.id = "modalVisualizarDocumentos";
       modal.className = "modal";
       modal.innerHTML = `
-            <div class="modal-content" style="max-width: 900px; width: 95%; background:#000; color:#fff; border:1px solid #661155; border-radius:12px; padding:0; overflow:hidden; box-shadow: 0 0 30px rgba(102,17,85,0.4); font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;">
-                <div style="background:#500a40; padding:18px 25px; display:flex; justify-content:space-between; align-items:center;">
-                   <h2 style="color:#fff; margin:0; font-size:18px; font-weight:700; display:flex; align-items:center; gap:12px; letter-spacing: 0.5px;">
+            <div class="modal-content" style="max-width: 900px; width: 95%; background:#000; color:#fff; border:1px solid #661155; border-radius:12px; padding:0; overflow:hidden; box-shadow: 0 0 60px rgba(0,0,0,1); font-family: 'Segoe UI', system-ui, sans-serif;">
+                <div style="background:#500a40; padding:20px 25px; display:flex; justify-content:space-between; align-items:center; border-bottom: 2px solid #661155;">
+                   <h2 style="color:#fff; margin:0; font-size:20px; font-weight:800; display:flex; align-items:center; gap:12px; letter-spacing: -0.5px;">
                       <i class="fa-solid fa-folder-open" style="color:#3ab9b6;"></i> 
-                      Documentos da Cotação #${idCotacao}
+                      Documentos da Cotação #${idLimpo}
                    </h2>
-                   <span class="close" onclick="document.getElementById('modalVisualizarDocumentos').style.display='none'" style="color:#fff; font-size:28px; cursor:pointer; opacity:0.7; transition:0.2s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.7">&times;</span>
+                   <span class="close" onclick="document.getElementById('modalVisualizarDocumentos').style.display='none'" style="color:#fff; font-size:32px; cursor:pointer; opacity:0.8; transition:0.2s; line-height:1;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.8">&times;</span>
                 </div>
-                <div id="listaDocumentosAnexados" style="padding:0; padding-bottom:20px; max-height:75vh; overflow-y:auto; background:#111;"></div>
+                <div id="listaDocumentosAnexados" style="padding:0; max-height:75vh; overflow-y:auto; background:#000;"></div>
             </div>`;
       document.body.appendChild(modal);
     }
 
     const container = document.getElementById("listaDocumentosAnexados");
-    container.innerHTML = "<p style='text-align:center; padding:20px;'>🔍 Buscando arquivos...</p>";
+    container.innerHTML = "<div style='text-align:center; padding:60px; color:#3ab9b6;'><i class='fa-solid fa-circle-notch fa-spin fa-2x'></i><br><br><span style='font-weight:700; letter-spacing:1px; font-size:12px;'>SINCRONIZANDO DADOS...</span></div>";
     modal.style.display = "flex";
+    document.body.style.overflow = "hidden";
 
-    // 1. DATA GATHERING (MERGE CLOUD & LOCAL - PRIORITIZAÇÃO DE DADOS COMPLETOS)
+    // --- COLETA DE DADOS (MERGE AGRESSIVO) ---
     let todasRespostasMap = new Map();
 
-    // Helper para adicionar/mesclar respostas priorizando as que têm anexo
     const addResposta = (r) => {
-      const email = (r.email || r.fornecedor || "").toLowerCase().trim();
-      if (!email) return;
+      if (!r) return;
+      const email = (r.email || r.fornecedor || r.nome || "").toLowerCase().trim();
+      if (!email || email === "undefined") return;
 
-      const temAnexo = r.anexo || (Array.isArray(r.anexos) && r.anexos.length > 0) || r.base64;
+      const temAnexo = r.anexo || (Array.isArray(r.anexos) && r.anexos.length > 0) || r.base64 || r.url || r.link;
 
       if (!todasRespostasMap.has(email)) {
         todasRespostasMap.set(email, r);
-      } else {
-        // Se já existe, mas a nova tem anexo e a velha não, substitui
-        const refAntiga = todasRespostasMap.get(email);
-        const antigaTemAnexo = refAntiga.anexo || (Array.isArray(refAntiga.anexos) && refAntiga.anexos.length > 0) || refAntiga.base64;
-
-        if (temAnexo && !antigaTemAnexo) {
-          todasRespostasMap.set(email, r);
-        }
+      } else if (temAnexo) {
+        todasRespostasMap.set(email, r); // Prioriza versão com anexo
       }
     };
 
-    // A. Fonte 1: Objeto Cotação (Nuvem/Filtro global)
+    // A. Fonte Local (Filtro Global)
     const todasCotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
-    const cot = todasCotacoes.find(c => String(c.numero) === String(idCotacao) || String(c.id) === String(idCotacao));
+    const cot = todasCotacoes.find(c => String(c.numero) === String(idCotacao) || String(c.numero) === String(idLimpo) || String(c.id) === String(idCotacao) || String(c.id) === String(idLimpo));
     if (cot && cot.respostasFornecedores) {
       cot.respostasFornecedores.forEach(addResposta);
     }
 
-    // B. Fonte 2: LocalStorage (res_... - Geralmente contém o Base64 completo)
+    // B. Fonte Local (Chaves res_...)
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key.includes(`res_${idCotacao}_`) || key.includes(`resposta_${idCotacao}_`)) {
+      if (key.includes(`res_${idLimpo}_`) || key.includes(`resposta_${idLimpo}_`) || key.includes(`res_${idCotacao}_`) || key.includes(`resposta_${idCotacao}_`)) {
         try {
           const r = JSON.parse(localStorage.getItem(key));
           if (r) addResposta(r);
@@ -12006,43 +12005,42 @@
       }
     }
 
-    // C. Fonte 3: Firestore Subcollection (Verdade Cloud)
+    // C. Fonte Nuvem (Firestore)
     if (typeof db !== "undefined") {
       try {
-        const querySnapshot = await db.collection("cotacoes").doc(String(idCotacao)).collection("respostas").get();
+        const querySnapshot = await db.collection("cotacoes").doc(String(idLimpo)).collection("respostas").get();
         querySnapshot.forEach(doc => addResposta(doc.data()));
-      } catch (e) { console.warn("Erro ao buscar subcoleção de respostas:", e); }
+        if (idLimpo !== String(idCotacao)) {
+          const qs2 = await db.collection("cotacoes").doc(String(idCotacao)).collection("respostas").get();
+          qs2.forEach(doc => addResposta(doc.data()));
+        }
+      } catch (e) { console.warn("Erro ao buscar subcoleção:", e); }
     }
 
     let todasRespostas = Array.from(todasRespostasMap.values());
-
-    // 2. Filtra por fornecedor se for um histórico individual
     if (emailFornecedor) {
       todasRespostas = todasRespostas.filter(r => (r.email || "").toLowerCase().trim() === emailFornecedor.toLowerCase().trim());
     }
 
     if (todasRespostas.length === 0) {
-      container.innerHTML = "<p style='text-align:center; color:#777; padding:60px; font-weight:600;'>Nenhuma resposta ou anexo detectado para esta cotação.</p>";
-      console.warn(`⚠️ [DOCS] Nenhuma resposta encontrada para COT ${idCotacao}`);
+      container.innerHTML = "<div style='text-align:center; padding:80px; color:#555;'><i class='fa-solid fa-ghost fa-3x' style='margin-bottom:20px; opacity:0.3;'></i><br><span style='font-weight:700;'>NENHUMA RESPOSTA ENCONTRADA</span></div>";
       return;
     }
 
-    // 2. RENDER (TABLE PATTERN - PIXEL PERFECT)
+    // --- RENDERIZAÇÃO PREMIUM PIXEL-PERFECT ---
     let tableHTML = `
-      <table style="width:100%; border-collapse:collapse; color:#fff; font-size:13px; background:#111; table-layout: fixed; border: 1px solid #222;">
+      <table style="width:100%; border-collapse:collapse; color:#fff; font-size:14px; background:#000;">
         <thead>
-          <tr style="background:#1a1a1a; border-bottom:2px solid #333; color:#999; text-transform:uppercase; font-size:11px; font-weight:800; letter-spacing:1px;">
-            <th style="padding:18px 25px; text-align:left; width: 40%;">FONTE / FORNECEDOR</th>
-            <th style="padding:18px 25px; text-align:center; width: 40%;">ARQUIVOS DETECTADOS</th>
-            <th style="padding:18px 25px; text-align:right; width: 20%;">AÇÕES</th>
+          <tr style="background:#111; border-bottom:1px solid #333; color:#888; text-transform:uppercase; font-size:11px; font-weight:900; letter-spacing:1px;">
+            <th style="padding:20px 25px; text-align:left; width: 35%;">FORNECEDOR / PARTICIPANTE</th>
+            <th style="padding:20px 25px; text-align:center; width: 40%;">DOCUMENTAÇÃO DETECTADA</th>
+            <th style="padding:20px 25px; text-align:right; width: 25%;">AÇÃO</th>
           </tr>
         </thead>
         <tbody>
     `;
 
-    console.log(`🔍 [DOCS] Renderizando ${todasRespostas.length} respostas para COT ${idCotacao}`);
-
-    todasRespostas.forEach((r, idx) => {
+    todasRespostas.forEach((r) => {
       let validAnexos = [];
       if (Array.isArray(r.anexos)) {
         r.anexos.forEach(a => { if (a && (a.url || a.base64 || a.link)) validAnexos.push(a); });
@@ -12055,18 +12053,13 @@
         validAnexos.push({ nome: r.anexoNome || r.nomeAnexo || "Documento Local", base64: r.base64 });
       }
 
-      if (validAnexos.length === 0) {
-        console.log(`   - Paticipante [${idx}] ${r.fornecedor || r.email} ok, mas sem anexos.`);
-        return;
-      }
-
-      const fornecedorNome = r.fornecedor || r.email || "Fornecedor Desconhecido";
+      if (validAnexos.length === 0) return;
 
       tableHTML += `
-        <tr style="border-bottom:1px solid #222; transition: 0.2s;">
-          <td style="padding:18px 25px; vertical-align: top;">
-            <div style="font-weight:800; color:#3ab9b6; font-size:14px; margin-bottom:4px; text-transform: uppercase;">${fornecedorNome}</div>
-            <div style="font-size:11px; color:#555; word-break: break-all;">${r.email || "E-mail não informado"}</div>
+        <tr style="border-bottom:1px solid #1a1a1a; transition: 0.2s;" onmouseover="this.style.background='rgba(58,185,182,0.05)'" onmouseout="this.style.background='transparent'">
+          <td style="padding:18px 25px;">
+            <div style="font-weight:800; color:#3ab9b6; font-size:15px; margin-bottom:4px; text-transform: uppercase;">${r.fornecedor || r.nome || "FORNECEDOR"}</div>
+            <div style="font-size:11px; color:#555; font-family: monospace;">${r.email || ""}</div>
           </td>
           <td style="padding:18px 25px; text-align:center; vertical-align: middle;">
       `;
@@ -12076,8 +12069,8 @@
         const isBase64 = !!(anexo.base64 && !anexo.url);
         tableHTML += `
           <div style="margin:6px 0; display:flex; align-items:center; justify-content:center; gap:10px;">
-            <i class="fa-solid ${isBase64 ? 'fa-file-shield' : 'fa-file-pdf'}" style="color:${isBase64 ? '#fbbf24' : '#ff4444'}; font-size:16px;"></i> 
-            <span style="font-size:12px; color:#fff; font-weight:600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 250px;" title="${nome}">${nome}</span>
+            <i class="fa-solid ${isBase64 ? 'fa-file-shield' : 'fa-file-pdf'}" style="color:${isBase64 ? '#fbbf24' : '#ff3366'}; font-size:16px;"></i> 
+            <span style="font-size:12px; color:#ddd; font-weight:600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 250px;" title="${nome}">${nome}</span>
           </div>`;
       });
 
@@ -12086,12 +12079,11 @@
       validAnexos.forEach(anexo => {
         if (anexo.url || anexo.link) {
           const url = anexo.url || anexo.link;
-          tableHTML += `<a href="${url}" target="_blank" style="background:#3ab9b6; color:#000; padding:6px 14px; border-radius:6px; font-size:10px; text-decoration:none; margin-left:8px; display:inline-flex; align-items:center; gap:6px; font-weight:900; text-transform:uppercase; box-shadow: 0 2px 0 #2a8f8c;"><i class="fa-solid fa-cloud-arrow-down"></i> ABRIR</a>`;
+          tableHTML += `<a href="${url}" target="_blank" style="background:#3ab9b6; color:#000; padding:8px 16px; border-radius:6px; font-size:11px; text-decoration:none; margin-left:10px; display:inline-flex; align-items:center; gap:8px; font-weight:900; text-transform:uppercase; box-shadow: 0 4px 0 #2a8f8c;"><i class="fa-solid fa-cloud-arrow-down"></i> ABRIR</a>`;
         } else if (anexo.base64) {
-          tableHTML += `<button onclick="window.abrirArquivoDireto('${anexo.base64}', '${anexo.nome || 'Anexo'}')" style="background:#fbbf24; color:#000; padding:6px 14px; border-radius:6px; border:none; cursor:pointer; font-size:10px; margin-left:8px; display:inline-flex; align-items:center; gap:6px; font-weight:900; text-transform:uppercase; box-shadow: 0 2px 0 #b4891b;"><i class="fa-solid fa-eye"></i> VER</button>`;
+          tableHTML += `<button onclick="window.abrirArquivoDireto('${anexo.base64}', '${anexo.nome || 'Anexo'}')" style="background:#fbbf24; color:#000; padding:8px 16px; border-radius:6px; border:none; cursor:pointer; font-size:11px; margin-left:10px; display:inline-flex; align-items:center; gap:8px; font-weight:900; text-transform:uppercase; box-shadow: 0 4px 0 #b4891b;"><i class="fa-solid fa-eye"></i> VER</button>`;
         }
       });
-
       tableHTML += `</td></tr>`;
     });
 
