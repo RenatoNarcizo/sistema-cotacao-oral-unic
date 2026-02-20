@@ -3449,7 +3449,7 @@
       </div>
 
       <!-- 👁️ MOTIVO DA REJEIÇÃO (Btn Hidden - Handled by premium_render.js) -->
-      <div id="contMotivoRejeicao" style="margin:15px 0; text-align:center;">
+      <div id="contMotivoRejeicao" style="display:none; margin:15px 0; text-align:center;">
         <button id="btnMotivoRejeicao" onclick="toggleMotivoRejeicao()" style="display:none;">
           📄 Ver motivo da rejeição
         </button>
@@ -10407,6 +10407,25 @@
     // 🔑 SEMPRE abre a cotação MANUAL
     abrirCotacaoManual();
   }
+
+  window.analisarCotacao = function (id) {
+    console.log("📊 Abrindo análise da cotação:", id);
+    const modal = document.getElementById("modalAnaliseCotacao");
+    if (!modal) return;
+
+    modal.style.display = "flex";
+    document.body.style.overflow = "hidden";
+
+    if (typeof renderizarTabelaAnalise === "function") {
+      renderizarTabelaAnalise(id);
+    } else {
+      console.error("❌ Erro: Função renderizarTabelaAnalise não encontrada!");
+      const conteudo = document.getElementById("analiseConteudo");
+      if (conteudo) {
+        conteudo.innerHTML = "<p style='color:#ff4444; padding:20px; text-align:center; font-weight:bold;'>Erro: O carregador premium não foi inicializado corretamente.</p>";
+      }
+    }
+  };
 
   function limparOverlays() {
     document.querySelectorAll(".modal").forEach(m => {
