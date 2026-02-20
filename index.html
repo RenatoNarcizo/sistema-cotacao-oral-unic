@@ -7227,17 +7227,14 @@
             </div>
           </div>
           <div class="acoes" style="display:flex; flex-wrap:wrap; gap:8px;">
-             <button onclick="encerrarCotacaoManualmente('${c.numero}')" style="background:#cc0000; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer;" title="Encerrar cotação agora">
-                🔒 Encerrar
-             </button>
-             
-             <!-- Novos Botões Solicitados -->
-             <button onclick="reabrirCotacao('${c.numero}')" style="background:#e0a800; color:#000; border:none; padding:8px 12px; border-radius:5px; cursor:pointer; font-weight:bold;" title="Estender prazo por 3 dias">
-                🔄 Reabrir / Estender
-             </button>
-             <button onclick="excluirCotacao('${c.numero}')" style="background:transparent; border:1px solid #ff4444; color:#ff4444; padding:8px 12px; border-radius:5px; cursor:pointer;" title="Excluir Cotação">
-                <i class="fa-solid fa-trash"></i>
-             </button>
+             ${usuario.tipo === 'fornecedor'
+            ? `<button onclick="abrirResponderCotacao('${c.numero}', 'novo')" style="background:#00ff99; color:#000; border:none; padding:8px 15px; border-radius:5px; cursor:pointer; font-weight:bold;">✍️ Responder Cotação</button>`
+            : `
+                 <button onclick="encerrarCotacaoManualmente('${c.numero}')" style="background:#cc0000; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer;" title="Encerrar cotação agora">🔒 Encerrar</button>
+                 <button onclick="reabrirCotacao('${c.numero}')" style="background:#e0a800; color:#000; border:none; padding:8px 12px; border-radius:5px; cursor:pointer; font-weight:bold;" title="Estender prazo por 3 dias">🔄 Reabrir / Estender</button>
+                 <button onclick="excluirCotacao('${c.numero}')" style="background:transparent; border:1px solid #ff4444; color:#ff4444; padding:8px 12px; border-radius:5px; cursor:pointer;" title="Excluir Cotação"><i class="fa-solid fa-trash"></i></button>
+               `
+          }
           </div>
         `;
       } else {
@@ -7259,9 +7256,10 @@
           </div>
 
           <div class="acoes" style="display:flex; gap:10px;">
-            <button onclick="analisarCotacao('${c.numero}')" style="background:#661155; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer;">
-              📊 Analisar Respostas
-            </button>
+            ${usuario.tipo === 'fornecedor'
+            ? `<button onclick="abrirResponderCotacao('${c.numero}', 'respondida')" style="background:#661155; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer;">👁️ Ver / Editar Resposta</button>`
+            : `<button onclick="analisarCotacao('${c.numero}')" style="background:#661155; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer;">📊 Analisar Respostas</button>`
+          }
           </div>
         `;
       }
@@ -7274,38 +7272,9 @@
   /* function abrirTela movida para consolidação no final do script */
 
 
-  /* ======================================================
-     💾 SALVA RESPOSTA (SUBSTITUI NO ARRAY)
-  ====================================================== */
-  function salvarRespostaCorreta() {
-    let idCotacao = document.getElementById('numCotacao').innerText;
+  /* 🛑 Funções antigas e duplicatas removidas para maior estabilidade */
 
-    // 1. Pega o ID do fornecedor que está logado no momento
-    let usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
-    let idFornecedor = usuarioLogado.id;
 
-    let dadosDaResposta = {
-      fornecedorNome: usuarioLogado.nome,
-      data: new Date().toLocaleDateString(),
-      precos: []
-    };
-
-    // 2. Captura os preços
-    document.querySelectorAll('.input-preco').forEach(input => {
-      dadosDaResposta.precos.push({
-        produto: input.dataset.nome,
-        valor: input.value
-      });
-    });
-
-    // 3. O SEGREDO: A chave agora leva o ID da cotação E o ID do fornecedor
-    // Exemplo de chave: "resposta_105_forn_7"
-    let chaveUnica = "res_" + idCotacao + "_forn_" + idFornecedor;
-
-    localStorage.setItem(chaveUnica, JSON.stringify(dadosDaResposta));
-
-    alert("Sua resposta foi enviada com sucesso e não aparecerá para outros!");
-  }
 
 
   function atualizarStatusCotacao({ cotacao, acao, usuario }) {
@@ -12096,19 +12065,31 @@
   window.salvarRespostaComAnexo = salvarRespostaComAnexo;
 
   /* ======================================================
-     ✏️ HABILITAR EDIÇÃO DE RESPOSTA (MISSING FUNCTION RESTORED)
+     ✏️ HABILITAR EDIÇÃO DE RESPOSTA (VERSÃO CORRIGIDA)
      ====================================================== */
   function habilitarEdicaoResposta() {
+    console.log("✏️ Habilitando edição de resposta...");
     const btnEdit = document.getElementById("btnEditarResposta");
     const btnSend = document.getElementById("btnEnviarResposta");
 
     if (btnEdit) btnEdit.style.display = 'none';
-    if (btnSend) btnSend.style.display = 'inline-block';
+    if (btnSend) {
+      btnSend.style.display = 'inline-block';
+      btnSend.innerText = "📤 Enviar Resposta Editada";
+    }
 
+    // Libera inputs da tabela
     const inputs = document.querySelectorAll("#tabelaResponderCorpo input");
     inputs.forEach(inp => inp.disabled = false);
 
-    // 🔓 DESBLOQUEIO DE ANEXO (ID DINÂMICO)
+    // 🔓 DESBLOQUEIO DE ANEXO (Visual e Real)
+    const btnFake = document.getElementById("btnFakeAnexo");
+    if (btnFake) {
+      btnFake.disabled = false;
+      btnFake.style.opacity = "1";
+      btnFake.style.cursor = "pointer";
+    }
+
     const containerAnexo = document.getElementById("containerAnexoResponder");
     const fileInput = containerAnexo ? containerAnexo.querySelector("input[type='file']") : null;
     if (fileInput) fileInput.disabled = false;
