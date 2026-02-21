@@ -8847,6 +8847,31 @@
   /* 🔑 garante acesso global */
   window.aprovarCotacaoDireto = aprovarCotacaoDireto;
 
+  /* ======================================================
+     🔍 ANALISAR COTAÇÃO (APROVADOR)
+  ====================================================== */
+  window.analisarCotacao = function (numero) {
+    console.log("🔍 Analisando cotação:", numero);
+    const modal = document.getElementById("modalAnaliseCotacao");
+    if (modal) {
+      modal.style.display = "flex";
+      document.body.style.overflow = "hidden";
+      if (typeof window.renderizarTabelaAnalise === "function") {
+        window.renderizarTabelaAnalise(numero);
+      } else {
+        alert("Erro: Sistema de análise não carregado.");
+      }
+    } else {
+      alert("Erro: Modal de análise não encontrado.");
+    }
+  };
+
+  window.fecharModalAnalise = function () {
+    const modal = document.getElementById("modalAnaliseCotacao");
+    if (modal) modal.style.display = "none";
+    document.body.style.overflow = "auto";
+  };
+
 
 
   /* ======================================================
@@ -9218,6 +9243,9 @@
     // Fecha detalhes se aberto
     const detalhesDiv = document.getElementById(`detalhes-${cotacao.numero}`);
     if (detalhesDiv) detalhesDiv.style.display = "none";
+
+    // ✅ Fecha modal premium se aberto
+    if (typeof window.fecharModalAnalise === 'function') window.fecharModalAnalise();
   };
 
 
@@ -9354,6 +9382,9 @@
     if (typeof carregarPendentesAprovacao === "function") {
       carregarPendentesAprovacao();
     }
+
+    // ✅ Fecha modal premium se aberto
+    if (typeof window.fecharModalAnalise === 'function') window.fecharModalAnalise();
   }
 
 
