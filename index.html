@@ -8988,19 +8988,6 @@
 
   // Função local removida. O sistema agora utiliza o carregarPendentesAprovacao global/async definido anteriormente.
 
-  /* 🔥 AQUI é onde o evento DEVE ser ligado */
-  detalhes.querySelectorAll(".btn-rejeitar").forEach(btn => {
-    btn.addEventListener("click", function () {
-      const numero = this.dataset.numero;
-      abrirRejeicaoCotacao(numero);
-    });
-  });
-
-  bloco.querySelector(".btn-detalhes").addEventListener("click", () => {
-    toggleDetalhesAprovacao(c.numero);
-  });
-    });
-  }
 
 
   function toggleDetalhesAprovacao(numero) {
