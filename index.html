@@ -11323,6 +11323,9 @@
   /* ======================================================
      📋 CARREGAR COTAÇÕES RESPONDIDAS
   ====================================================== */
+  /* ======================================================
+     📋 CARREGAR COTAÇÕES RESPONDIDAS (LAYOUT PREMIUM)
+  ====================================================== */
   window.carregarRespondidas = function (status, container) {
     if (!container) return;
     const cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
@@ -11330,58 +11333,132 @@
 
     container.innerHTML = "";
 
-    // Normaliza status para array
+    // 🔑 normaliza status para array
     const statusFiltro = Array.isArray(status) ? status : [status];
 
-    // Filtro de Busca
+    function fornecedorRespondeu(cotacao, email) {
+      return Array.isArray(cotacao.respostasFornecedores) &&
+        cotacao.respostasFornecedores.some(r =>
+          (r.email || "").toLowerCase().trim() === (email || "").toLowerCase().trim()
+        );
+    }
+
+    // 🔍 BUSCA
     const busca = document.getElementById("buscaCotacaoRespondida")?.value.toLowerCase().trim() || "";
 
-    const filtradas = cotacoes.filter(c => {
-      const s = String(c.status || "").toLowerCase().trim();
-      const matchStatus = statusFiltro.some(sf => String(sf).toLowerCase().trim() === s);
-      const matchBusca = !busca ||
+    const filtrarPorBusca = (list) => {
+      if (!busca) return list;
+      return list.filter(c =>
         (c.numero && String(c.numero).toLowerCase().includes(busca)) ||
-        (c.descricao && c.descricao.toLowerCase().includes(busca));
+        (c.descricao && c.descricao.toLowerCase().includes(busca))
+      );
+    };
 
-      if (usuario.tipo === "fornecedor") {
-        const respondeu = Array.isArray(c.respostasFornecedores) &&
-          c.respostasFornecedores.some(r => (r.email || "").toLowerCase().trim() === (usuario.email || "").toLowerCase().trim());
-        return matchStatus && matchBusca && respondeu;
-      }
+    let filtradas = [];
 
-      return matchStatus && matchBusca;
-    });
+    /* ===========================
+       🚚 FORNECEDOR
+    ============================ */
+    if (usuario.tipo === "fornecedor") {
+      filtradas = cotacoes.filter(c =>
+        statusFiltro.includes(c.status) &&
+        fornecedorRespondeu(c, usuario.email)
+      );
+    }
+    /* ===========================
+       👔 ADMIN / COMPRADOR / APROVADOR
+    ============================ */
+    else {
+      filtradas = cotacoes.filter(c =>
+        statusFiltro.includes(c.status)
+      );
+    }
+
+    // Aplica o filtro de busca final
+    filtradas = filtrarPorBusca(filtradas);
 
     if (filtradas.length === 0) {
-      container.innerHTML = "<p style='text-align:center; padding:20px; color:#666;'>Nenhum registro encontrado.</p>";
+      container.innerHTML = "<p style='text-align:center; padding:20px; color:#666;'>Nenhuma cotação encontrada.</p>";
       return;
     }
 
     // Ordenar por mais recentes
     filtradas.sort((a, b) => (b.numero || 0) - (a.numero || 0));
 
+    // List each quotation
     filtradas.forEach(c => {
+      const respostas = Array.isArray(c.respostasFornecedores) ? c.respostasFornecedores : [];
+      const qtdRespostas = usuario.tipo === "fornecedor" ? 1 : respostas.length;
+      const qtdConvidados = Array.isArray(c.fornecedores) ? c.fornecedores.length : 0;
+
       const bloco = document.createElement("div");
       bloco.className = "linha-cotacao";
 
-      const qtdRespostas = Array.isArray(c.respostasFornecedores) ? c.respostasFornecedores.length : 0;
+      if (c.status === "aberta") {
+        const agora = new Date();
+        const fim = window.parseDateBR ? window.parseDateBR(c.dataFechamento) : new Date(c.dataFechamento);
+        const diffMs = fim - agora;
+        let tempoRestante = "Expirado";
 
-      bloco.innerHTML = `
-        <div class="info">
-          <div style="font-weight:bold; font-size:15px; color:#fff;">${c.descricao || "Sem descrição"}</div>
-          <div style="font-size:12px; color:#aaa; margin-top:4px;">
-            <strong>Cotação #${c.numero}</strong> ${window.obterBadgeWorkflow(c.status)}
+        if (diffMs > 0) {
+          const dias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+          const horas = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+          const minutos = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+          tempoRestante = `${dias}d ${horas}h ${minutos}m`;
+        }
+
+        bloco.innerHTML = `
+          <div class="info">
+            <div style="font-weight:bold; font-size:16px; color:#fff;">${c.descricao || "Sem descrição"}</div>
+            <div style="margin-top:5px; font-size:12px; color:#aaa;">
+               <strong>Cotação #${c.numero}</strong> <span style="background:#555; padding:2px 6px; border-radius:4px; font-size:11px; margin-left:5px; color:white;">📢 Publicada</span>
+            </div>
+            <div style="margin-top:5px; color:#ccc; font-size:13px;">
+              <span>👤 Com fornecedores (${qtdConvidados} convidados)</span><br>
+              <span>📩 Respostas atuais: <b style="color:#0dcaf0;">${qtdRespostas}</b></span><br>
+              <span style="color:${diffMs > 0 ? '#3ab9b6' : '#ff5555'};">⏳ Tempo restante: <b>${tempoRestante}</b></span>
+            </div>
           </div>
-          <div style="margin-top:5px; font-size:13px; color:#ccc;">
-            Respostas: <b style="color:#0dcaf0;">${qtdRespostas}</b>
+          <div class="acoes" style="display:flex; flex-wrap:wrap; gap:8px;">
+             <button onclick="encerrarCotacaoManualmente('${c.numero}')" style="background:#cc0000; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer;" title="Encerrar cotação agora">
+                🔒 Encerrar
+             </button>
+             
+             <!-- Novos Botões Solicitados -->
+             <button onclick="reabrirCotacao('${c.numero}')" style="background:#e0a800; color:#000; border:none; padding:8px 12px; border-radius:5px; cursor:pointer; font-weight:bold;" title="Estender prazo por 3 dias">
+                🔄 Reabrir / Estender
+             </button>
+             <button onclick="excluirCotacao('${c.numero}')" style="background:transparent; border:1px solid #ff4444; color:#ff4444; padding:8px 12px; border-radius:5px; cursor:pointer;" title="Excluir Cotação">
+                <i class="fa-solid fa-trash"></i>
+             </button>
           </div>
-        </div>
-        <div class="acoes">
-          <button onclick="window.analisarCotacao('${c.numero}')" style="background:#661155; color:white; border:none; padding:8px 16px; border-radius:4px; cursor:pointer;">
-            📊 Analisar
-          </button>
-        </div>
-      `;
+        `;
+      } else {
+        bloco.innerHTML = `
+          <div class="info">
+            <div style="font-weight:bold; font-size:15px; color:#fff;">${c.descricao || "Sem descrição"}</div>
+            <div style="font-size:12px; color:#aaa; margin-top:4px;">
+              <strong>Cotação #${c.numero}</strong> ${window.obterBadgeWorkflow ? window.obterBadgeWorkflow(c.status) : ""}
+            </div>
+            <div style="margin-top:4px; font-size:13px; color:#ccc;">
+              ${usuario.tipo === "fornecedor"
+            ? "✅ Você respondeu"
+            : `Respostas recebidas: <b>${qtdRespostas}</b>`}
+              ${c.status === "reanalise"
+            ? "<br><span style='color:#ff5555;'>❌ Rejeitada — voltou para análise</span>"
+            : ""}
+              ${c.status === "fechada" ? "<br><span style='color:#0dcaf0;'>🏁 Concluída</span>" : ""}
+            </div>
+          </div>
+
+          <div class="acoes" style="display:flex; flex-wrap:wrap; gap:10px;">
+            <button onclick="analisarCotacao('${c.numero}')" style="background:#661155; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer;">
+              📊 Analisar Respostas
+            </button>
+          </div>
+        `;
+      }
+
       container.appendChild(bloco);
     });
   };
