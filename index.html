@@ -8287,73 +8287,8 @@
 
 
 
-  // 🗑️ Lógica para Excluir Cotação
-  window.excluirCotacao = function (id) {
-    if (!confirm("⚠️ ATENÇÃO: Tem certeza que deseja EXCLUIR permanentemente esta cotação?\n\nEssa ação apagará todos os itens e respostas vinculadas e NÃO poderá ser desfeita.")) {
-      return;
-    }
-
-    try {
-      // 1. Remove da lista principal
-      let cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
-      const novaLista = cotacoes.filter(c => c.numero !== id && c.id !== id);
-
-      if (cotacoes.length === novaLista.length) {
-        alert("Erro: Cotação não encontrada na lista.");
-        return;
-      }
-
-      localStorage.setItem("cotacoes", JSON.stringify(novaLista));
-
-      // ☁️ SYNC RTDB (CRITICO PARA EXCLUSÃO)
-      if (typeof rtdb !== "undefined") {
-        rtdb.ref("cotacoes/" + id).remove()
-          .then(() => console.log("🗑️ Cotação excluída do RTDB"))
-          .catch(e => console.error("❌ Erro ao excluir do RTDB:", e));
-      }
-
-      // 2. Remove respostas vinculadas (Limpeza)
-      // Percorre keys para achar respostas desta cotação
-      const keysParaRemover = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key.startsWith(`resposta_${id}_`) || key.startsWith(`resposta_${id} _`)) {
-          keysParaRemover.push(key);
-        }
-      }
-
-      keysParaRemover.forEach(k => localStorage.removeItem(k));
-
-      // 3. Remove decisões salvas se houver
-      if (window.decisoesAnalise && window.decisoesAnalise[id]) {
-        delete window.decisoesAnalise[id];
-      }
-
-      alert("✅ Cotação excluída com sucesso!");
-
-      // 4. Fecha modal e atualiza
-      const modal = document.getElementById('modalAnaliseCotacao');
-      if (modal) modal.style.display = "none";
-
-      // Tenta recarregar a lista se a função existir
-      if (typeof carregarCotacoes === 'function') {
-        carregarCotacoes();
-      } else {
-        window.location.reload();
-      }
-
-    } catch (e) {
-      console.error(e);
-      alert("Erro ao excluir cotação: " + e.message);
-    }
-  };
-
   // Helper function
-  function atualizarDecisaoVencedor(numeroCotacao, produto, emailFornecedor) {
-    if (!window.decisoesAnalise) window.decisoesAnalise = {};
-    if (!window.decisoesAnalise[numeroCotacao]) window.decisoesAnalise[numeroCotacao] = {};
-    window.decisoesAnalise[numeroCotacao][produto] = emailFornecedor;
-  }
+
 
 
   /* ======================================================
@@ -8483,8 +8418,8 @@
       // Recarrega do LOCALSTORAGE (que acabamos de atualizar)
       // Isso evita o round-trip com o Firebase que poderia trazer dados antigos
       if (typeof carregarCotacoes === 'function') {
-        // Hack: Força leitura local temporariamente se a função suportasse, 
-        // mas como não suporta, vamos confiar que o carregarCotacoes vai ler do Firestore 
+        // Hack: Força leitura local temporariamente se a função suportasse,
+        // mas como não suporta, vamos confiar que o carregarCotacoes vai ler do Firestore
         // e talvez sobrescrever.
         // MELHOR: Não chamar carregarCotacoes('analise'). O usuário vai mudar de tela.
       }
@@ -8563,32 +8498,6 @@
 
   /* 🔑 garante acesso global */
   window.aprovarCotacaoDireto = aprovarCotacaoDireto;
-
-  /* ======================================================
-     🔍 ANALISAR COTAÇÃO (APROVADOR - MODO ORIGINAL)
-  ====================================================== */
-  window.analisarCotacao = function (numero) {
-    console.log("🔍 Analisando cotação (modo premium original):", numero);
-    const divDetalhes = document.getElementById(`detalhes-${numero}`);
-    if (!divDetalhes) {
-      console.error("Erro: Container detalhes não encontrado para", numero);
-      return;
-    }
-
-    if (divDetalhes.style.display === "none") {
-      // Chama o premium_render para popular o div de detalhes
-      if (typeof window.renderizarTabelaAnalise === "function") {
-        window.renderizarTabelaAnalise(numero, divDetalhes);
-        divDetalhes.style.display = "block";
-      } else {
-        alert("Erro: Sistema de análise não carregado.");
-      }
-    } else {
-      divDetalhes.style.display = "none";
-    }
-  };
-
-
 
   /* ======================================================
   📊 CALCULAR RANKING DE PREÇOS POR ITEM
@@ -9740,7 +9649,7 @@
 
   function fecharModalDetalhesSolicitacao() {
     document.getElementById("modalDetalhesSolicitacao").style.display = "none";
-    document.body.style.overflow = "auto";
+    document.body.style.overflow = "auto"; // 🔓 Unlock background scroll
   }
 
 
@@ -11714,7 +11623,9 @@
       // Remove respostas
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (key.includes(idStr)) localStorage.removeItem(key);
+        if (key && (key.includes(`resposta_${idStr}_`) || key.includes(`res_${idStr}_`))) {
+          localStorage.removeItem(key);
+        }
       }
 
       // ☁️ Remove Firestore (Background)
@@ -11738,6 +11649,58 @@
       console.error("Erro ao excluir cotação:", e);
       alert("Erro ao excluir: " + e.message);
     }
+  };
+
+  /**
+   * Função para alternar entre as abas do dashboard (Publicadas, Análise, Aprovação, Fechadas)
+   */
+  window.toggleListaRespondidas = function (aba, forcar = false) {
+    console.log("🔄 Alternando aba para:", aba);
+    const abas = ['publicadas', 'analise', 'aprovacao', 'fechada'];
+    const activeTab = aba || 'publicadas';
+
+    abas.forEach(nomeAba => {
+      const idLista = `lista${nomeAba.charAt(0).toUpperCase() + nomeAba.slice(1)}`;
+      const idBotao = `btn${nomeAba.charAt(0).toUpperCase() + nomeAba.slice(1)}`;
+
+      const elLista = document.getElementById(idLista);
+      if (elLista) elLista.style.display = 'none';
+
+      const elBotao = document.getElementById(idBotao);
+      if (elBotao) elBotao.classList.remove('ativo');
+    });
+
+    const idListaAtiva = `lista${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}`;
+    const idBotaoAtivo = `btn${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}`;
+
+    const elAtivo = document.getElementById(idListaAtiva);
+    if (elAtivo) elAtivo.style.display = 'block';
+
+    const elBotaoAtivo = document.getElementById(idBotaoAtivo);
+    if (elBotaoAtivo) elBotaoAtivo.classList.add('ativo');
+
+    // Carregamento de dados por aba
+    if (activeTab === 'publicadas') {
+      if (typeof carregarRespondidas === 'function') {
+        carregarRespondidas('aberta', document.getElementById('listaPublicadas'));
+      }
+    } else if (activeTab === 'analise') {
+      if (typeof carregarRespondidas === 'function') {
+        carregarRespondidas(['respondida', 'reanalise', 'analise'], document.getElementById('listaAnalise'));
+      }
+    } else if (activeTab === 'aprovacao') {
+      if (typeof carregarPendentesAprovacao === 'function') {
+        carregarPendentesAprovacao();
+      } else if (typeof carregarRespondidas === 'function') {
+        carregarRespondidas('aprovacao', document.getElementById('listaAprovacao'));
+      }
+    } else if (activeTab === 'fechada') {
+      if (typeof carregarRespondidas === 'function') {
+        carregarRespondidas('fechada', document.getElementById('listaFechadas'));
+      }
+    }
+
+    window.ultimaAbaRespondidas = activeTab;
   };
 
   // Inicia assim que possível
