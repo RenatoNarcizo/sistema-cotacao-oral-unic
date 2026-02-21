@@ -5823,6 +5823,7 @@
                    🔍 Analisar
                 </button>
             </div>
+            <div id="detalhes-${cot.numero}" style="display:none; margin-top:15px; border-top:1px solid #333; padding-top:15px;"></div>
         `;
       listaDiv.appendChild(card);
     });
@@ -8848,28 +8849,28 @@
   window.aprovarCotacaoDireto = aprovarCotacaoDireto;
 
   /* ======================================================
-     🔍 ANALISAR COTAÇÃO (APROVADOR)
+     🔍 ANALISAR COTAÇÃO (APROVADOR - MODO ORIGINAL)
   ====================================================== */
   window.analisarCotacao = function (numero) {
-    console.log("🔍 Analisando cotação:", numero);
-    const modal = document.getElementById("modalAnaliseCotacao");
-    if (modal) {
-      modal.style.display = "flex";
-      document.body.style.overflow = "hidden";
-      if (typeof window.renderizarTabelaAnalise === "function") {
-        window.renderizarTabelaAnalise(numero);
+    console.log("🔍 Analisando cotação (modo original):", numero);
+    const divDetalhes = document.getElementById(`detalhes-${numero}`);
+    if (!divDetalhes) {
+      console.error("Erro: Container detalhes não encontrado para", numero);
+      return;
+    }
+
+    if (divDetalhes.style.display === "none") {
+      const cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
+      const cot = cotacoes.find(c => c.numero === numero || c.id === numero);
+      if (cot) {
+        divDetalhes.innerHTML = gerarHTMLDetalhesAprovacao(cot);
+        divDetalhes.style.display = "block";
       } else {
-        alert("Erro: Sistema de análise não carregado.");
+        alert("Erro: Cotação não encontrada.");
       }
     } else {
-      alert("Erro: Modal de análise não encontrado.");
+      divDetalhes.style.display = "none";
     }
-  };
-
-  window.fecharModalAnalise = function () {
-    const modal = document.getElementById("modalAnaliseCotacao");
-    if (modal) modal.style.display = "none";
-    document.body.style.overflow = "auto";
   };
 
 
@@ -9243,9 +9244,6 @@
     // Fecha detalhes se aberto
     const detalhesDiv = document.getElementById(`detalhes-${cotacao.numero}`);
     if (detalhesDiv) detalhesDiv.style.display = "none";
-
-    // ✅ Fecha modal premium se aberto
-    if (typeof window.fecharModalAnalise === 'function') window.fecharModalAnalise();
   };
 
 
@@ -9382,9 +9380,6 @@
     if (typeof carregarPendentesAprovacao === "function") {
       carregarPendentesAprovacao();
     }
-
-    // ✅ Fecha modal premium se aberto
-    if (typeof window.fecharModalAnalise === 'function') window.fecharModalAnalise();
   }
 
 
