@@ -1877,9 +1877,9 @@
     }
 
     .status-pendente {
-      background: #333;
-      color: #aaa;
-      border: 1px solid #555;
+      background: #3ab9b6;
+      color: #000;
+      border: 1px solid #2a8f8c;
     }
 
     .status-cotacao {
@@ -11411,7 +11411,7 @@
           <div class="info">
             <div style="font-weight:bold; font-size:16px; color:#fff;">${c.descricao || "Sem descrição"}</div>
             <div style="margin-top:5px; font-size:12px; color:#aaa;">
-               <strong>Cotação #${c.numero}</strong> <span style="background:#555; padding:2px 6px; border-radius:4px; font-size:11px; margin-left:5px; color:white;">📢 Publicada</span>
+               <strong>Cotação #${c.numero}</strong> ${window.obterBadgeWorkflow ? window.obterBadgeWorkflow(c.status) : ""}
             </div>
             <div style="margin-top:5px; color:#ccc; font-size:13px;">
               <span>👤 Com fornecedores (${qtdConvidados} convidados)</span><br>
@@ -11419,7 +11419,7 @@
               <span style="color:${diffMs > 0 ? '#3ab9b6' : '#ff5555'};">⏳ Tempo restante: <b>${tempoRestante}</b></span>
             </div>
           </div>
-          <div class="acoes" style="display:flex; flex-wrap:wrap; gap:8px;">
+          <div class="acoes" style="display:flex; flex-wrap:nowrap; gap:8px;">
              <button onclick="encerrarCotacaoManualmente('${c.numero}')" style="background:#cc0000; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer;" title="Encerrar cotação agora">
                 🔒 Encerrar
              </button>
@@ -11451,7 +11451,7 @@
             </div>
           </div>
 
-          <div class="acoes" style="display:flex; flex-wrap:wrap; gap:10px;">
+          <div class="acoes" style="display:flex; flex-wrap:nowrap; gap:10px;">
             <button onclick="analisarCotacao('${c.numero}')" style="background:#661155; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer;">
               📊 Analisar Respostas
             </button>
