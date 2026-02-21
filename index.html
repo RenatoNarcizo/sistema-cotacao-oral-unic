@@ -8574,22 +8574,25 @@
     // BOTÕES FULL WIDTH (PREMIUM) - Exibidos apenas em modo de análise
     if (isAnalise) {
       html += `
-         <div style="margin-top:25px; display:flex; flex-direction:column; gap:12px;">
+         <div style="margin-top:25px; display:flex; flex-direction:row; gap:10px; justify-content:center; align-items:center; padding: 5px 0;">
+            
+            <!-- 📂 ANEXOS -->
             <button onclick="visualizarDocumentos('${cotacao.numero}')" 
-                 style="width:100%; background:#3ab9b6; color:#fff; border:none; padding:14px; border-radius:8px; cursor:pointer; font-weight:800; font-size:15px; display:flex; align-items:center; justify-content:center; gap:10px; box-shadow:0 3px 0 #2a8f8c;">
-               <i class="fa-solid fa-folder-open" style="color:#ffd700;"></i> <span style="color:#fff;">Ver Todos os Anexos</span>
+                 style="flex:1; background:#3ab9b6; color:#fff; border:none; padding:12px 15px; border-radius:8px; cursor:pointer; font-weight:800; font-size:12px; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 3px 0 #2a8f8c; text-transform:uppercase;">
+               <i class="fa-solid fa-folder-open"></i> Ver Todos os Anexos
             </button>
-            <div style="display:flex; gap:12px;">
-              <button onclick="excluirCotacao('${cotacao.numero}')" 
-                   style="flex:1; background:#b93a3a; color:white; border:none; padding:14px; border-radius:8px; cursor:pointer; font-weight:800; font-size:15px; display:flex; align-items:center; justify-content:center; gap:10px; box-shadow:0 3px 0 #8f2a2a;">
-                 <i class="fa-solid fa-trash"></i> Excluir Cotação
-              </button>
 
-              <button onclick="enviarParaAprovacao()" 
-                   style="flex:1; background:#661155; color:white; border:none; padding:14px; border-radius:8px; cursor:pointer; font-weight:800; font-size:15px; display:flex; align-items:center; justify-content:center; gap:10px; box-shadow:0 3px 0 #4a0c3e;">
-                 <i class="fa-solid fa-square-check"></i> Enviar para Aprovação
-              </button>
-            </div>
+            <!-- 🗑️ EXCLUIR -->
+            <button onclick="excluirCotacao('${cotacao.numero}')" 
+                 style="flex:1; background:#b93a3a; color:white; border:none; padding:12px 15px; border-radius:8px; cursor:pointer; font-weight:800; font-size:12px; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 3px 0 #8f2a2a; text-transform:uppercase;">
+               <i class="fa-solid fa-trash"></i> Excluir Cotação
+            </button>
+
+            <!-- ✅ ENVIAR -->
+            <button onclick="enviarParaAprovacao()" 
+                 style="flex:1.2; background:#661155; color:white; border:none; padding:12px 20px; border-radius:8px; cursor:pointer; font-weight:800; font-size:12px; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 3px 0 #4a0c3e; text-transform:uppercase;">
+               <i class="fa-solid fa-paper-plane"></i> Enviar p/ Aprovação
+            </button>
          </div>
       `;
     }
