@@ -1877,9 +1877,9 @@
     }
 
     .status-pendente {
-      background: #3ab9b6;
-      color: #000;
-      border: 1px solid #2a8f8c;
+      background: #333;
+      color: #aaa;
+      border: 1px solid #555;
     }
 
     .status-cotacao {
@@ -3784,7 +3784,35 @@
     </div>
   </section>
 
+  <!-- ======================================================
+     ✅ APROVAR COMPRAS (MISSING SECTION RESTORED)
+  ====================================================== -->
+  <section id="aprovarCompras" style="display:none;">
+    <header>
+      <button class="btn-sair" onclick="voltarMenu()">🏠 Menu Principal</button>
+      <h1>Aprovar Compras</h1>
+    </header>
 
+    <div style="
+    background:#111;
+    border:1px solid #661155;
+    border-radius:12px;
+    padding:25px;
+    margin:30px auto;
+    width:90%;
+    max-width:1000px;
+    color:white;
+    box-shadow:0 0 15px rgba(102,17,85,0.6);
+  ">
+
+      <h2 style="color:#661155; text-align:center;">
+        ✅ Cotações Pendentes de Aprovação
+      </h2>
+
+      <div id="listaPendentesAprovacao" style="margin-top:25px;"></div>
+
+    </div>
+  </section>
 
 
 
@@ -5280,11 +5308,41 @@
   /* ======================================================
      ✅ APROVAÇÃO DE COMPRAS (CORRIGIDO)
      ====================================================== */
-  /* ======================================================
-     ✅ APROVAÇÃO DE COMPRAS (DASHBOARD)
-     ====================================================== */
-  // Versão simples removida em favor da versão Cloud/Async unificada abaixo
+  window.carregarPendentesAprovacao = function () {
+    const listaDiv = document.getElementById("listaPendentesAprovacao");
+    const cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
 
+    listaDiv.innerHTML = "";
+
+    // Filtra status "aprovacao" (aprovada na análise)
+    const pendentes = cotacoes.filter(c => c.status === "aprovacao");
+
+    if (pendentes.length === 0) {
+      listaDiv.innerHTML = "<p style='text-align:center;color:#ccc;'>Nenhuma cotação aguardando aprovação final.</p>";
+      return;
+    }
+
+    pendentes.forEach(cot => {
+      const card = document.createElement("div");
+      card.className = "card-cotacao";
+      card.style.cssText = "background:#1a1a1a; border:1px solid #661155; padding:15px; margin-bottom:10px; border-radius:8px;";
+
+      // Botão leva para o modal de análise mas em modo de aprovação (já tratado no premium_render)
+      card.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                 <strong style="color:white; font-size:16px;">${cot.descricao || "Cotação Sem Descrição"}</strong>
+                 <span style="display:block; font-size:12px; color:#aaa;">#${cot.numero} - Encerrada em: ${cot.dataFechamento}</span>
+                 <span style="font-size:11px; color:#f39c12;">💛 Aguardando Decisão Final</span>
+              </div>
+              <button onclick="abrirAnalise('${cot.numero}')" style="background:#661155; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer;">
+                 🔍 Avaliar
+              </button>
+          </div>
+      `;
+      listaDiv.appendChild(card);
+    });
+  };
 
   /* ======================================================
      GERAR NÚMERO DE COTAÇÃO (ÚNICO)
@@ -5756,8 +5814,8 @@
       cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
     }
 
-    // Filtro adicional (para garantir que só apareça o que realmente está pendente)
-    const pendentes = cotacoes.filter(c => c.status === "aprovacao" && c.status !== "reanalise");
+    // Filtro adicional (para garantir)
+    const pendentes = cotacoes.filter(c => c.status === "aprovacao" || (c.status === "respondida" && c.statusAprovacao === "pendente"));
 
     console.log("☁️ Pendentes encontradas (Cloud/Final):", pendentes.length);
 
@@ -5766,8 +5824,8 @@
     if (pendentes.length === 0) {
       listaDiv.innerHTML = `
         <div style="text-align:center; color:#ccc; padding:20px;">
-          <i class="fa-solid fa-check-double" style="font-size:30px; margin-bottom:10px; color:#3ab9b6;"></i>
-          <p>Nenhuma cotação aguardando aprovação no momento.</p>
+          <i class="fa-solid fa-folder-open" style="font-size:30px; margin-bottom:10px; color:#555;"></i>
+          <p>Nenhuma cotação aguardando aprovação na nuvem.</p>
         </div>
       `;
       return;
@@ -5787,7 +5845,7 @@
                 <div>
                    <strong style="color:white; font-size:16px;">${cot.descricao || "Cotação sem descrição"}</strong>
                    <span style="display:block; font-size:12px; color:#aaa;">
-                     #${cot.numero} - ${cot.dataFechamento}
+                     #${cot.numero} - ${cot.dataFechamento ? new Date(cot.dataFechamento).toLocaleDateString() : 'Sem data'}
                      <span style="color:#f39c12; margin-left:8px;">(Nuvem)</span>
                    </span>
                 </div>
@@ -5795,7 +5853,6 @@
                    🔍 Analisar
                 </button>
             </div>
-            <div id="detalhes-${cot.numero}" style="display:none; margin-top:15px; border-top:1px solid #333; padding-top:15px;"></div>
         `;
       listaDiv.appendChild(card);
     });
@@ -6709,8 +6766,250 @@
     }
   };
 
-  /* 🛑 Funções legadas carregarRespondidas e analisarCotacao removidas para evitar duplicidade.
-     As versões estáveis estão localizadas na seção de consolidação ao final do script. */
+  function carregarRespondidas(status, container) {
+
+    const cotacoes = getCotacoes(); // TODAS
+    const usuario = getUsuarioLogado();
+
+    container.innerHTML = "";
+
+    // 🔑 normaliza status para array
+    const statusFiltro = Array.isArray(status) ? status : [status];
+
+    function fornecedorRespondeu(cotacao, email) {
+      return Array.isArray(cotacao.respostasFornecedores) &&
+        cotacao.respostasFornecedores.some(r =>
+          normalizarEmail(r.email) === normalizarEmail(email)
+        );
+    }
+
+    // 🔍 BUSCA
+    const busca = document.getElementById("buscaCotacaoRespondida")?.value.toLowerCase().trim() || "";
+
+    const filtrarPorBusca = (list) => {
+      if (!busca) return list;
+      return list.filter(c =>
+        (c.numero && String(c.numero).toLowerCase().includes(busca)) ||
+        (c.descricao && c.descricao.toLowerCase().includes(busca))
+      );
+    };
+
+    let filtradas = [];
+
+    /* ===========================
+       🚚 FORNECEDOR
+    ============================ */
+    if (usuario.tipo === "fornecedor") {
+
+      filtradas = cotacoes.filter(c =>
+        statusFiltro.includes(c.status) &&
+        fornecedorRespondeu(c, usuario.email)
+      );
+
+    }
+    /* ===========================
+       👔 ADMIN / COMPRADOR / APROVADOR
+    ============================ */
+    else {
+      filtradas = cotacoes.filter(c =>
+        statusFiltro.includes(c.status)
+      );
+    }
+
+    // Aplica o filtro de busca final
+    filtradas = filtrarPorBusca(filtradas);
+
+    if (filtradas.length === 0) {
+      container.innerHTML =
+        "<p style='text-align:center;'>Nenhuma cotação encontrada.</p>";
+      return;
+    }
+
+    // List each quotation
+    filtradas.forEach(c => {
+
+      const respostas = Array.isArray(c.respostasFornecedores) ? c.respostasFornecedores : [];
+      const qtdRespostas = usuario.tipo === "fornecedor" ? 1 : respostas.length;
+      const qtdConvidados = Array.isArray(c.fornecedores) ? c.fornecedores.length : 0;
+      /* cleanup start */
+      /* cleaning... */
+      /* cleanup point 1 */
+      /* line removed */
+
+      /* line removed */
+      /* line removed */
+
+      const bloco = document.createElement("div");
+      bloco.className = "linha-cotacao";
+
+      if (c.status === "aberta") {
+        const agora = new Date();
+        // 🛠️ FIX: Usa o parser global para evitar Invalid Date
+        const fim = window.parseDateBR ? window.parseDateBR(c.dataFechamento) : new Date(c.dataFechamento);
+
+        const diffMs = fim - agora;
+        let tempoRestante = "Expirado";
+
+        if (diffMs > 0) {
+          const dias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+          const horas = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+          const minutos = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+          tempoRestante = `${dias}d ${horas}h ${minutos}m`;
+        }
+
+        // 🟢 LABEL REABERTA
+        if (c.reaberta) {
+          tempoRestante += " <span style='color:#ffd700; font-size:11px;'>(Reaberta)</span>";
+        }
+
+        bloco.innerHTML = `
+          <div class="info">
+            <div style="font-weight:bold; font-size:16px; color:#fff;">${c.descricao || "Sem descrição"}</div>
+            <div style="margin-top:5px; font-size:12px; color:#aaa;">
+               <strong>Cotação #${c.numero}</strong> <span style="background:#555; padding:2px 6px; border-radius:4px; font-size:11px; margin-left:5px; color:white;">📢 Publicada</span>
+            </div>
+            <div style="margin-top:5px; color:#ccc; font-size:13px;">
+              <span>👤 Com fornecedores (${qtdConvidados} convidados)</span><br>
+              <span>📩 Respostas atuais: <b style="color:#0dcaf0;">${qtdRespostas}</b></span><br>
+              <span style="color:${diffMs > 0 ? '#3ab9b6' : '#ff5555'};">⏳ Tempo restante: <b>${tempoRestante}</b></span>
+            </div>
+          </div>
+          <div class="acoes" style="display:flex; flex-wrap:wrap; gap:8px;">
+             ${usuario.tipo === 'fornecedor'
+            ? `<button onclick="abrirResponderCotacao('${c.numero}', 'novo')" style="background:#00ff99; color:#000; border:none; padding:8px 15px; border-radius:5px; cursor:pointer; font-weight:bold;">✍️ Responder Cotação</button>`
+            : `
+                 <button onclick="encerrarCotacaoManualmente('${c.numero}')" style="background:#cc0000; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer;" title="Encerrar cotação agora">🔒 Encerrar</button>
+                 <button onclick="reabrirCotacao('${c.numero}')" style="background:#e0a800; color:#000; border:none; padding:8px 12px; border-radius:5px; cursor:pointer; font-weight:bold;" title="Estender prazo por 3 dias">🔄 Reabrir / Estender</button>
+                 <button onclick="excluirCotacao('${c.numero}')" style="background:transparent; border:1px solid #ff4444; color:#ff4444; padding:8px 12px; border-radius:5px; cursor:pointer;" title="Excluir Cotação"><i class="fa-solid fa-trash"></i></button>
+               `
+          }
+          </div>
+        `;
+      } else {
+        bloco.innerHTML = `
+          <div class="info">
+            <div style="font-weight:bold; font-size:15px; color:#fff;">${c.descricao || "Sem descrição"}</div>
+            <div style="font-size:12px; color:#aaa; margin-top:4px;">
+              <strong>Cotação #${c.numero}</strong>
+            </div>
+            <div style="margin-top:4px; font-size:13px; color:#ccc;">
+              ${usuario.tipo === "fornecedor"
+            ? "✅ Você respondeu"
+            : `Respostas recebidas: <b>${qtdRespostas}</b>`}
+              ${c.status === "reanalise"
+            ? "<br><span style='color:#ff5555;'>❌ Rejeitada — voltou para análise</span>"
+            : ""}
+              ${c.status === "fechada" ? "<br><span style='color:#0dcaf0;'>🏁 Concluída</span>" : ""}
+            </div>
+          </div>
+
+          <div class="acoes" style="display:flex; gap:10px;">
+            ${usuario.tipo === 'fornecedor'
+            ? `<button onclick="abrirResponderCotacao('${c.numero}', 'respondida')" style="background:#661155; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer;">👁️ Ver / Editar Resposta</button>`
+            : `<button onclick="analisarCotacao('${c.numero}')" style="background:#661155; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer;">📊 Analisar Respostas</button>`
+          }
+          </div>
+        `;
+      }
+
+      container.appendChild(bloco);
+    });
+  }
+
+
+  /* function abrirTela movida para consolidação no final do script */
+
+
+  /* 🛑 Funções antigas e duplicatas removidas para maior estabilidade */
+
+
+
+
+  function atualizarStatusCotacao({ cotacao, acao, usuario }) {
+
+    // status atual
+    const statusAtual = cotacao.status || "aberta";
+
+    // ⛔ nunca muda se já estiver fechada
+    if (statusAtual === "fechada") {
+      return statusAtual;
+    }
+
+    // ✅ 1. Fornecedor enviou resposta
+    if (acao === "enviar_resposta" && usuario.tipo === "fornecedor") {
+      // NÃO muda status global
+      // resposta é individual
+      return statusAtual; // continua aberta
+    }
+
+    // ✅ 2. Comprador fechou manualmente
+    if (acao === "fechar_manual" && usuario.tipo === "comprador") {
+      cotacao.status = "fechada";
+      return "fechada";
+    }
+
+    // ✅ 3. Prazo acabou
+    if (acao === "prazo_expirado") {
+      cotacao.status = "fechada";
+      return "fechada";
+    }
+
+    // 🔒 QUALQUER OUTRA COISA → BLOQUEIA
+    return statusAtual;
+  }
+
+  /* ======================================================
+     STEPPER VISUAL WORKFLOW HELPER
+  ====================================================== */
+  function gerarStepperHTML(status) {
+    const steps = [
+      { id: 'pendente', label: 'Requisição' },
+      { id: 'em_cotacao', label: 'Cotação' },
+      { id: 'respondida', label: 'Análise' },
+      { id: 'aprovacao', label: 'Aprovação' },
+      { id: 'fechada', label: 'Pedido' },
+      { id: 'finalizada', label: 'Finalizado' }
+    ];
+
+    // Mapeamento de progresso
+    let activeIndex = 0;
+    if (status === 'em_cotacao') activeIndex = 1;
+    if (status === 'respondida' || status === 'reanalise') activeIndex = 2;
+    if (status === 'aprovacao') activeIndex = 3;
+    if (status === 'fechada') activeIndex = 4;
+    if (status === 'finalizada') activeIndex = 5;
+
+    let html = `
+        <div class="stepper-container" style="margin-bottom:30px;">
+          <div class="progress-bar-stepper" style="width: ${(activeIndex / (steps.length - 1)) * 100}%"></div>
+      `;
+
+    steps.forEach((step, index) => {
+      let cssClass = '';
+      if (index < activeIndex) cssClass = 'completed';
+      if (index === activeIndex) cssClass = 'active';
+
+      html += `
+        <div class="step-item ${cssClass}">
+          <div class="step-circle">${index + 1}</div>
+          <div class="step-label">${step.label}</div>
+        </div>
+        `;
+    });
+
+    html += `</div>`;
+    return html;
+  }
+
+  /* ======================================================
+     📊 MATRIZ DE ADJUDICAÇÃO — ANÁLISE DE COTAÇÃO (COMPRADOR)
+  ====================================================== */
+  /* ======================================================
+     📊 ANÁLISE DE COTAÇÃO (COMPRADOR) - UNIFICADO
+     Redireciona para renderizarTabelaAnalise para garantir
+     lógica única e correção de bugs visuais.
+  ====================================================== */
+  /* window.analisarCotacao foi movida para a seção de consolidação final */
 
   window.fecharModalAnalise = function () {
     document.getElementById("modalAnaliseCotacao").style.display = "none";
@@ -8041,12 +8340,330 @@
     }
   };
 
+  function renderizarTabelaAnalise(textoOuId) {
+    const container = document.getElementById('analiseConteudo');
 
+    // 🔥 Limpa completamente para evitar duplicações
+    if (container) container.innerHTML = "";
 
+    // 🔍 Helper Local
+    const normalizarEmail = (e) => (e || "").toLowerCase().trim();
 
+    const cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
+    let cotacao = cotacoes.find(c => c.id === textoOuId);
+    if (!cotacao) {
+      cotacao = cotacoes.find(c => c.numero === textoOuId);
+    }
+
+    if (!cotacao) {
+      container.innerHTML = "<p>Cotação não encontrada.</p>";
+      return;
+    }
+
+    /* ==========================
+       📌 CABEÇALHO 
+    ========================== */
+    const elNum = document.getElementById("analiseNumero");
+    if (elNum) elNum.textContent = cotacao.numero || cotacao.id;
+
+    const elDesc = document.getElementById("analiseDescricao");
+    if (elDesc) elDesc.textContent = cotacao.descricao || "— Sem descrição";
+
+    const elData = document.getElementById("analiseDataCriacao");
+    if (elData) elData.textContent = cotacao.dataCriacao || "-";
+
+    const elFech = document.getElementById("analiseDataFechamento");
+    if (elFech) elFech.textContent = cotacao.dataFechamento || "-";
+
+    // Controle de Status / Visibilidade de Botões EXTERNOS
+    const divAcoesFechada = document.getElementById("acoesFechada");
+    const statusDiv = document.getElementById("statusAprovacao");
+    const btnEnviarExterno = document.getElementById("btnEnviarAprovacao");
+    const btnVerTodosAnexos = document.getElementById("btnVerTodosAnexos");
+    const contEnviarAprovacao = document.getElementById("contEnviarAprovacao");
+
+    // Reseta visibilidade externa - DESATIVADOS (botões agora são internos/premium)
+    if (divAcoesFechada) divAcoesFechada.style.display = "none";
+    if (statusDiv) statusDiv.innerHTML = "";
+    if (btnEnviarExterno) btnEnviarExterno.style.display = "none";
+    if (btnVerTodosAnexos) btnVerTodosAnexos.style.display = "none";
+    if (contEnviarAprovacao) contEnviarAprovacao.style.display = "none"; // 🔥 Esconde container inteiro
+
+    // 1. ANÁLISE (Comprador) - Botões agora são renderizados internamente
+    const isAnalise = (cotacao.status === "analise" || cotacao.status === "respondida" || cotacao.status === "reanalise");
+    // Removido a ativação dos botões externos - agora usamos apenas os internos (premium)
+
+    // 2. APROVAÇÃO (Aprovador vê, Comprador vê status)
+    if (cotacao.status === "aprovacao") {
+      if (statusDiv) statusDiv.innerHTML = "⏳ Aguardando Aprovação";
+    }
+
+    // 3. FECHADA
+    if (cotacao.status === "fechada") {
+      if (statusDiv) statusDiv.innerHTML = "🔒 Fechada (Pedido Gerado)";
+      if (divAcoesFechada) divAcoesFechada.style.display = "flex";
+      window.cotacaoAtualPDF = cotacao;
+    }
+
+    // Botão de Motivo
+    const textAreaMotivo = document.getElementById("motivoRejeicao");
+    const btnMotivo = document.getElementById("btnMotivoRejeicao");
+
+    if (btnMotivo && btnMotivo.parentElement) {
+      if (cotacao.motivoRejeicao) {
+        btnMotivo.parentElement.style.display = "block";
+      } else {
+        btnMotivo.parentElement.style.display = "none";
+      }
+    }
+    if (textAreaMotivo) {
+      textAreaMotivo.value = cotacao.motivoRejeicao || "";
+    }
+
+    /* ==========================
+       📊 DADOS 
+    ========================== */
+    let respostas = [];
+    if (Array.isArray(cotacao.respostasFornecedores)) {
+      respostas = [...cotacao.respostasFornecedores];
+    }
+
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key.startsWith(`resposta_${cotacao.numero}_`) || key.startsWith(`resposta_${cotacao.numero} _`)) {
+        try {
+          const r = JSON.parse(localStorage.getItem(key));
+          const jaExiste = respostas.some(
+            existing => normalizarEmail(existing.email) === normalizarEmail(r.email)
+          );
+          if (!jaExiste) {
+            respostas.push({
+              fornecedor: r.fornecedor || r.fornecedorNome || "Fornecedor",
+              email: r.email || r.emailFornecedor || "",
+              itens: r.itens || r.precos || []
+            });
+          }
+        } catch (e) { }
+      }
+    }
+
+    if (respostas.length === 0) {
+      container.innerHTML = "<p>Nenhuma resposta recebida para esta cotação ainda.</p>";
+      return;
+    }
+
+    /* ==========================
+       🏗️ TABELA PREMIUM COM BADGES
+    ========================== */
+    let html = `
+    <table class="matriz-cotacao" style="width:100%; border-collapse:collapse; margin-top:20px;">
+      <thead style="background:#661155; color:white;">
+        <tr>
+          <th style="width:50px; text-align:center; padding:12px;">
+            <i class="fa-solid fa-expand" style="cursor:pointer; color:#3ab9b6; font-size:14px;" onclick="toggleExpansaoColunas()" title="Expandir"></i>
+          </th>
+          <th style="width:60px; text-align:center;">#</th>
+          <th style="text-align:left; padding-left:10px;">Item</th>
+          <th style="text-align:center;">Marca</th>
+          <th style="text-align:center;">Qtd</th>`;
+
+    // Cabeçalhos fornecedores
+    respostas.forEach(r => {
+      html += `<th style="text-align:center; min-width:140px;">${r.fornecedor}</th>`;
+    });
+
+    // Coluna VENCEDOR
+    html += `<th style="text-align:center; color:#00ff99; min-width:200px;">VENCEDOR</th>`;
+    html += `</tr></thead><tbody style="background:#000;">`;
+
+    // Iterar produtos
+    const produtos = cotacao.itens || cotacao.produtos || [];
+    produtos.forEach((prod, idx) => {
+      const nomeProd = prod.nome || prod.descricao || prod.produto || "Item";
+      const qtd = prod.quantidade || 0;
+
+      // Cálculo de melhor preço
+      let precosRow = [];
+      respostas.forEach(r => {
+        const pItem = (r.itens || []).find(it => (it.produto === nomeProd) || (it.nome === nomeProd));
+        if (pItem) {
+          const valor = Number(pItem.preco) || Number(pItem.valor) || 0;
+          if (valor > 0) precosRow.push({ fornecedor: r.fornecedor, email: r.email, val: valor });
+        }
+      });
+      precosRow.sort((a, b) => a.val - b.val);
+      const melhorPreco = precosRow.length > 0 ? precosRow[0] : null;
+
+      html += `<tr style="border-bottom:1px solid #333;">
+                <td style="text-align:center; padding:10px;">
+                </td>
+                <td style="text-align:center; padding:8px;">
+                  <span style="background:#000; color:#fff; padding:4px 10px; border-radius:6px; font-size:13px; font-weight:bold; border:1px solid #661155;">#${idx + 1}</span>
+                </td>
+                <td style="padding:12px 10px; color:white;">${nomeProd}</td>
+                <td style="text-align:center; color:#adb5bd;">${prod.marca || "-"}</td>
+                <td style="text-align:center; color:#adb5bd;">${qtd}</td>`;
+
+      // Células de Preço (COM BADGE COLORIDA OUTLINE)
+      respostas.forEach(r => {
+        const pItem = (r.itens || []).find(it => (it.produto === nomeProd) || (it.nome === nomeProd));
+        const valor = pItem ? (Number(pItem.preco) || Number(pItem.valor) || 0) : 0;
+
+        const rankIndex = precosRow.findIndex(x => normalizarEmail(x.email) === normalizarEmail(r.email));
+        const badgeColors = [
+          { color: '#00ff99', label: '1&ordm;' },  // Verde
+          { color: '#ffd700', label: '2&ordm;' },  // Amarelo
+          { color: '#ff4444', label: '3&ordm;' }   // Vermelho
+        ];
+        const badge = rankIndex >= 0 && rankIndex < 3 ? badgeColors[rankIndex] : null;
+
+        html += `<td style="text-align:center; padding:8px;">`;
+
+        if (valor > 0) {
+          if (badge) {
+            html += `
+              <div style="display:inline-flex; align-items:center; gap:6px; background:transparent; padding:4px;">
+                <span style="background:#000; color:${badge.color}; font-weight:900; border-radius:50%; width:24px; height:24px; display:inline-flex; align-items:center; justify-content:center; font-size:12px; line-height:1; border:2px solid ${badge.color};">${badge.label}</span>
+                <span style="color:${badge.color}; font-weight:bold; font-size:14px;">R$ ${valor.toFixed(2)}</span>
+              </div>`;
+          } else {
+            html += `<span style="color:#ccc; font-size:14px;">R$ ${valor.toFixed(2)}</span>`;
+          }
+        } else {
+          html += `<span style="color:#555;">-</span>`;
+        }
+
+        html += `</td>`;
+      });
+
+      // VENCEDOR com Troféu
+      let emailEscolhido = window.decisoesAnalise?.[cotacao.numero]?.[nomeProd];
+      if (!emailEscolhido && melhorPreco) {
+        emailEscolhido = melhorPreco.email;
+        if (!window.decisoesAnalise) window.decisoesAnalise = {};
+        if (!window.decisoesAnalise[cotacao.numero]) window.decisoesAnalise[cotacao.numero] = {};
+        window.decisoesAnalise[cotacao.numero][nomeProd] = emailEscolhido;
+      }
+
+      const fornEscolhido = respostas.find(r => normalizarEmail(r.email) === normalizarEmail(emailEscolhido));
+      const nomeEscolhido = fornEscolhido ? fornEscolhido.fornecedor : "Selecione";
+
+      html += `<td style="text-align:center; padding:8px;">
+                <div style="background:#111; border:1px solid #00ff99; padding:8px 12px; border-radius:6px; display:inline-flex; align-items:center; gap:8px; min-width:160px; position:relative;">
+                  <i class="fa-solid fa-trophy" style="color:#ffcc00;"></i>
+                  <span style="color:#00ff99; font-weight:bold; flex:1;">${nomeEscolhido}</span>
+                  ${isAnalise ? `
+                    <select onchange="atualizarDecisaoVencedor('${cotacao.numero}', '${nomeProd}', this.value)" 
+                            style="position:absolute; top:0; left:0; width:100%; height:100%; opacity:0; cursor:pointer;">
+                      ${precosRow.map(p => `
+                        <option value="${p.email}" ${normalizarEmail(p.email) === normalizarEmail(emailEscolhido) ? 'selected' : ''}>
+                          ${p.fornecedor} - R$ ${p.val.toFixed(2)}
+                        </option>
+                      `).join('')}
+                    </select>
+                    <i class="fa-solid fa-chevron-down" style="color:#00ff99; font-size:10px;"></i>
+                  ` : ''}
+                </div>
+              </td>`;
+
+      html += `</tr>`;
+    });
+
+    html += `</tbody></table>`;
+
+    // BOTÕES FULL WIDTH (PREMIUM) - Exibidos apenas em modo de análise
+    if (isAnalise) {
+      html += `
+         <div style="margin-top:25px; display:flex; flex-direction:column; gap:12px;">
+            <button onclick="visualizarDocumentos('${cotacao.numero}')" 
+                 style="width:100%; background:#3ab9b6; color:#fff; border:none; padding:14px; border-radius:8px; cursor:pointer; font-weight:800; font-size:15px; display:flex; align-items:center; justify-content:center; gap:10px; box-shadow:0 3px 0 #2a8f8c;">
+               <i class="fa-solid fa-folder-open" style="color:#ffd700;"></i> <span style="color:#fff;">Ver Todos os Anexos</span>
+            </button>
+            <div style="display:flex; gap:12px;">
+              <button onclick="excluirCotacao('${cotacao.numero}')" 
+                   style="flex:1; background:#b93a3a; color:white; border:none; padding:14px; border-radius:8px; cursor:pointer; font-weight:800; font-size:15px; display:flex; align-items:center; justify-content:center; gap:10px; box-shadow:0 3px 0 #8f2a2a;">
+                 <i class="fa-solid fa-trash"></i> Excluir Cotação
+              </button>
+
+              <button onclick="enviarParaAprovacao()" 
+                   style="flex:1; background:#661155; color:white; border:none; padding:14px; border-radius:8px; cursor:pointer; font-weight:800; font-size:15px; display:flex; align-items:center; justify-content:center; gap:10px; box-shadow:0 3px 0 #4a0c3e;">
+                 <i class="fa-solid fa-square-check"></i> Enviar para Aprovação
+              </button>
+            </div>
+         </div>
+      `;
+    }
+
+    container.innerHTML = html;
+  }
+
+  // 🗑️ Lógica para Excluir Cotação
+  window.excluirCotacao = function (id) {
+    if (!confirm("⚠️ ATENÇÃO: Tem certeza que deseja EXCLUIR permanentemente esta cotação?\n\nEssa ação apagará todos os itens e respostas vinculadas e NÃO poderá ser desfeita.")) {
+      return;
+    }
+
+    try {
+      // 1. Remove da lista principal
+      let cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
+      const novaLista = cotacoes.filter(c => c.numero !== id && c.id !== id);
+
+      if (cotacoes.length === novaLista.length) {
+        alert("Erro: Cotação não encontrada na lista.");
+        return;
+      }
+
+      localStorage.setItem("cotacoes", JSON.stringify(novaLista));
+
+      // ☁️ SYNC RTDB (CRITICO PARA EXCLUSÃO)
+      if (typeof rtdb !== "undefined") {
+        rtdb.ref("cotacoes/" + id).remove()
+          .then(() => console.log("🗑️ Cotação excluída do RTDB"))
+          .catch(e => console.error("❌ Erro ao excluir do RTDB:", e));
+      }
+
+      // 2. Remove respostas vinculadas (Limpeza)
+      // Percorre keys para achar respostas desta cotação
+      const keysParaRemover = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key.startsWith(`resposta_${id}_`) || key.startsWith(`resposta_${id} _`)) {
+          keysParaRemover.push(key);
+        }
+      }
+
+      keysParaRemover.forEach(k => localStorage.removeItem(k));
+
+      // 3. Remove decisões salvas se houver
+      if (window.decisoesAnalise && window.decisoesAnalise[id]) {
+        delete window.decisoesAnalise[id];
+      }
+
+      alert("✅ Cotação excluída com sucesso!");
+
+      // 4. Fecha modal e atualiza
+      const modal = document.getElementById('modalAnaliseCotacao');
+      if (modal) modal.style.display = "none";
+
+      // Tenta recarregar a lista se a função existir
+      if (typeof carregarCotacoes === 'function') {
+        carregarCotacoes();
+      } else {
+        window.location.reload();
+      }
+
+    } catch (e) {
+      console.error(e);
+      alert("Erro ao excluir cotação: " + e.message);
+    }
+  };
 
   // Helper function
-
+  function atualizarDecisaoVencedor(numeroCotacao, produto, emailFornecedor) {
+    if (!window.decisoesAnalise) window.decisoesAnalise = {};
+    if (!window.decisoesAnalise[numeroCotacao]) window.decisoesAnalise[numeroCotacao] = {};
+    window.decisoesAnalise[numeroCotacao][produto] = emailFornecedor;
+  }
 
 
   /* ======================================================
@@ -8176,8 +8793,8 @@
       // Recarrega do LOCALSTORAGE (que acabamos de atualizar)
       // Isso evita o round-trip com o Firebase que poderia trazer dados antigos
       if (typeof carregarCotacoes === 'function') {
-        // Hack: Força leitura local temporariamente se a função suportasse,
-        // mas como não suporta, vamos confiar que o carregarCotacoes vai ler do Firestore
+        // Hack: Força leitura local temporariamente se a função suportasse, 
+        // mas como não suporta, vamos confiar que o carregarCotacoes vai ler do Firestore 
         // e talvez sobrescrever.
         // MELHOR: Não chamar carregarCotacoes('analise'). O usuário vai mudar de tela.
       }
@@ -8256,6 +8873,8 @@
 
   /* 🔑 garante acesso global */
   window.aprovarCotacaoDireto = aprovarCotacaoDireto;
+
+
 
   /* ======================================================
   📊 CALCULAR RANKING DE PREÇOS POR ITEM
@@ -8394,8 +9013,82 @@
      📥 CARREGAR COTAÇÕES PENDENTES DE APROVAÇÃO
   ====================================================== */
 
-  // Função local removida. O sistema agora utiliza o carregarPendentesAprovacao global/async definido anteriormente.
+  function carregarPendentesAprovacao() {
+    const div = document.getElementById("listaPendentesAprovacao");
+    if (!div) {
+      console.warn("listaPendentesAprovacao não encontrada");
+      return;
+    }
 
+    const cotacoes = getCotacoes();
+
+    const pendentes = cotacoes.filter(c =>
+      c.status === "aprovacao" &&
+      Array.isArray(c.adjudicacao) &&
+      c.adjudicacao.length > 0
+    );
+
+    div.innerHTML = "";
+
+    if (pendentes.length === 0) {
+      div.innerHTML =
+        "<p style='text-align:center;color:#aaa;'>Nenhuma cotação pendente de aprovação.</p>";
+      return;
+    }
+
+    pendentes.forEach(c => {
+      const total = c.adjudicacao.reduce(
+        (s, i) => s + (Number(i.total) || 0),
+        0
+      );
+
+      const bloco = document.createElement("div");
+      bloco.className = "linha-cotacao";
+
+      bloco.innerHTML = `
+        <div class="info">
+        <div style="font-weight:bold;font-size:15px;color:#fff;">
+          ${c.descricao || "Sem descrição"}
+        </div>
+
+        <div style="font-size:13px;color:#ccc;margin:4px 0 8px;">
+          <strong>Cotação #${c.numero}</strong>
+        </div>
+
+        <div style="font-size:13px;">
+          Itens adjudicados: <b>${c.adjudicacao.length}</b><br>
+          Total estimado: <b>R$ ${total.toFixed(2)}</b>
+        </div>
+      </div>
+
+        <div class="acoes">
+          <button class="btn-detalhes" data-numero="${c.numero}">
+            🔎 Detalhes
+          </button>
+        </div>
+      `;
+
+      const detalhes = document.createElement("div");
+      detalhes.id = `detalhes - ${c.numero} `;
+      detalhes.style.display = "none";
+      detalhes.innerHTML = gerarHTMLDetalhesAprovacao(c);
+
+      div.appendChild(bloco);
+      div.appendChild(detalhes);
+
+      /* 🔥 AQUI é onde o evento DEVE ser ligado */
+      detalhes.querySelectorAll(".btn-rejeitar").forEach(btn => {
+        btn.addEventListener("click", function () {
+          const numero = this.dataset.numero;
+          abrirRejeicaoCotacao(numero);
+        });
+      });
+
+      bloco.querySelector(".btn-detalhes").addEventListener("click", () => {
+        toggleDetalhesAprovacao(c.numero);
+      });
+    });
+  }
 
 
   function toggleDetalhesAprovacao(numero) {
@@ -8405,7 +9098,166 @@
     el.style.display = el.style.display === "none" ? "block" : "none";
   }
 
+  function gerarHTMLDetalhesAprovacao(cotacao) {
+    if (!Array.isArray(cotacao.adjudicacao) || cotacao.adjudicacao.length === 0) {
+      return "<p>⚠️ Nenhum item adjudicado.</p>";
+    }
 
+    let total = 0;
+
+    // 🔥 Gera UID para mapa de rejeição (segurança para ID fantasma)
+    if (!window.rejectionMap) window.rejectionMap = {};
+    const safeID = (cotacao.numero || cotacao.id || ("RND" + Math.random())).toString().replace(/\W/g, '');
+    const rejectionUID = safeID + "_" + Math.floor(Math.random() * 10000);
+    window.rejectionMap[rejectionUID] = cotacao;
+
+    // Busca documentos para exibir ícone
+    const idDoc = `docs_${cotacao.numero}`;
+    const arquivosCotacao = JSON.parse(localStorage.getItem(idDoc)) || [];
+
+    let html = `
+        <table style="width:100%;border-collapse:collapse;margin-bottom:15px;">
+      <thead style="background:#661155;">
+        <tr>
+          <th style="width: 40px; text-align: center; padding:8px;">
+            <input type="checkbox" id="checkAprovarTodos" checked onclick="toggleTodosAprovacao(this)" style="cursor:pointer; transform: scale(1.2);">
+          </th>
+          <th style="text-align:left; padding:8px;">Item</th>
+          <th style="text-align:center; padding:8px;">Marca</th>
+          <th style="text-align:center; padding:8px;">Qtd</th>
+          <th style="text-align:left; padding:8px;">Fornecedor</th>
+          <th style="text-align:right; padding:8px;">Preço</th>
+          <th style="text-align:right; padding:8px;">Total</th>
+        </tr>
+      </thead>
+      <tbody id="listaItensAprovacao">
+  `;
+
+    cotacao.adjudicacao.forEach((i, idx) => {
+      const t = Number(i.total) || 0;
+      total += t;
+
+      // Verifica anexo
+      const temAnexo = arquivosCotacao.some(arq => (arq.usuario || "").toLowerCase() === (i.fornecedor || "").toLowerCase());
+      let iconAnexo = "";
+      if (temAnexo) {
+        iconAnexo = `<i class="fa-solid fa-paperclip" 
+             style="font-size:12px; cursor:pointer; margin-left:6px; color:#3ab9b6;" 
+             title="Ver anexo deste fornecedor"
+             onclick="visualizarDocumentos('${cotacao.numero}', '${i.fornecedor}')"></i>`;
+      }
+
+      html += `
+      <tr style="background:#1a1a1a; border-bottom: 1px solid #333;">
+        <td style="text-align:center; padding:8px;">
+            <input type="checkbox" class="check-item-aprovacao" data-index="${idx}" checked style="cursor:pointer; transform: scale(1.2);">
+        </td>
+        <td style="padding:8px; text-align:left;">${i.produto}</td>
+        <td style="padding:8px; text-align:center;">${i.marca || "-"}</td>
+        <td style="padding:8px; text-align:center;">${i.quantidade}</td>
+        <td style="padding:8px; text-align:left;">
+           <div style="font-weight:bold; color:#00ff99; display:flex; align-items:center; gap:5px;">
+             <i class="fa-solid fa-trophy" style="color:#ffcc00;"></i> ${i.fornecedor} ${iconAnexo}
+           </div>
+        </td>
+        <td style="padding:8px; text-align:right;">R$ ${Number(i.preco).toFixed(2)}</td>
+        <td style="padding:8px; text-align:right;"><strong>R$ ${t.toFixed(2)}</strong></td>
+      </tr>
+      `;
+    });
+
+    html += `
+      </tbody>
+    </table>
+
+    <h3 style="margin:10px 0;">
+      💰 Total Geral: R$ ${total.toFixed(2)}
+    </h3>
+
+    <!-- 🔘 AÇÕES -->
+        <div style="
+      display:grid !important;
+      grid-template-columns: auto auto auto auto !important;
+      gap:10px;
+      margin-top:20px;
+      justify-content:center;
+      align-items: center;
+      width: 100%;
+      padding: 10px 0;
+    ">
+
+          <!-- 📂 VER ANEXOS -->
+          <button
+            type="button"
+            onclick="visualizarDocumentos('${cotacao.numero}')"
+            style="
+          background:#3ab9b6;
+          color:white;
+          border:none;
+          padding:10px 22px;
+          border-radius:6px;
+          cursor:pointer;
+          font-weight:bold;
+          display:flex; align-items:center; gap:6px;
+          width: auto !important;
+        ">
+            <i class="fa-solid fa-folder-open"></i> Ver Anexos
+          </button>
+
+          <!-- 🗺️ MAPA DE PREÇOS -->
+          <button
+            type="button"
+            onclick="abrirMapaPrecos('${cotacao.numero}')"
+            style="
+          background:#333;
+          color:white;
+          border:1px solid #661155;
+          padding:10px 22px;
+          border-radius:6px;
+          cursor:pointer;
+          width: auto !important;
+        ">
+            🗺️ Mapa de Preços
+          </button>
+
+          <!-- ✔ APROVAR -->
+          <button
+            type="button"
+            onclick="aprovarCotacaoDireto('${cotacao.numero}')"
+            style="
+          background:#198754;
+          color:white;
+          border:none;
+          padding:10px 22px;
+          border-radius:6px;
+          cursor:pointer;
+          width: auto !important;
+        ">
+            ✔ Aprovar Itens Selecionados
+          </button>
+
+          <!-- ❌ REJEITAR -->
+          <button
+            type="button"
+            class="btn-rejeitar"
+            onclick="abrirRejeicaoCotacao('${cotacao.numero}')"
+            style="
+          background:#842029;
+          color:white;
+          border:none;
+          padding:10px 22px;
+          border-radius:6px;
+          cursor:pointer;
+          width: auto !important;
+        ">
+            ❌ Rejeitar
+          </button>
+        </div>
+      </div>
+        `;
+
+    return html;
+  }
 
   // Helper para marcar/desmarcar todos
   window.toggleTodosAprovacao = function (source) {
@@ -8531,7 +9383,7 @@
   // Torna a função global para o botão conseguir achar
   window.abrirRejeicaoCotacao = abrirRejeicaoCotacao;
 
-  async function confirmarRejeicaoAprovacao() {
+  function confirmarRejeicaoAprovacao() {
     if (!cotacaoRejeicaoAtual) return;
 
     const campo = document.getElementById("motivoRejeicaoAprovacao");
@@ -8543,7 +9395,7 @@
 
     // 🔥 FIX: Acesso direto ao LocalStorage (devido a erro de referência)
     const cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
-    const index = cotacoes.findIndex(c => String(c.numero) === String(cotacaoRejeicaoAtual) || String(c.id) === String(cotacaoRejeicaoAtual));
+    const index = cotacoes.findIndex(c => c.numero === cotacaoRejeicaoAtual || c.id === cotacaoRejeicaoAtual);
 
     if (index !== -1) {
       cotacoes[index].status = "reanalise";
@@ -8552,36 +9404,24 @@
 
       localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
 
-      const docId = String(cotacoes[index].numero || cotacoes[index].id);
-
-      // 🔥 SYNC FIRESTORE (AWAIT OBRIGATÓRIO)
+      // 🔥 SYNC FIRESTORE (CRÍTICO - garante persistência na nuvem)
       if (typeof db !== "undefined") {
-        try {
-          await db.collection("cotacoes").doc(docId).update({
-            status: "reanalise",
-            motivoRejeicao: motivo,
-            dataRejeicao: cotacoes[index].dataRejeicao
-          });
-          console.log("✅ Rejeição salva no Firestore.");
-        } catch (e) {
-          console.error("❌ Erro ao salvar rejeição no Firestore:", e);
-          alert("Erro ao salvar na nuvem. Verifique sua conexão.");
-          return;
-        }
+        db.collection("cotacoes").doc(String(cotacoes[index].numero)).update({
+          status: "reanalise",
+          motivoRejeicao: motivo,
+          dataRejeicao: cotacoes[index].dataRejeicao
+        }).then(() => console.log("✅ Rejeição salva no Firestore."))
+          .catch(e => console.error("❌ Erro ao salvar rejeição no Firestore:", e));
       }
 
-      // ☁️ SYNC RTDB (CRÍTICO)
+      // ☁️ SYNC RTDB (CRÍTICO PARA REJEIÇÃO)
       if (typeof rtdb !== "undefined") {
-        try {
-          await rtdb.ref("cotacoes/" + cotacoes[index].numero).update({
-            status: "reanalise",
-            motivoRejeicao: motivo,
-            dataRejeicao: cotacoes[index].dataRejeicao
-          });
-          console.log("☁️ Rejeição sincronizada no RTDB.");
-        } catch (e) {
-          console.error("❌ Erro sync rejeicao:", e);
-        }
+        rtdb.ref("cotacoes/" + cotacoes[index].numero).update({
+          status: "reanalise",
+          motivoRejeicao: motivo,
+          dataRejeicao: cotacoes[index].dataRejeicao
+        }).then(() => console.log("☁️ Rejeição sincronizada no RTDB."))
+          .catch(e => console.error("❌ Erro sync rejeicao:", e));
       }
       alert("✅ Cotação rejeitada e devolvida para análise.");
     } else {
@@ -9407,7 +10247,7 @@
 
   function fecharModalDetalhesSolicitacao() {
     document.getElementById("modalDetalhesSolicitacao").style.display = "none";
-    document.body.style.overflow = "auto"; // 🔓 Unlock background scroll
+    document.body.style.overflow = "auto";
   }
 
 
@@ -9564,24 +10404,22 @@
     abrirCotacaoManual();
   }
 
-  window.analisarCotacao = function (numero) {
-    console.log("🔍 Analisando cotação (Modo Accordion Premium):", numero);
-    const divDetalhes = document.getElementById(`detalhes-${numero}`);
-    if (!divDetalhes) {
-      console.error("Erro: Container #detalhes não encontrado para", numero);
-      return;
-    }
+  window.analisarCotacao = function (id) {
+    console.log("📊 Abrindo análise da cotação:", id);
+    const modal = document.getElementById("modalAnaliseCotacao");
+    if (!modal) return;
 
-    if (divDetalhes.style.display === "none") {
-      // Chama o premium_render para popular o div de detalhes
-      if (typeof window.renderizarTabelaAnalise === "function") {
-        window.renderizarTabelaAnalise(numero, divDetalhes);
-        divDetalhes.style.display = "block";
-      } else {
-        alert("Erro: Sistema de análise premium não carregado.");
-      }
+    modal.style.display = "flex";
+    document.body.style.overflow = "hidden";
+
+    if (typeof renderizarTabelaAnalise === "function") {
+      renderizarTabelaAnalise(id);
     } else {
-      divDetalhes.style.display = "none";
+      console.error("❌ Erro: Função renderizarTabelaAnalise não encontrada!");
+      const conteudo = document.getElementById("analiseConteudo");
+      if (conteudo) {
+        conteudo.innerHTML = "<p style='color:#ff4444; padding:20px; text-align:center; font-weight:bold;'>Erro: O carregador premium não foi inicializado corretamente.</p>";
+      }
     }
   };
 
@@ -10538,7 +11376,7 @@
     // 2. Verifica se a tela de Aprovação está visível
     const sectionAprovar = document.getElementById("aprovarCompras");
     if (sectionAprovar && sectionAprovar.style.display !== "none") {
-      if (typeof carregarPendentesAprovacao === "function") carregarPendentesAprovacao();
+      if (typeof carregarListaAprovacao === "function") carregarListaAprovacao();
     }
   };
 
@@ -11305,177 +12143,7 @@
     return new Date(s); // Fallback ISO/USA
   };
 
-  /* 🛠️ HELPERS GLOBAIS (RECUPERADOS DO BACKUP) */
-
-  /* ======================================================
-     🏷️ HELPER: BADGE DE WORKFLOW
-  ====================================================== */
-  window.obterBadgeWorkflow = function (status) {
-    const s = String(status || "").toLowerCase().trim();
-    if (s === "aberta" || s === "publicada") return '<span class="status-pulsante status-pendente">📢 Publicada</span>';
-    if (s === "analise" || s === "respondida") return '<span class="status-pulsante status-cotacao">📊 Análise</span>';
-    if (s === "reanalise") return '<span class="status-pulsante status-rejeitada">❌ Reanalise</span>';
-    if (s === "aprovacao") return '<span class="status-pulsante status-aprovacao">⏳ Aprovação</span>';
-    if (s === "fechada") return '<span class="status-pulsante status-finalizada">✅ Fechada</span>';
-    return `<span class="status-pulsante">${status}</span>`;
-  };
-
-  /* ======================================================
-     📋 CARREGAR COTAÇÕES RESPONDIDAS
-  ====================================================== */
-  /* ======================================================
-     📋 CARREGAR COTAÇÕES RESPONDIDAS (LAYOUT PREMIUM)
-  ====================================================== */
-  window.carregarRespondidas = function (status, container) {
-    if (!container) return;
-    const cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
-    const usuario = getUsuarioLogado();
-
-    container.innerHTML = "";
-
-    // 🔑 normaliza status para array
-    const statusFiltro = Array.isArray(status) ? status : [status];
-
-    function fornecedorRespondeu(cotacao, email) {
-      return Array.isArray(cotacao.respostasFornecedores) &&
-        cotacao.respostasFornecedores.some(r =>
-          (r.email || "").toLowerCase().trim() === (email || "").toLowerCase().trim()
-        );
-    }
-
-    // 🔍 BUSCA
-    const busca = document.getElementById("buscaCotacaoRespondida")?.value.toLowerCase().trim() || "";
-
-    const filtrarPorBusca = (list) => {
-      if (!busca) return list;
-      return list.filter(c =>
-        (c.numero && String(c.numero).toLowerCase().includes(busca)) ||
-        (c.descricao && c.descricao.toLowerCase().includes(busca))
-      );
-    };
-
-    let filtradas = [];
-
-    /* ===========================
-       🚚 FORNECEDOR
-    ============================ */
-    if (usuario.tipo === "fornecedor") {
-      filtradas = cotacoes.filter(c =>
-        statusFiltro.includes(c.status) &&
-        fornecedorRespondeu(c, usuario.email)
-      );
-    }
-    /* ===========================
-       👔 ADMIN / COMPRADOR / APROVADOR
-    ============================ */
-    else {
-      filtradas = cotacoes.filter(c =>
-        statusFiltro.includes(c.status)
-      );
-    }
-
-    // Aplica o filtro de busca final
-    filtradas = filtrarPorBusca(filtradas);
-
-    if (filtradas.length === 0) {
-      container.innerHTML = "<p style='text-align:center; padding:20px; color:#666;'>Nenhuma cotação encontrada.</p>";
-      return;
-    }
-
-    // Ordenar por mais recentes
-    filtradas.sort((a, b) => (b.numero || 0) - (a.numero || 0));
-
-    // List each quotation
-    filtradas.forEach(c => {
-      const respostas = Array.isArray(c.respostasFornecedores) ? c.respostasFornecedores : [];
-      const qtdRespostas = usuario.tipo === "fornecedor" ? 1 : respostas.length;
-      const qtdConvidados = Array.isArray(c.fornecedores) ? c.fornecedores.length : 0;
-
-      const bloco = document.createElement("div");
-      bloco.className = "linha-cotacao";
-
-      if (c.status === "aberta") {
-        const agora = new Date();
-        const fim = window.parseDateBR ? window.parseDateBR(c.dataFechamento) : new Date(c.dataFechamento);
-        const diffMs = fim - agora;
-        let tempoRestante = "Expirado";
-
-        if (diffMs > 0) {
-          const dias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-          const horas = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-          const minutos = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-          tempoRestante = `${dias}d ${horas}h ${minutos}m`;
-        }
-
-        bloco.innerHTML = `
-          <div class="info">
-            <div style="font-weight:bold; font-size:16px; color:#fff;">${c.descricao || "Sem descrição"}</div>
-            <div style="margin-top:5px; font-size:12px; color:#aaa;">
-               <strong>Cotação #${c.numero}</strong> ${window.obterBadgeWorkflow ? window.obterBadgeWorkflow(c.status) : ""}
-            </div>
-            <div style="margin-top:5px; color:#ccc; font-size:13px;">
-              <span>👤 Com fornecedores (${qtdConvidados} convidados)</span><br>
-              <span>📩 Respostas atuais: <b style="color:#0dcaf0;">${qtdRespostas}</b></span><br>
-              <span style="color:${diffMs > 0 ? '#3ab9b6' : '#ff5555'};">⏳ Tempo restante: <b>${tempoRestante}</b></span>
-            </div>
-          </div>
-          <div class="acoes" style="display:flex; flex-wrap:nowrap; gap:8px;">
-             <button onclick="encerrarCotacaoManualmente('${c.numero}')" style="background:#cc0000; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer;" title="Encerrar cotação agora">
-                🔒 Encerrar
-             </button>
-             
-             <!-- Novos Botões Solicitados -->
-             <button onclick="reabrirCotacao('${c.numero}')" style="background:#e0a800; color:#000; border:none; padding:8px 12px; border-radius:5px; cursor:pointer; font-weight:bold;" title="Estender prazo por 3 dias">
-                🔄 Reabrir / Estender
-             </button>
-             <button onclick="excluirCotacao('${c.numero}')" style="background:transparent; border:1px solid #ff4444; color:#ff4444; padding:8px 12px; border-radius:5px; cursor:pointer;" title="Excluir Cotação">
-                <i class="fa-solid fa-trash"></i>
-             </button>
-          </div>
-        `;
-      } else {
-        bloco.innerHTML = `
-          <div class="info">
-            <div style="font-weight:bold; font-size:15px; color:#fff;">${c.descricao || "Sem descrição"}</div>
-            <div style="font-size:12px; color:#aaa; margin-top:4px;">
-              <strong>Cotação #${c.numero}</strong> ${window.obterBadgeWorkflow ? window.obterBadgeWorkflow(c.status) : ""}
-            </div>
-            <div style="margin-top:4px; font-size:13px; color:#ccc;">
-              ${usuario.tipo === "fornecedor"
-            ? "✅ Você respondeu"
-            : `Respostas recebidas: <b>${qtdRespostas}</b>`}
-              ${c.status === "reanalise"
-            ? "<br><span style='color:#ff5555;'>❌ Rejeitada — voltou para análise</span>"
-            : ""}
-              ${c.status === "fechada" ? "<br><span style='color:#0dcaf0;'>🏁 Concluída</span>" : ""}
-            </div>
-          </div>
-
-          <div class="acoes" style="display:flex; flex-wrap:nowrap; gap:10px;">
-            <button onclick="analisarCotacao('${c.numero}')" style="background:#661155; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer;">
-              📊 Analisar Respostas
-            </button>
-          </div>
-        `;
-      }
-
-      container.appendChild(bloco);
-    });
-  };
-
-  /* ======================================================
-     📊 ANALISAR COTAÇÃO
-  ====================================================== */
-  window.analisarCotacao = function (numero) {
-    const modal = document.getElementById("modalAnaliseCotacao");
-    if (modal) {
-      modal.style.display = "flex";
-      document.body.style.overflow = "hidden";
-      if (typeof renderizarTabelaAnalise === "function") {
-        renderizarTabelaAnalise(numero);
-      }
-    }
-  };
+  /* 🛠️ HELPERS GLOBAIS (USANDO DEFINIÇÕES DO CABEÇALHO) */
 
   window.reabrirCotacao = async function (id) {
     if (!confirm("⚠️ Deseja REABRIR esta cotação?\n\nIsso estenderá o prazo de fechamento em 3 dias para tentar atrair novos fornecedores.")) return;
@@ -11551,9 +12219,7 @@
       // Remove respostas
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (key && (key.includes(`resposta_${idStr}_`) || key.includes(`res_${idStr}_`))) {
-          localStorage.removeItem(key);
-        }
+        if (key.includes(idStr)) localStorage.removeItem(key);
       }
 
       // ☁️ Remove Firestore (Background)
@@ -11577,58 +12243,6 @@
       console.error("Erro ao excluir cotação:", e);
       alert("Erro ao excluir: " + e.message);
     }
-  };
-
-  /**
-   * Função para alternar entre as abas do dashboard (Publicadas, Análise, Aprovação, Fechadas)
-   */
-  window.toggleListaRespondidas = function (aba, forcar = false) {
-    console.log("🔄 Alternando aba para:", aba);
-    const abas = ['publicadas', 'analise', 'aprovacao', 'fechada'];
-    const activeTab = aba || 'publicadas';
-
-    abas.forEach(nomeAba => {
-      const idLista = `lista${nomeAba.charAt(0).toUpperCase() + nomeAba.slice(1)}`;
-      const idBotao = `btn${nomeAba.charAt(0).toUpperCase() + nomeAba.slice(1)}`;
-
-      const elLista = document.getElementById(idLista);
-      if (elLista) elLista.style.display = 'none';
-
-      const elBotao = document.getElementById(idBotao);
-      if (elBotao) elBotao.classList.remove('ativo');
-    });
-
-    const idListaAtiva = `lista${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}`;
-    const idBotaoAtivo = `btn${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}`;
-
-    const elAtivo = document.getElementById(idListaAtiva);
-    if (elAtivo) elAtivo.style.display = 'block';
-
-    const elBotaoAtivo = document.getElementById(idBotaoAtivo);
-    if (elBotaoAtivo) elBotaoAtivo.classList.add('ativo');
-
-    // Carregamento de dados por aba
-    if (activeTab === 'publicadas') {
-      if (typeof carregarRespondidas === 'function') {
-        carregarRespondidas('aberta', document.getElementById('listaPublicadas'));
-      }
-    } else if (activeTab === 'analise') {
-      if (typeof carregarRespondidas === 'function') {
-        carregarRespondidas(['respondida', 'reanalise', 'analise'], document.getElementById('listaAnalise'));
-      }
-    } else if (activeTab === 'aprovacao') {
-      if (typeof carregarPendentesAprovacao === 'function') {
-        carregarPendentesAprovacao();
-      } else if (typeof carregarRespondidas === 'function') {
-        carregarRespondidas('aprovacao', document.getElementById('listaAprovacao'));
-      }
-    } else if (activeTab === 'fechada') {
-      if (typeof carregarRespondidas === 'function') {
-        carregarRespondidas('fechada', document.getElementById('listaFechadas'));
-      }
-    }
-
-    window.ultimaAbaRespondidas = activeTab;
   };
 
   // Inicia assim que possível
