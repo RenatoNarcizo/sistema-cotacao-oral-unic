@@ -5308,41 +5308,11 @@
   /* ======================================================
      ✅ APROVAÇÃO DE COMPRAS (CORRIGIDO)
      ====================================================== */
-  window.carregarPendentesAprovacao = function () {
-    const listaDiv = document.getElementById("listaPendentesAprovacao");
-    const cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
+  /* ======================================================
+     ✅ APROVAÇÃO DE COMPRAS (DASHBOARD)
+     ====================================================== */
+  // Versão simples removida em favor da versão Cloud/Async unificada abaixo
 
-    listaDiv.innerHTML = "";
-
-    // Filtra status "aprovacao" (aprovada na análise)
-    const pendentes = cotacoes.filter(c => c.status === "aprovacao");
-
-    if (pendentes.length === 0) {
-      listaDiv.innerHTML = "<p style='text-align:center;color:#ccc;'>Nenhuma cotação aguardando aprovação final.</p>";
-      return;
-    }
-
-    pendentes.forEach(cot => {
-      const card = document.createElement("div");
-      card.className = "card-cotacao";
-      card.style.cssText = "background:#1a1a1a; border:1px solid #661155; padding:15px; margin-bottom:10px; border-radius:8px;";
-
-      // Botão leva para o modal de análise mas em modo de aprovação (já tratado no premium_render)
-      card.innerHTML = `
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-              <div>
-                 <strong style="color:white; font-size:16px;">${cot.descricao || "Cotação Sem Descrição"}</strong>
-                 <span style="display:block; font-size:12px; color:#aaa;">#${cot.numero} - Encerrada em: ${cot.dataFechamento}</span>
-                 <span style="font-size:11px; color:#f39c12;">💛 Aguardando Decisão Final</span>
-              </div>
-              <button onclick="abrirAnalise('${cot.numero}')" style="background:#661155; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer;">
-                 🔍 Avaliar
-              </button>
-          </div>
-      `;
-      listaDiv.appendChild(card);
-    });
-  };
 
   /* ======================================================
      GERAR NÚMERO DE COTAÇÃO (ÚNICO)
@@ -5814,8 +5784,8 @@
       cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
     }
 
-    // Filtro adicional (para garantir)
-    const pendentes = cotacoes.filter(c => c.status === "aprovacao" || (c.status === "respondida" && c.statusAprovacao === "pendente"));
+    // Filtro adicional (para garantir que só apareça o que realmente está pendente)
+    const pendentes = cotacoes.filter(c => c.status === "aprovacao" && c.status !== "reanalise");
 
     console.log("☁️ Pendentes encontradas (Cloud/Final):", pendentes.length);
 
@@ -5824,8 +5794,8 @@
     if (pendentes.length === 0) {
       listaDiv.innerHTML = `
         <div style="text-align:center; color:#ccc; padding:20px;">
-          <i class="fa-solid fa-folder-open" style="font-size:30px; margin-bottom:10px; color:#555;"></i>
-          <p>Nenhuma cotação aguardando aprovação na nuvem.</p>
+          <i class="fa-solid fa-check-double" style="font-size:30px; margin-bottom:10px; color:#3ab9b6;"></i>
+          <p>Nenhuma cotação aguardando aprovação no momento.</p>
         </div>
       `;
       return;
@@ -5845,7 +5815,7 @@
                 <div>
                    <strong style="color:white; font-size:16px;">${cot.descricao || "Cotação sem descrição"}</strong>
                    <span style="display:block; font-size:12px; color:#aaa;">
-                     #${cot.numero} - ${cot.dataFechamento ? new Date(cot.dataFechamento).toLocaleDateString() : 'Sem data'}
+                     #${cot.numero} - ${cot.dataFechamento}
                      <span style="color:#f39c12; margin-left:8px;">(Nuvem)</span>
                    </span>
                 </div>
@@ -9016,80 +8986,19 @@
      📥 CARREGAR COTAÇÕES PENDENTES DE APROVAÇÃO
   ====================================================== */
 
-  function carregarPendentesAprovacao() {
-    const div = document.getElementById("listaPendentesAprovacao");
-    if (!div) {
-      console.warn("listaPendentesAprovacao não encontrada");
-      return;
-    }
+  // Função local removida. O sistema agora utiliza o carregarPendentesAprovacao global/async definido anteriormente.
 
-    const cotacoes = getCotacoes();
+  /* 🔥 AQUI é onde o evento DEVE ser ligado */
+  detalhes.querySelectorAll(".btn-rejeitar").forEach(btn => {
+    btn.addEventListener("click", function () {
+      const numero = this.dataset.numero;
+      abrirRejeicaoCotacao(numero);
+    });
+  });
 
-    const pendentes = cotacoes.filter(c =>
-      c.status === "aprovacao" &&
-      Array.isArray(c.adjudicacao) &&
-      c.adjudicacao.length > 0
-    );
-
-    div.innerHTML = "";
-
-    if (pendentes.length === 0) {
-      div.innerHTML =
-        "<p style='text-align:center;color:#aaa;'>Nenhuma cotação pendente de aprovação.</p>";
-      return;
-    }
-
-    pendentes.forEach(c => {
-      const total = c.adjudicacao.reduce(
-        (s, i) => s + (Number(i.total) || 0),
-        0
-      );
-
-      const bloco = document.createElement("div");
-      bloco.className = "linha-cotacao";
-
-      bloco.innerHTML = `
-        <div class="info">
-        <div style="font-weight:bold;font-size:15px;color:#fff;">
-          ${c.descricao || "Sem descrição"}
-        </div>
-
-        <div style="font-size:13px;color:#ccc;margin:4px 0 8px;">
-          <strong>Cotação #${c.numero}</strong>
-        </div>
-
-        <div style="font-size:13px;">
-          Itens adjudicados: <b>${c.adjudicacao.length}</b><br>
-          Total estimado: <b>R$ ${total.toFixed(2)}</b>
-        </div>
-      </div>
-
-        <div class="acoes">
-          <button class="btn-detalhes" data-numero="${c.numero}">
-            🔎 Detalhes
-          </button>
-        </div>
-      `;
-
-      const detalhes = document.createElement("div");
-      detalhes.id = `detalhes - ${c.numero} `;
-      detalhes.style.display = "none";
-      detalhes.innerHTML = gerarHTMLDetalhesAprovacao(c);
-
-      div.appendChild(bloco);
-      div.appendChild(detalhes);
-
-      /* 🔥 AQUI é onde o evento DEVE ser ligado */
-      detalhes.querySelectorAll(".btn-rejeitar").forEach(btn => {
-        btn.addEventListener("click", function () {
-          const numero = this.dataset.numero;
-          abrirRejeicaoCotacao(numero);
-        });
-      });
-
-      bloco.querySelector(".btn-detalhes").addEventListener("click", () => {
-        toggleDetalhesAprovacao(c.numero);
-      });
+  bloco.querySelector(".btn-detalhes").addEventListener("click", () => {
+    toggleDetalhesAprovacao(c.numero);
+  });
     });
   }
 
@@ -9386,7 +9295,7 @@
   // Torna a função global para o botão conseguir achar
   window.abrirRejeicaoCotacao = abrirRejeicaoCotacao;
 
-  function confirmarRejeicaoAprovacao() {
+  async function confirmarRejeicaoAprovacao() {
     if (!cotacaoRejeicaoAtual) return;
 
     const campo = document.getElementById("motivoRejeicaoAprovacao");
@@ -9398,7 +9307,7 @@
 
     // 🔥 FIX: Acesso direto ao LocalStorage (devido a erro de referência)
     const cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
-    const index = cotacoes.findIndex(c => c.numero === cotacaoRejeicaoAtual || c.id === cotacaoRejeicaoAtual);
+    const index = cotacoes.findIndex(c => String(c.numero) === String(cotacaoRejeicaoAtual) || String(c.id) === String(cotacaoRejeicaoAtual));
 
     if (index !== -1) {
       cotacoes[index].status = "reanalise";
@@ -9407,24 +9316,36 @@
 
       localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
 
-      // 🔥 SYNC FIRESTORE (CRÍTICO - garante persistência na nuvem)
+      const docId = String(cotacoes[index].numero || cotacoes[index].id);
+
+      // 🔥 SYNC FIRESTORE (AWAIT OBRIGATÓRIO)
       if (typeof db !== "undefined") {
-        db.collection("cotacoes").doc(String(cotacoes[index].numero)).update({
-          status: "reanalise",
-          motivoRejeicao: motivo,
-          dataRejeicao: cotacoes[index].dataRejeicao
-        }).then(() => console.log("✅ Rejeição salva no Firestore."))
-          .catch(e => console.error("❌ Erro ao salvar rejeição no Firestore:", e));
+        try {
+          await db.collection("cotacoes").doc(docId).update({
+            status: "reanalise",
+            motivoRejeicao: motivo,
+            dataRejeicao: cotacoes[index].dataRejeicao
+          });
+          console.log("✅ Rejeição salva no Firestore.");
+        } catch (e) {
+          console.error("❌ Erro ao salvar rejeição no Firestore:", e);
+          alert("Erro ao salvar na nuvem. Verifique sua conexão.");
+          return;
+        }
       }
 
-      // ☁️ SYNC RTDB (CRÍTICO PARA REJEIÇÃO)
+      // ☁️ SYNC RTDB (CRÍTICO)
       if (typeof rtdb !== "undefined") {
-        rtdb.ref("cotacoes/" + cotacoes[index].numero).update({
-          status: "reanalise",
-          motivoRejeicao: motivo,
-          dataRejeicao: cotacoes[index].dataRejeicao
-        }).then(() => console.log("☁️ Rejeição sincronizada no RTDB."))
-          .catch(e => console.error("❌ Erro sync rejeicao:", e));
+        try {
+          await rtdb.ref("cotacoes/" + cotacoes[index].numero).update({
+            status: "reanalise",
+            motivoRejeicao: motivo,
+            dataRejeicao: cotacoes[index].dataRejeicao
+          });
+          console.log("☁️ Rejeição sincronizada no RTDB.");
+        } catch (e) {
+          console.error("❌ Erro sync rejeicao:", e);
+        }
       }
       alert("✅ Cotação rejeitada e devolvida para análise.");
     } else {
