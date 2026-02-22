@@ -131,11 +131,11 @@ function renderizarTabelaAnalise(textoOuId, containerOverride = null) {
             btnMotivo.innerText = "📄 Ver motivo da rejeição";
         }
 
-        if (cotacao.motivoRejeicao) {
+        if (cotacao.motivoRejeicao && cotacao.status !== "aprovacao") {
             if (areaMotivo) areaMotivo.value = cotacao.motivoRejeicao;
             if (contMotivo) contMotivo.style.display = "block";
-            // 🔥 REMOVIDO: btnMotivo.style.display = "inline-block"; 
-            // O botão agora fica apenas na linha de ações para evitar duplicidade.
+            // O botão btnMotivo agora fica oculto (display:none no HTML) para evitar duplicidade.
+            // O controle é feito apenas pelo botão na linha de ações da matriz.
         }
     }
 
@@ -315,30 +315,9 @@ function renderizarTabelaAnalise(textoOuId, containerOverride = null) {
         html += `<div class="botoes-acao-container" style="margin-top:30px; display:flex; gap:10px; flex-direction: row; justify-content: center; align-items: center; flex-wrap: nowrap; width: 100%; padding: 10px 0;">`;
 
         if (cotacao.status === "aprovacao") {
-            if (isAprovador) {
-                // --- BOTÕES DE APROVAÇÃO (Aprovador) ---
-                html += `
-                  <button onclick="visualizarDocumentos('${cotacao.numero || cotacao.id}')" 
-                       style="flex:1; width:auto; min-width:140px; background:#3ab9b6; color:#fff; border:none; padding:12px 10px; border-radius:8px; cursor:pointer; font-weight:800; font-size:11px; display:flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 3px 0 #2a8f8c; text-transform:uppercase;">
-                     <i class="fa-solid fa-folder-open"></i> Ver Todos os Anexos
-                  </button>
-                  <button onclick="abrirMapaPrecos('${cotacao.numero || cotacao.id}')" 
-                       style="flex:1; width:auto; min-width:140px; background:#333; color:#fff; border:1px solid #661155; padding:12px 10px; border-radius:8px; cursor:pointer; font-weight:800; font-size:11px; display:flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 3px 0 #4a0c3e; text-transform:uppercase;">
-                     🗺️ Mapa de preços
-                  </button>
-                  <button onclick="aprovarCotacaoDireto('${cotacao.numero || cotacao.id}')" 
-                       style="flex:1.2; width:auto; min-width:160px; background:#198754; color:white; border:none; padding:12px 10px; border-radius:8px; cursor:pointer; font-weight:800; font-size:12px; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 3px 0 #146c43; text-transform:uppercase;">
-                     <i class="fa-solid fa-confirm"></i> Aprovar Cotação
-                  </button>
-                  <button onclick="abrirRejeicaoCotacao('${cotacao.numero || cotacao.id}')" 
-                       style="flex:1; width:auto; min-width:120px; background:#842029; color:white; border:none; padding:12px 10px; border-radius:8px; cursor:pointer; font-weight:800; font-size:11px; display:flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 3px 0 #6a1a21; text-transform:uppercase;">
-                     <i class="fa-solid fa-xmark"></i> Rejeitar
-                  </button>
-                `;
-            } else {
-                // Comprador NÃO vê botões no status de aprovação (apenas acompanha)
-                html += `<!-- Status apenas informativo para comprador -->`;
-            }
+            // No status de aprovação, não mostramos botões de ação na matriz de análise.
+            // O usuário apenas acompanha o status.
+            html += `<!-- Acompanhamento: Sem botões de ação neste status -->`;
         } else if (cotacao.status !== "aprovacao") {
             // --- BOTÕES DE ANÁLISE (Comprador) ---
             if (cotacao.motivoRejeicao) {
