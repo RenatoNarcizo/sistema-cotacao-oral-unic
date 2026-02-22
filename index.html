@@ -9397,6 +9397,20 @@
   window.abrirRejeicaoCotacao = abrirRejeicaoCotacao;
   window.confirmarRejeicaoAprovacao = confirmarRejeicaoAprovacao;
 
+  window.toggleMotivoRejeicao = function () {
+    const box = document.getElementById("boxMotivoRejeicao");
+    const btn = document.getElementById("btnMotivoRejeicao");
+    if (!box) return;
+
+    if (box.style.display === "none" || !box.style.display) {
+      box.style.display = "block";
+      if (btn) btn.innerText = "🔼 Recolher motivo";
+    } else {
+      box.style.display = "none";
+      if (btn) btn.innerText = "📄 Ver motivo da rejeição";
+    }
+  };
+
 
   /* ======================================================
      EXPANSÃO DE COLUNAS (TOGGLE FULL SCREEN)

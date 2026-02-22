@@ -116,6 +116,26 @@ function renderizarTabelaAnalise(textoOuId, containerOverride = null) {
         if (statusDiv) statusDiv.innerHTML = "";
         if (btnEnviarExterno) btnEnviarExterno.style.display = "none";
         if (btnVerTodosAnexos) btnVerTodosAnexos.style.display = "none";
+
+        // --- LIMPEZA E POPULAÇÃO DO MOTIVO DE REJEIÇÃO ---
+        const contMotivo = document.getElementById("contMotivoRejeicao");
+        const boxMotivo = document.getElementById("boxMotivoRejeicao");
+        const areaMotivo = document.getElementById("motivoRejeicao");
+        const btnMotivo = document.getElementById("btnMotivoRejeicao");
+
+        if (contMotivo) contMotivo.style.display = "none";
+        if (boxMotivo) boxMotivo.style.display = "none";
+        if (areaMotivo) areaMotivo.value = "";
+        if (btnMotivo) {
+            btnMotivo.style.display = "none";
+            btnMotivo.innerText = "📄 Ver motivo da rejeição";
+        }
+
+        if (cotacao.motivoRejeicao) {
+            if (areaMotivo) areaMotivo.value = cotacao.motivoRejeicao;
+            if (contMotivo) contMotivo.style.display = "block";
+            if (btnMotivo) btnMotivo.style.display = "inline-block";
+        }
     }
 
     // 1. ANÁLISE / APROVAÇÃO
@@ -287,30 +307,47 @@ function renderizarTabelaAnalise(textoOuId, containerOverride = null) {
     }
 
     // BOTÕES DE AÇÃO
+    const usuarioLogado = JSON.parse(localStorage.getItem("usuarioLogado")) || {};
+    const isAprovador = (usuarioLogado.tipo === "aprovador" || usuarioLogado.tipo === "administrador");
+
     if (isAnalise) {
         html += `<div class="botoes-acao-container" style="margin-top:30px; display:flex; gap:10px; flex-direction: row; justify-content: center; align-items: center; flex-wrap: nowrap; width: 100%; padding: 10px 0;">`;
 
         if (cotacao.status === "aprovacao") {
-            // --- BOTÕES DE APROVAÇÃO (Aprovador) ---
-            html += `
-              <button onclick="visualizarDocumentos('${cotacao.numero || cotacao.id}')" 
-                   style="flex:1; width:auto; min-width:140px; background:#3ab9b6; color:#fff; border:none; padding:12px 10px; border-radius:8px; cursor:pointer; font-weight:800; font-size:11px; display:flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 3px 0 #2a8f8c; text-transform:uppercase;">
-                 <i class="fa-solid fa-folder-open"></i> Ver Todos os Anexos
-              </button>
-              <button onclick="abrirMapaPrecos('${cotacao.numero || cotacao.id}')" 
-                   style="flex:1; width:auto; min-width:140px; background:#333; color:#fff; border:1px solid #661155; padding:12px 10px; border-radius:8px; cursor:pointer; font-weight:800; font-size:11px; display:flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 3px 0 #4a0c3e; text-transform:uppercase;">
-                 🗺️ Mapa de preços
-              </button>
-              <button onclick="aprovarCotacaoDireto('${cotacao.numero || cotacao.id}')" 
-                   style="flex:1.2; width:auto; min-width:160px; background:#198754; color:white; border:none; padding:12px 10px; border-radius:8px; cursor:pointer; font-weight:800; font-size:12px; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 3px 0 #146c43; text-transform:uppercase;">
-                 <i class="fa-solid fa-confirm"></i> Aprovar Cotação
-              </button>
-              <button onclick="abrirRejeicaoCotacao('${cotacao.numero || cotacao.id}')" 
-                   style="flex:1; width:auto; min-width:120px; background:#842029; color:white; border:none; padding:12px 10px; border-radius:8px; cursor:pointer; font-weight:800; font-size:11px; display:flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 3px 0 #6a1a21; text-transform:uppercase;">
-                 <i class="fa-solid fa-xmark"></i> Rejeitar
-              </button>
-            `;
-        } else {
+            if (isAprovador) {
+                // --- BOTÕES DE APROVAÇÃO (Aprovador) ---
+                html += `
+                  <button onclick="visualizarDocumentos('${cotacao.numero || cotacao.id}')" 
+                       style="flex:1; width:auto; min-width:140px; background:#3ab9b6; color:#fff; border:none; padding:12px 10px; border-radius:8px; cursor:pointer; font-weight:800; font-size:11px; display:flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 3px 0 #2a8f8c; text-transform:uppercase;">
+                     <i class="fa-solid fa-folder-open"></i> Ver Todos os Anexos
+                  </button>
+                  <button onclick="abrirMapaPrecos('${cotacao.numero || cotacao.id}')" 
+                       style="flex:1; width:auto; min-width:140px; background:#333; color:#fff; border:1px solid #661155; padding:12px 10px; border-radius:8px; cursor:pointer; font-weight:800; font-size:11px; display:flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 3px 0 #4a0c3e; text-transform:uppercase;">
+                     🗺️ Mapa de preços
+                  </button>
+                  <button onclick="aprovarCotacaoDireto('${cotacao.numero || cotacao.id}')" 
+                       style="flex:1.2; width:auto; min-width:160px; background:#198754; color:white; border:none; padding:12px 10px; border-radius:8px; cursor:pointer; font-weight:800; font-size:12px; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 3px 0 #146c43; text-transform:uppercase;">
+                     <i class="fa-solid fa-confirm"></i> Aprovar Cotação
+                  </button>
+                  <button onclick="abrirRejeicaoCotacao('${cotacao.numero || cotacao.id}')" 
+                       style="flex:1; width:auto; min-width:120px; background:#842029; color:white; border:none; padding:12px 10px; border-radius:8px; cursor:pointer; font-weight:800; font-size:11px; display:flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 3px 0 #6a1a21; text-transform:uppercase;">
+                     <i class="fa-solid fa-xmark"></i> Rejeitar
+                  </button>
+                `;
+            } else {
+                // Comprador vê apenas as visualizações passivas no status de aprovação
+                html += `
+                  <button onclick="visualizarDocumentos('${cotacao.numero || cotacao.id}')" 
+                       style="flex:1; width:auto; min-width:150px; background:#3ab9b6; color:#fff; border:none; padding:12px 8px; border-radius:8px; cursor:pointer; font-weight:800; font-size:10px; display:flex; align-items:center; justify-content:center; gap:5px; box-shadow:0 3px 0 #2a8f8c; text-transform:uppercase;">
+                     <i class="fa-solid fa-folder-open"></i> Ver Todos os Anexos
+                  </button>
+                  <button onclick="abrirMapaPrecos('${cotacao.numero || cotacao.id}')" 
+                       style="flex:1; width:auto; min-width:150px; background:#333; color:#fff; border:1px solid #661155; padding:12px 8px; border-radius:8px; cursor:pointer; font-weight:800; font-size:10px; display:flex; align-items:center; justify-content:center; gap:5px; box-shadow:0 3px 0 #4a0c3e; text-transform:uppercase;">
+                     🗺️ Mapa de preços
+                  </button>
+                `;
+            }
+        } else if (cotacao.status !== "aprovacao") {
             // --- BOTÕES DE ANÁLISE (Comprador) ---
             if (cotacao.motivoRejeicao) {
                 html += `<button onclick="toggleMotivoRejeicao()" style="flex:1; width:auto; min-width:150px; background:#661155; color:#fff; border:none; padding:12px 8px; border-radius:8px; cursor:pointer; font-weight:800; font-size:10px; display:flex; align-items:center; justify-content:center; gap:5px; box-shadow:0 3px 0 #4a0c3e; text-transform:uppercase;"><i class="fa-solid fa-file-invoice"></i> Ver motivo da rejeição</button>`;
