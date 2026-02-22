@@ -134,7 +134,8 @@ function renderizarTabelaAnalise(textoOuId, containerOverride = null) {
         if (cotacao.motivoRejeicao) {
             if (areaMotivo) areaMotivo.value = cotacao.motivoRejeicao;
             if (contMotivo) contMotivo.style.display = "block";
-            if (btnMotivo) btnMotivo.style.display = "inline-block";
+            // 🔥 REMOVIDO: btnMotivo.style.display = "inline-block"; 
+            // O botão agora fica apenas na linha de ações para evitar duplicidade.
         }
     }
 
@@ -335,17 +336,8 @@ function renderizarTabelaAnalise(textoOuId, containerOverride = null) {
                   </button>
                 `;
             } else {
-                // Comprador vê apenas as visualizações passivas no status de aprovação
-                html += `
-                  <button onclick="visualizarDocumentos('${cotacao.numero || cotacao.id}')" 
-                       style="flex:1; width:auto; min-width:150px; background:#3ab9b6; color:#fff; border:none; padding:12px 8px; border-radius:8px; cursor:pointer; font-weight:800; font-size:10px; display:flex; align-items:center; justify-content:center; gap:5px; box-shadow:0 3px 0 #2a8f8c; text-transform:uppercase;">
-                     <i class="fa-solid fa-folder-open"></i> Ver Todos os Anexos
-                  </button>
-                  <button onclick="abrirMapaPrecos('${cotacao.numero || cotacao.id}')" 
-                       style="flex:1; width:auto; min-width:150px; background:#333; color:#fff; border:1px solid #661155; padding:12px 8px; border-radius:8px; cursor:pointer; font-weight:800; font-size:10px; display:flex; align-items:center; justify-content:center; gap:5px; box-shadow:0 3px 0 #4a0c3e; text-transform:uppercase;">
-                     🗺️ Mapa de preços
-                  </button>
-                `;
+                // Comprador NÃO vê botões no status de aprovação (apenas acompanha)
+                html += `<!-- Status apenas informativo para comprador -->`;
             }
         } else if (cotacao.status !== "aprovacao") {
             // --- BOTÕES DE ANÁLISE (Comprador) ---
