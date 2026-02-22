@@ -8825,51 +8825,91 @@
   /* ======================================================
   ✔ APROVAR COTAÇÃO DIRETAMENTE (APROVADOR)
   ====================================================== */
-  function aprovarCotacaoDireto(numero) {
+  async function aprovarCotacaoDireto(numero) {
     if (!numero) {
       alert("Número da cotação inválido.");
       return;
     }
 
-    const cotacoes = getCotacoes();
-    const cotacao = cotacoes.find(c => c.numero === numero);
+    // 1. ATUALIZAÇÃO LOCAL
+    const cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
+    const index = cotacoes.findIndex(c => String(c.numero) === String(numero) || String(c.id) === String(numero));
 
-    if (!cotacao) {
-      alert("Cotação não encontrada.");
+    if (index === -1) {
+      alert("Cotação não encontrada no banco local.");
       return;
     }
 
-    // 🔒 valida se realmente está em aprovação
-    if (cotacao.status !== "aprovacao") {
-      alert("Esta cotação não está aguardando aprovação.");
-      return;
+    const cotacao = cotacoes[index];
+
+    // Se estivermos vindo do carregarPendentesAprovacao (que permite aprovação parcial via checkboxes)
+    const checkboxes = document.querySelectorAll('.check-item-aprovacao');
+    if (checkboxes.length > 0) {
+      const indicesAprovados = [];
+      checkboxes.forEach(cb => {
+        if (cb.checked) indicesAprovados.push(parseInt(cb.dataset.index));
+      });
+
+      if (indicesAprovados.length === 0) {
+        alert("⚠️ Selecione pelo menos um item para aprovar.");
+        return;
+      }
+
+      if (!confirm(`Confirma a aprovação de ${indicesAprovados.length} item(ns)?\nOs itens NÃO selecionados serão removidos.`)) {
+        return;
+      }
+      cotacao.adjudicacao = cotacao.adjudicacao.filter((_, idx) => indicesAprovados.includes(idx));
+    } else {
+      if (!confirm("Confirmar aprovação total desta cotação?")) return;
     }
 
-    // ✅ aprova
+    // ✅ transição para fechada
     cotacao.status = "fechada";
     cotacao.dataAprovacao = new Date().toLocaleString();
 
-    salvarCotacoes(cotacoes);
+    localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
 
-    // ☁️ SYNC RTDB (CRITICO)
+    // 2. SYNC FIRESTORE
+    if (typeof db !== "undefined") {
+      try {
+        await db.collection("cotacoes").doc(String(cotacao.numero)).update({
+          status: "fechada",
+          dataAprovacao: cotacao.dataAprovacao,
+          adjudicacao: cotacao.adjudicacao
+        });
+        console.log("✅ Firestore: Cotação aprovada/fechada.");
+      } catch (e) {
+        console.warn("⚠️ Firestore sync falhou:", e);
+      }
+    }
+
+    // 3. SYNC RTDB
     if (typeof rtdb !== "undefined") {
-      rtdb.ref("cotacoes/" + cotacao.numero).update({
-        status: "fechada",
-        dataAprovacao: cotacao.dataAprovacao
-      });
+      try {
+        await rtdb.ref("cotacoes/" + cotacao.numero).update({
+          status: "fechada",
+          dataAprovacao: cotacao.dataAprovacao,
+          adjudicacao: cotacao.adjudicacao
+        });
+        console.log("☁️ RTDB: Cotação fechada sincronizada.");
+      } catch (e) {
+        console.error("❌ RTDB sync falhou:", e);
+      }
     }
 
-    alert("✅ Cotação aprovada com sucesso!");
+    alert("✅ Cotação aprovada com sucesso! Status alterado para Fechada.");
 
-    // 🔄 atualiza tela de aprovações
-    if (typeof carregarPendentesAprovacao === "function") {
-      carregarPendentesAprovacao();
-    }
+    // 4. LIMPEZA UI
+    if (typeof carregarPendentesAprovacao === "function") carregarPendentesAprovacao();
+    if (typeof carregarCotacoes === "function") carregarCotacoes();
 
-    // 🔒 fecha modal se existir
-    const modal = document.getElementById("modalAprovacao");
-    if (modal) modal.style.display = "none";
+    const modalAprov = document.getElementById("modalAprovacao");
+    if (modalAprov) modalAprov.style.display = "none";
+
+    document.body.style.overflow = "auto";
   }
+
+  window.aprovarCotacaoDireto = aprovarCotacaoDireto;
 
   /* 🔑 garante acesso global */
   window.aprovarCotacaoDireto = aprovarCotacaoDireto;
@@ -8992,19 +9032,7 @@
 
   function aprovarCotacaoAtual() {
     if (!cotacaoAprovacaoAtual) return;
-
-    const cotacoes = getCotacoes();
-    const cotacao = cotacoes.find(c => c.numero === cotacaoAprovacaoAtual);
-    if (!cotacao) return;
-
-    cotacao.status = "fechada";
-    cotacao.dataAprovacao = new Date().toLocaleString();
-
-    salvarCotacoes(cotacoes);
-
-    alert("✅ Cotação aprovada com sucesso!");
-    fecharModalAprovacao();
-    carregarPendentesAprovacao();
+    aprovarCotacaoDireto(cotacaoAprovacaoAtual);
   }
 
 
@@ -9015,13 +9043,9 @@
 
   function carregarPendentesAprovacao() {
     const div = document.getElementById("listaPendentesAprovacao");
-    if (!div) {
-      console.warn("listaPendentesAprovacao não encontrada");
-      return;
-    }
+    if (!div) return;
 
-    const cotacoes = getCotacoes();
-
+    const cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
     const pendentes = cotacoes.filter(c =>
       c.status === "aprovacao" &&
       Array.isArray(c.adjudicacao) &&
@@ -9031,71 +9055,47 @@
     div.innerHTML = "";
 
     if (pendentes.length === 0) {
-      div.innerHTML =
-        "<p style='text-align:center;color:#aaa;'>Nenhuma cotação pendente de aprovação.</p>";
+      div.innerHTML = "<p style='text-align:center;color:#aaa;padding:20px;'>Nenhuma cotação aguardando aprovação.</p>";
       return;
     }
 
     pendentes.forEach(c => {
-      const total = c.adjudicacao.reduce(
-        (s, i) => s + (Number(i.total) || 0),
-        0
-      );
+      const total = c.adjudicacao.reduce((s, i) => s + (Number(i.total) || 0), 0);
+      const safeID = String(c.numero).replace(/\W/g, '');
 
       const bloco = document.createElement("div");
       bloco.className = "linha-cotacao";
-
       bloco.innerHTML = `
         <div class="info">
-        <div style="font-weight:bold;font-size:15px;color:#fff;">
-          ${c.descricao || "Sem descrição"}
+          <div style="font-weight:bold;font-size:15px;color:#fff;">${c.descricao || "Sem descrição"}</div>
+          <div style="font-size:13px;color:#ccc;margin:4px 0 8px;"><strong>Cotação #${c.numero}</strong></div>
+          <div style="font-size:13px;">
+            Itens adjudicados: <b>${c.adjudicacao.length}</b><br>
+            Total estimado: <b>R$ ${total.toFixed(2)}</b>
+          </div>
         </div>
-
-        <div style="font-size:13px;color:#ccc;margin:4px 0 8px;">
-          <strong>Cotação #${c.numero}</strong>
-        </div>
-
-        <div style="font-size:13px;">
-          Itens adjudicados: <b>${c.adjudicacao.length}</b><br>
-          Total estimado: <b>R$ ${total.toFixed(2)}</b>
-        </div>
-      </div>
-
         <div class="acoes">
-          <button class="btn-detalhes" data-numero="${c.numero}">
+          <button class="btn-detalhes" onclick="toggleDetalhesAprovacao('${safeID}')">
             🔎 Detalhes
           </button>
         </div>
       `;
 
       const detalhes = document.createElement("div");
-      detalhes.id = `detalhes - ${c.numero} `;
+      detalhes.id = `detalhes_${safeID}`;
       detalhes.style.display = "none";
+      detalhes.style.marginTop = "15px";
       detalhes.innerHTML = gerarHTMLDetalhesAprovacao(c);
 
       div.appendChild(bloco);
       div.appendChild(detalhes);
-
-      /* 🔥 AQUI é onde o evento DEVE ser ligado */
-      detalhes.querySelectorAll(".btn-rejeitar").forEach(btn => {
-        btn.addEventListener("click", function () {
-          const numero = this.dataset.numero;
-          abrirRejeicaoCotacao(numero);
-        });
-      });
-
-      bloco.querySelector(".btn-detalhes").addEventListener("click", () => {
-        toggleDetalhesAprovacao(c.numero);
-      });
     });
   }
 
 
-  function toggleDetalhesAprovacao(numero) {
-    const el = document.getElementById(`detalhes - ${numero} `);
-    if (!el) return;
-
-    el.style.display = el.style.display === "none" ? "block" : "none";
+  function toggleDetalhesAprovacao(safeID) {
+    const el = document.getElementById(`detalhes_${safeID}`);
+    if (el) el.style.display = el.style.display === "none" ? "block" : "none";
   }
 
   function gerarHTMLDetalhesAprovacao(cotacao) {
@@ -9266,60 +9266,7 @@
   };
 
   // Função de Aprovação Parcial
-  window.aprovarCotacaoDireto = function (numeroCotacao) {
-    const cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
-    const index = cotacoes.findIndex(c => c.numero === numeroCotacao || c.id === numeroCotacao);
-
-    if (index === -1) return alert("Cotação não encontrada.");
-
-    const cotacao = cotacoes[index];
-
-    // Coleta índices marcados
-    const checkboxes = document.querySelectorAll('.check-item-aprovacao');
-    const indicesAprovados = [];
-    checkboxes.forEach(cb => {
-      if (cb.checked) {
-        indicesAprovados.push(parseInt(cb.dataset.index));
-      }
-    });
-
-    if (indicesAprovados.length === 0) {
-      return alert("⚠️ Selecione pelo menos um item para aprovar.");
-    }
-
-    if (!confirm(`Confirma a aprovação de ${indicesAprovados.length} item(ns)?\nOs itens NÃO selecionados serão removidos do pedido.`)) {
-      return;
-    }
-
-    // Filtra adjudicação mantendo apenas os aprovados
-    const novaAdjudicacao = cotacao.adjudicacao.filter((_, idx) => indicesAprovados.includes(idx));
-
-    cotacao.adjudicacao = novaAdjudicacao;
-    cotacao.status = "fechada";
-    cotacao.dataAprovacao = new Date().toLocaleString();
-
-    cotacoes[index] = cotacao;
-    localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
-
-    // ☁️ SYNC RTDB (CRÍTICO PARA APROVAÇÃO)
-    if (typeof rtdb !== "undefined") {
-      rtdb.ref("cotacoes/" + cotacao.numero).update({
-        status: "fechada",
-        dataAprovacao: cotacao.dataAprovacao,
-        adjudicacao: cotacao.adjudicacao
-      }).then(() => console.log("☁️ Cotação aprovada (fechada) no RTDB!"))
-        .catch(e => console.error("❌ Erro ao aprovar no RTDB:", e));
-    }
-
-    alert("✅ Cotação aprovada com sucesso!");
-
-    // Atualiza lista
-    if (typeof carregarPendentesAprovacao === 'function') carregarPendentesAprovacao();
-
-    // Fecha detalhes se aberto
-    const detalhesDiv = document.getElementById(`detalhes-${cotacao.numero}`);
-    if (detalhesDiv) detalhesDiv.style.display = "none";
-  };
+  // Removida duplicata de aprovarCotacaoDireto aqui embaixo
 
 
   /* ======================================================
@@ -10888,15 +10835,15 @@
     document.body.style.overflow = "auto";
   };
 
-  window.confirmarRejeicaoV2 = function () {
+  window.confirmarRejeicaoV2 = async function () {
     const modal = document.getElementById("modalRejeicaoAprovacao");
 
     // Tenta obter ID de MÚLTIPLAS fontes para garantir
     let alvo = modal ? modal.dataset.rejectionId : null;
     if (!alvo) alvo = window.rejectionTargetID;
-    if (!alvo) alvo = cotacaoRejeicaoAtual;
+    if (!alvo) alvo = window.cotacaoRejeicaoAtual;
 
-    console.log("🔥 confirmarRejeicaoV2 CHAMADO! ID Final:", alvo);
+    console.log("🔥 confirmarRejeicaoV2 (UNIFICADO) CHAMADO! ID Final:", alvo);
 
     if (!alvo) {
       alert("Erro CRÍTICO: Não foi possível identificar a cotação.\nPor favor, recarregue a página e tente novamente.");
@@ -10904,34 +10851,69 @@
     }
 
     const campo = document.getElementById("motivoRejeicaoAprovacao");
-    const motivo = campo.value.trim();
+    const motivo = campo ? campo.value.trim() : "";
     if (!motivo) {
       alert("⚠️ Por favor, informe o motivo da rejeição.");
       return;
     }
 
-    // FIX: Acesso direto ao LocalStorage
+    // 1. ATUALIZAÇÃO LOCAL IMEDIATA
     const cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
-    const index = cotacoes.findIndex(c => c.numero === alvo || c.id === alvo);
+    const index = cotacoes.findIndex(c => String(c.numero) === String(alvo) || String(c.id) === String(alvo));
 
-    if (index !== -1) {
-      cotacoes[index].status = "reanalise";
-      cotacoes[index].motivoRejeicao = motivo;
-      cotacoes[index].dataRejeicao = new Date().toLocaleString();
-
-      localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
-      alert("✅ Cotação rejeitada com sucesso!");
-    } else {
-      alert("❌ Erro: Cotação ID '" + alvo + "' não encontrada no banco de dados.");
+    if (index === -1) {
+      alert("❌ Erro: Cotação ID '" + alvo + "' não encontrada no banco de dados local.");
+      return;
     }
+
+    const cot = cotacoes[index];
+    cot.status = "reanalise";
+    cot.motivoRejeicao = motivo;
+    cot.dataRejeicao = new Date().toLocaleString();
+
+    localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
+
+    // 2. SINCRONIZAÇÃO CLOUD (FIRESTORE)
+    if (typeof db !== "undefined") {
+      try {
+        await db.collection("cotacoes").doc(String(alvo)).update({
+          status: "reanalise",
+          motivoRejeicao: motivo,
+          dataRejeicao: cot.dataRejeicao
+        });
+        console.log("✅ Firestore: Cotação rejeitada e sincronizada.");
+      } catch (e) {
+        console.warn("⚠️ Falha ao sincronizar rejeição no Firestore:", e);
+      }
+    }
+
+    // 3. SINCRONIZAÇÃO RTDB (REALTIME)
+    if (typeof rtdb !== "undefined") {
+      try {
+        await rtdb.ref("cotacoes/" + alvo).update({
+          status: "reanalise",
+          motivoRejeicao: motivo,
+          dataRejeicao: cot.dataRejeicao
+        });
+        console.log("☁️ RTDB: Rejeição sincronizada.");
+      } catch (e) {
+        console.error("❌ Erro sync RTDB rejeição:", e);
+      }
+    }
+
+    alert("✅ Cotação rejeitada com sucesso! Status alterado para Reanálise.");
 
     window.fecharRejeicaoV2();
     if (modal) modal.dataset.rejectionId = "";
 
-    if (typeof carregarPendentesAprovacao === "function") {
-      carregarPendentesAprovacao();
-    }
+    // Recarrega as listas
+    if (typeof carregarPendentesAprovacao === "function") carregarPendentesAprovacao();
+    if (typeof carregarCotacoes === "function") carregarCotacoes();
+    if (typeof toggleListaRespondidas === "function") toggleListaRespondidas('analise', true);
   };
+
+  // Aliases para compatibilidade
+  window.confirmarRejeicaoAprovacao = window.confirmarRejeicaoV2;
 
   /* ======================================================
      🔄 REJEIÇÃO V3 (SAFE MAP OVERRIDE) - EXECUTADO POR ÚLTIMO
@@ -10941,30 +10923,21 @@
 
     let numeroReal = input;
 
-    // 1. Tenta achar via MAPA (UID)
+    // 1. Tenta achar via MAPA (UID) ou Global
     if (window.rejectionMap && window.rejectionMap[input]) {
       const c = window.rejectionMap[input];
-      // Prioriza todas as variantes possíveis de ID
       numeroReal = c.numero || c.id || c.codigo || c.cod || c._id || c.uuid;
-
-      if (!numeroReal) {
-        console.error("ERRO: Objeto no rejectionMap não tem ID visível", c);
-      }
     }
 
-    // 2. Fallback: Variável global antiga
     if (!numeroReal && window.cotacaoRejeicaoAtual) {
       numeroReal = window.cotacaoRejeicaoAtual;
     }
 
-    // 3. Log para debug silencioso
     if (!numeroReal) {
-      console.warn("abrirRejeicaoCotacao chamado com input vazio e sem fallback.");
-      // Não alerta "undefined", apenas segue. Se confirmar, dará erro lá.
+      console.warn("abrirRejeicaoCotacao chamado sem ID.");
     } else {
-      // Salva globalmente
       window.rejectionTargetID = numeroReal;
-      cotacaoRejeicaoAtual = numeroReal;
+      window.cotacaoRejeicaoAtual = numeroReal;
     }
 
     const modal = document.getElementById("modalRejeicaoAprovacao");
@@ -10978,11 +10951,8 @@
       const campo = document.getElementById("motivoRejeicaoAprovacao");
       if (campo) campo.value = "";
 
-      // Exibe sem estilos hardcoded
-      modal.removeAttribute("style");
+      // Estilos críticos
       modal.style.display = "flex";
-
-      // CSS Inline crítico
       modal.style.position = "fixed";
       modal.style.top = "0";
       modal.style.left = "0";
@@ -10993,9 +10963,7 @@
       modal.style.justifyContent = "center";
       modal.style.backgroundColor = "rgba(0,0,0,0.8)";
 
-      console.log("✅ Modal V3 Aberto. ID:", numeroReal);
-    } else {
-      console.error("Erro: Modal de rejeição não encontrado (V3).");
+      console.log("✅ Modal Rejeição Aberto. ID:", numeroReal);
     }
   };
 
