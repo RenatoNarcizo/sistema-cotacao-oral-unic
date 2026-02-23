@@ -9988,13 +9988,8 @@
                         <p><strong>Setor:</strong> ${sol.setor}</p>
                         <p><strong>Tipo:</strong> ${sol.tipo.toUpperCase()}</p>
                         <p><strong>Data:</strong> ${sol.data}</p>
-                        <div>
-                          <strong>Alterar Status:</strong>
-                          <select id="selectStatus_${sol.id}" style="margin-left:10px; background:#111; color:white; border:1px solid #661155; border-radius:4px; padding:4px;">
-                            <option value="pendente" ${sol.status === 'pendente' ? 'selected' : ''}>📝 Pendente</option>
-                            <option value="em_cotacao" ${sol.status === 'em_cotacao' ? 'selected' : ''}>🔍 Em Cotação</option>
-                            <option value="finalizada" ${sol.status === 'finalizada' ? 'selected' : ''}>✅ Finalizada</option>
-                          </select>
+                        <div id="containerAlterarStatus">
+                          <!-- Será preenchido apenas para compradores -->
                         </div>
                       </div>
 
@@ -10027,7 +10022,26 @@
                             `;
 
 
-    // 🔥 AQUI ESTAVA O ERRO
+    // 🔥 Ajusta ações e status por perfil
+    const usuario = JSON.parse(localStorage.getItem("usuarioLogado"));
+    const ehComprador = usuario && (usuario.tipo === "comprador" || usuario.tipo === "administrador");
+    const statusContainer = document.getElementById("containerAlterarStatus");
+
+    if (statusContainer) {
+      if (ehComprador) {
+        statusContainer.innerHTML = `
+          <strong>Alterar Status:</strong>
+          <select id="selectStatus_${sol.id}" style="margin-left:10px; background:#111; color:white; border:1px solid #661155; border-radius:4px; padding:4px;">
+            <option value="pendente" ${sol.status === 'pendente' ? 'selected' : ''}>📝 Pendente</option>
+            <option value="em_cotacao" ${sol.status === 'em_cotacao' ? 'selected' : ''}>🔍 Em Cotação</option>
+            <option value="finalizada" ${sol.status === 'finalizada' ? 'selected' : ''}>✅ Finalizada</option>
+          </select>
+        `;
+      } else {
+        statusContainer.innerHTML = ""; // Requisitante não vê
+      }
+    }
+
     ajustarAcoesSolicitacaoPorPerfil();
 
     document.getElementById("modalDetalhesSolicitacao").style.display = "flex";
