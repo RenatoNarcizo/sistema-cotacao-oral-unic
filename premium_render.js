@@ -160,6 +160,12 @@ function renderizarTabelaAnalise(textoOuId, containerOverride = null) {
     /* ==========================
        📊 DADOS (Sincronizados via Nuvem)
     ========================== */
+    const listaFornGlobal = JSON.parse(localStorage.getItem("fornecedores")) || [];
+    const getNomeExibicao = (email, nomeOriginal) => {
+        const f = listaFornGlobal.find(x => (x.email || "").toLowerCase().trim() === (email || "").toLowerCase().trim());
+        return f ? f.nome : nomeOriginal;
+    };
+
     let respostas = [];
     if (Array.isArray(cotacao.respostasFornecedores)) {
         respostas = [...cotacao.respostasFornecedores];
@@ -209,9 +215,8 @@ function renderizarTabelaAnalise(textoOuId, containerOverride = null) {
                            title="Ver Anexos deste Fornecedor" 
                            onclick="visualizarDocumentos('${cotacao.numero}', '${r.email}')"></i>
                         ` : ''}
-                        ${r.fornecedor}
+                        ${getNomeExibicao(r.email, r.fornecedor)}
                     </div>
-                    <div style="font-size:10px; opacity:0.8;">${r.email}</div>
                  </th>`;
     });
 
@@ -281,7 +286,7 @@ function renderizarTabelaAnalise(textoOuId, containerOverride = null) {
         }
 
         let fornEscolhidoObj = respostas.find(r => normalizarEmail(r.email) === normalizarEmail(emailEscolhido));
-        let nomeEscolhido = fornEscolhidoObj ? fornEscolhidoObj.fornecedor : "Selecione";
+        let nomeEscolhido = fornEscolhidoObj ? getNomeExibicao(fornEscolhidoObj.email, fornEscolhidoObj.fornecedor) : "Selecione";
         const labelId = `label-escolhido-${idx}`;
 
         html += `<td style="text-align:center; padding:12px;">
@@ -292,7 +297,10 @@ function renderizarTabelaAnalise(textoOuId, containerOverride = null) {
                     </div>
                     ${(isAnalise && cotacao.status !== "aprovacao") ? `
                       <select onchange="atualizarDecisaoV3('${cotacao.numero || cotacao.id}', '${idx}', this.value, '${idx}')" style="position:absolute; top:0; left:0; width:100%; height:100%; opacity:0; cursor:pointer;">
-                          ${precosRow.map(p => `<option value="${p.email}" data-nome="${p.fornecedor}" ${normalizarEmail(p.email) === normalizarEmail(emailEscolhido) ? 'selected' : ''}>${p.fornecedor} - R$ ${p.val.toFixed(2)}</option>`).join('')}
+                          ${precosRow.map(p => {
+            const n = getNomeExibicao(p.email, p.fornecedor);
+            return `<option value="${p.email}" data-nome="${n}" ${normalizarEmail(p.email) === normalizarEmail(emailEscolhido) ? 'selected' : ''}>${n} - R$ ${p.val.toFixed(2)}</option>`;
+        }).join('')}
                       </select>
                       <i class="fa-solid fa-chevron-down" style="color:#10b981; font-size:11px;"></i>` : ''}
                  </div>
