@@ -11938,6 +11938,12 @@
      👁️ VISUALIZAR DOCUMENTOS (STRICT MODE - ISOLADO)
      Garante que só abrimos documentos desta cotação específica.
   ====================================================== */
+  window.fecharModalDocs = function () {
+    const modal = document.getElementById("modalVisualizarDocumentos");
+    if (modal) modal.style.display = "none";
+    document.body.style.overflow = "auto"; // 🔓 Restaura scroll
+  };
+
   window.visualizarDocumentos = async function (idCotacao, emailFornecedor) {
     if (!idCotacao) return;
 
@@ -11957,10 +11963,16 @@
                       <i class="fa-solid fa-folder-open" style="color:#3ab9b6;"></i> 
                       Documentos da Cotação #${idLimpo}
                    </h2>
-                   <span class="close" onclick="document.getElementById('modalVisualizarDocumentos').style.display='none'" style="color:#fff; font-size:32px; cursor:pointer; opacity:0.8; transition:0.2s; line-height:1;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.8">&times;</span>
+                   <span class="close" onclick="fecharModalDocs()" style="color:#fff; font-size:32px; cursor:pointer; opacity:0.8; transition:0.2s; line-height:1;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.8">&times;</span>
                 </div>
                 <div id="listaDocumentosAnexados" style="padding:0; max-height:75vh; overflow-y:auto; background:#000;"></div>
             </div>`;
+
+      // Fecha ao clicar fora do conteúdo
+      modal.onclick = function (e) {
+        if (e.target === modal) fecharModalDocs();
+      };
+
       document.body.appendChild(modal);
     }
 
