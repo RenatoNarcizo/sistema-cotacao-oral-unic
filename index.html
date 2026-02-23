@@ -6404,23 +6404,40 @@
 
     input.onchange = function (e) {
       if (e.target.files.length > 0) {
-        arquivoSelecionadoTemp = {
-          files: Array.from(e.target.files),
-          numeroCotacao: numero,
-          tipo: tipoDoc
-        };
+        if (!arquivoSelecionadoTemp || arquivoSelecionadoTemp.numeroCotacao !== numero) {
+          arquivoSelecionadoTemp = {
+            files: [],
+            numeroCotacao: numero
+          };
+        }
+
+        Array.from(e.target.files).forEach(f => {
+          arquivoSelecionadoTemp.files.push({
+            file: f,
+            tipo: tipoDoc
+          });
+        });
 
         const feedback = document.getElementById("feedbackUploadManual");
         const msg = document.getElementById("msgArquivoSelecionado");
 
         feedback.style.display = "block";
-        const listaNomes = arquivoSelecionadoTemp.files.map(f => `<li style="margin-bottom:5px;">📎 ${f.name} <small>(${(f.size / 1024).toFixed(1)} KB)</small></li>`).join('');
+        const listaNomes = arquivoSelecionadoTemp.files.map(item => `
+          <li style="margin-bottom:5px; display:flex; justify-content:space-between; align-items:center;">
+            <span>📎 [${item.tipo}] ${item.file.name}</span>
+            <small style="color:#888;">(${(item.file.size / 1024).toFixed(1)} KB)</small>
+          </li>
+        `).join('');
+
         msg.innerHTML = `
-          <div style="margin-bottom:10px;">
-            📌 <strong>${e.target.files.length} arquivo(s)</strong> para:<br>
-            Cotação: <strong style="color:white;">${numero}</strong> • Tipo: <strong style="color:white;">${tipoDoc}</strong>
+          <div style="margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:8px;">
+            📌 <strong>${arquivoSelecionadoTemp.files.length} arquivo(s)</strong> preparados para:<br>
+            Cotação: <strong style="color:white;">${numero}</strong>
           </div>
-          <ul style="margin:0; padding-left:20px; color:#aaa; font-size:12px;">${listaNomes}</ul>
+          <ul style="margin:0; padding-left:0; list-style:none; font-size:12px;">${listaNomes}</ul>
+          <div style="margin-top:10px; color:#ffc107; font-size:11px;">
+            <i class="fa-solid fa-circle-info"></i> Você pode selecionar mais arquivos antes de enviar.
+          </div>
         `;
 
         document.getElementById("inputNumeroCotacaoManual").disabled = true;
@@ -6433,50 +6450,70 @@
   window.enviarArquivoManual = async function () {
     if (!arquivoSelecionadoTemp) return;
 
-    const { files, numeroCotacao, tipo } = arquivoSelecionadoTemp;
-
-    // Processa todos os arquivos (CLOUD STORAGE)
-    const uploadPromises = files.map(async file => {
-      try {
-        const timestamp = Date.now();
-        const randomPart = Math.floor(Math.random() * 1000);
-        const nomeSeguro = file.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9.-]/g, "_");
-        const path = `financeiro/${numeroCotacao}/${timestamp}_${randomPart}_${nomeSeguro}`;
-
-        const storageRef = storage.ref(path);
-        const uploadTask = await storageRef.put(file);
-        const downloadURL = await uploadTask.ref.getDownloadURL();
-
-        return {
-          nome: file.name,
-          tipo: tipo,
-          data: new Date().toLocaleString(),
-          tamanho: (file.size / 1024).toFixed(2) + " KB",
-          url: downloadURL,
-          usuario: getUsuarioLogado()?.nome || "Desconhecido"
-        };
-      } catch (e) {
-        console.error("Erro upload ind:", e);
-        return null;
-      }
-    });
+    const btn = event?.target || document.querySelector("button[onclick='enviarArquivoManual()']");
+    const originalText = btn ? btn.innerHTML : "🚀 Enviar Arquivo";
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = "⌛ Enviando...";
+    }
 
     try {
+      const { files, numeroCotacao } = arquivoSelecionadoTemp;
+      console.log(`🚀 Iniciando upload de ${files.length} arquivo(s) para COT ${numeroCotacao}...`);
+
+      const uploadPromises = files.map(async item => {
+        const { file, tipo } = item;
+        try {
+          const timestamp = Date.now();
+          const randomPart = Math.floor(Math.random() * 1000);
+          const nomeSeguro = file.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9.-]/g, "_");
+          const path = `financeiro/${numeroCotacao}/${timestamp}_${randomPart}_${nomeSeguro}`;
+
+          console.log(`📤 Carregando individual: ${file.name} ([${tipo}]) em ${path}...`);
+          const storageRef = storage.ref(path);
+          const uploadTask = await storageRef.put(file);
+          const downloadURL = await uploadTask.ref.getDownloadURL();
+
+          return {
+            nome: file.name,
+            tipo: tipo,
+            data: new Date().toLocaleString(),
+            tamanho: (file.size / 1024).toFixed(2) + " KB",
+            url: downloadURL,
+            usuario: getUsuarioLogado()?.nome || "Desconhecido"
+          };
+        } catch (e) {
+          console.error(`❌ Erro no arquivo ${file.name}:`, e);
+          return null;
+        }
+      });
+
       let novosArquivos = await Promise.all(uploadPromises);
       novosArquivos = novosArquivos.filter(a => a !== null);
+
+      if (novosArquivos.length === 0) {
+        throw new Error("Nenhum arquivo pôde ser carregado para o servidor. Verifique sua conexão ou o tamanho dos arquivos.");
+      }
+
+      console.log(`✅ ${novosArquivos.length} arquivos no Storage. Atualizando Firestore...`);
 
       const idDoc = `docs_${numeroCotacao}`;
       const docRef = db.collection("documentos_cotacao").doc(idDoc);
       const snap = await docRef.get();
       const atuais = snap.exists ? (snap.data().arquivos || []) : [];
 
-      await docRef.set({ arquivos: [...atuais, ...novosArquivos] });
+      await docRef.set({ arquivos: [...atuais, ...novosArquivos] }, { merge: true });
 
-      alert(`✅ ${novosArquivos.length} arquivo(s) enviados com sucesso para a nuvem!`);
+      alert(`✅ ${novosArquivos.length} arquivo(s) enviados com sucesso!`);
       cancelarUploadManual();
     } catch (err) {
-      console.error(err);
-      alert("❌ Erro ao enviar arquivos para o Firebase.");
+      console.error("❌ ERRO FATAL no upload manual:", err);
+      alert("⚠️ Falha ao concluir envio: " + err.message);
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
     }
   };
 
@@ -6490,7 +6527,7 @@
 
   function validarPermissaoUpload(numero) {
     const cotacoes = JSON.parse(localStorage.getItem('cotacoes')) || [];
-    const cotacao = cotacoes.find(c => c.numero === numero);
+    const cotacao = cotacoes.find(c => String(c.numero) === String(numero));
 
     if (!cotacao) {
       alert("❌ Cotação não encontrada! Verifique o número digitado.");
