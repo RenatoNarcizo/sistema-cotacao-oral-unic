@@ -7056,7 +7056,7 @@
         itensPorFornecedor[forn].push(item);
       });
 
-      const logoBase64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAAACZklEQVR42u3dwU0jQRCFYbvkCDYd7kgkQAobEymQABJ30iEF72kltMthYT0zXa++l4Cp+vnL7Z7W9Pl6vZ4kN6UFAAMmKUhzQeA+6C3DInmI/gO4mB9i7/E2fCIn+v9eW2Y+vX8An60f1vP938D3H69f1uK7GIB7H++vN/6T9p8S52I93v8NPN+vW+vP9TzYAnM6fEmvM6f69K5LzCl2Pn/An7p6Xp7T5nN5ThfP9TtdPNfr9B2vy3eAnu/7eR4m6eYv5Xm+58mX8jxP9jw50v5fX/A+n62f1/P938CP9f/FvP/Xn69f7j3OfgD6mP6/fE6fU+oUW2BOfV2fU8pznP6f9hzH6Xmwb/2/57S879f9vOf9fP+O4+eP1nO8ThfP9Tr9h3vOn3/9f/n8uR6fU/90Xo85fU6pU2zn+3Xz+R9y+T6v+R/9uX7/f+/XreW/6C36P9p3uvl7Xdb9/9X/H1+fzzv9Hz/X/+Xv+Zz/+p+W7/9/v3v+3v/X5/+Xzzm9f6+/z8/vX/8P8f+3/98p9v99+fylPE6xBeZzff/96n9Pncaf8hHTU17X73SOnD7NHzCnmFPsfP4BP6dPo0+nk/n9vX8AAAAASUVORK5CYII=";
+      
 
       Object.entries(itensPorFornecedor).forEach(([fornecedorNome, itens]) => {
         try {
@@ -7064,8 +7064,23 @@
           const pageWidth = doc.internal.pageSize.getWidth();
           let y = 15;
 
-          /* ================= LOGO OFICIAL ================= */
-          doc.addImage(logoBase64, "PNG", pageWidth - 35, 12, 22, 22);
+          
+          /* ================= LOGO OFICIAL VETORIAL (100% ESTÁVEL) ================= */
+          const drawLogo = (d, lx, ly) => {
+            // Círculo Teal (Fundo esquerdo)
+            d.setFillColor(58, 185, 182);
+            d.ellipse(lx + 6, ly + 11, 8, 7, "F");
+            
+            // Quadrado Arredondado Roxo (Sobreposição direita)
+            d.setFillColor(102, 17, 85);
+            d.roundedRect(lx + 8, ly + 2, 11, 11, 3, 3, "F");
+            
+            // Efeito de Lente Branco (Interseção)
+            d.setFillColor(255, 255, 255);
+            d.ellipse(lx + 10, ly + 8, 2.5, 3.5, "F");
+          };
+          drawLogo(doc, pageWidth - 35, 12);
+
 
           /* ================= CABEÇALHO ================= */
           doc.setFontSize(12);
