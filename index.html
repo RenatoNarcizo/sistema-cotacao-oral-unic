@@ -9875,18 +9875,22 @@
     const mesesExtenso = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
     lista.sort((a, b) => {
-      // Tenta converter data (ex: "23/02/2026, 12:13:48") para objeto Date
       const parseDate = (dStr) => {
         if (!dStr) return new Date(0);
-        const parts = dStr.split(",")[0].split("/"); // [dd, mm, yyyy]
-        return new Date(parts[2], parts[1] - 1, parts[0]);
+        const clean = dStr.replace(",", "").trim();
+        const [datePart, timePart] = clean.split(" ");
+        const [dd, mm, yyyy] = datePart.split("/");
+        const [hh, mi, ss] = (timePart || "00:00:00").split(":");
+        return new Date(yyyy, mm - 1, dd, hh, mi, ss);
       };
-      return parseDate(b.data) - parseDate(a.data); // Ordem decrescente
+      return parseDate(b.data) - parseDate(a.data);
     });
 
     lista.forEach(s => {
       if (!s.data) return;
-      const parts = s.data.split(",")[0].split("/");
+      // Garante pegar apenas o dia/mês/ano para a chave do grupo
+      const datePart = s.data.split(",")[0].trim().split(" ")[0];
+      const parts = datePart.split("/");
       if (parts.length < 3) return;
       const mesIdx = parseInt(parts[1]) - 1;
       const ano = parts[2];
