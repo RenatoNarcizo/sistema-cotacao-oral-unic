@@ -7048,13 +7048,14 @@
     Object.entries(itensPorFornecedor).forEach(([fornecedorNome, itens]) => {
       const doc = new jsPDF("p", "mm", "a4");
       const pageWidth = doc.internal.pageSize.getWidth();
-      let y = 45;
+      let y = 15;
 
       /* ================= LOGO ================= */
       const customLogo = localStorage.getItem("logoBase64");
       if (customLogo) {
         try {
-          doc.addImage(customLogo, "PNG", pageWidth - 45, 10, 30, 30);
+          // Posiciona logo à direita (pageWidth - 40)
+          doc.addImage(customLogo, "PNG", pageWidth - 35, 12, 25, 25);
         } catch (e) {
           desenharLogoPadrao(doc, pageWidth);
         }
@@ -7063,24 +7064,18 @@
       }
 
       function desenharLogoPadrao(doc, pageWidth) {
-        let logoX = pageWidth - 45;
-        let logoY = 10;
+        let logoX = pageWidth - 40;
+        let logoY = 15;
         const corTurquesa = [58, 185, 182];
         const corRoxo = [102, 17, 85];
         doc.setFillColor(corTurquesa[0], corTurquesa[1], corTurquesa[2]);
         doc.ellipse(logoX + 7, logoY + 12, 7, 7, "F");
         doc.setFillColor(corRoxo[0], corRoxo[1], corRoxo[2]);
         doc.roundedRect(logoX + 11, logoY + 4, 11, 12, 2, 2, "F");
-        doc.setTextColor(corRoxo[0], corRoxo[1], corRoxo[2]);
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(14);
-        doc.text("ORAL UNIC", logoX - 10, logoY + 25, { align: "right" });
-        doc.setFontSize(7);
-        doc.setFont("helvetica", "normal");
-        doc.text("IMPLANTES PREMIUM", logoX - 10, logoY + 29, { align: "right" });
+        // Textos removidos daqui pois já estão no cabeçalho centralizado
       }
 
-      /* ================= CABEÇALHO ================= */
+      /* ================= CABEÇALHO (Centralizado conforme Imagem) ================= */
       doc.setFontSize(12);
       doc.setFont("helvetica", "bold");
       doc.text("O.U. CAMPO GRANDE CLÍNICA ODONTOLÓGICA LTDA", pageWidth / 2, y, { align: "center" });
