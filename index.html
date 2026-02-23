@@ -6467,32 +6467,49 @@
           const timestamp = Date.now();
           const randomPart = Math.floor(Math.random() * 1000);
           const nomeSeguro = file.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9.-]/g, "_");
-          const path = `financeiro/${numeroCotacao}/${timestamp}_${randomPart}_${nomeSeguro}`;
+          const path = `financeiro/${numeroCotacao}/${timestamp}_random_${randomPart}_${nomeSeguro}`;
 
           console.log(`📤 Carregando individual: ${file.name} ([${tipo}]) em ${path}...`);
-          const storageRef = storage.ref(path);
 
-          // Monitor de progresso simples
-          const uploadTask = storageRef.put(file);
-          uploadTask.on('state_changed', (snap) => {
-            const prog = (snap.bytesTransferred / snap.totalBytes) * 100;
-            if (prog % 20 === 0) console.log(`📊 [${file.name}] Progresso: ${prog.toFixed(0)}%`);
-          });
-
-          const snapshot = await comTimeout(uploadTask, 30000, `Upload de ${file.name}`);
-          console.log(`✅ Upload concluído (${file.name}). Buscando URL...`);
-
-          const downloadURL = await comTimeout(snapshot.ref.getDownloadURL(), 10000, `Busca de URL de ${file.name}`);
-          console.log(`🔗 URL gerada para ${file.name}: ${downloadURL}`);
-
-          return {
+          let resultAnexo = {
             nome: file.name,
             tipo: tipo,
             data: new Date().toLocaleString(),
             tamanho: (file.size / 1024).toFixed(2) + " KB",
-            url: downloadURL,
+            url: "",
+            base64: "",
             usuario: getUsuarioLogado()?.nome || "Desconhecido"
           };
+
+          if (typeof storage !== "undefined") {
+            try {
+              const storageRef = storage.ref(path);
+              const uploadTask = storageRef.put(file);
+
+              uploadTask.on('state_changed', (snap) => {
+                const prog = (snap.bytesTransferred / snap.totalBytes) * 100;
+                console.log(`📊 [${file.name}] Progresso: ${prog.toFixed(0)}%`);
+              });
+
+              const snapshot = await comTimeout(uploadTask, 40000, `Upload de ${file.name}`);
+              const downloadURL = await comTimeout(snapshot.ref.getDownloadURL(), 10000, `URL de ${file.name}`);
+
+              resultAnexo.url = downloadURL;
+              console.log(`✅ URL gerada: ${downloadURL}`);
+            } catch (storageErr) {
+              console.warn(`⚠️ Falha no Storage para ${file.name}:`, storageErr.message);
+
+              if (file.size < 800 * 1024) { // Limite 800KB para Base64 direto no Firestore
+                console.log(`🔄 Acionando Modo de Segurança (Base64) para ${file.name}...`);
+                const b64 = await fileToBase64(file);
+                resultAnexo.base64 = b64;
+              } else {
+                throw new Error(`Arquivo ${file.name} é muito grande (${(file.size / 1024).toFixed(0)}KB) e o upload em nuvem expirou.`);
+              }
+            }
+          }
+
+          return resultAnexo;
         } catch (e) {
           console.error(`❌ Erro no arquivo ${file.name}:`, e);
           return null;
@@ -6506,14 +6523,26 @@
         throw new Error("Nenhum arquivo pôde ser carregado para o servidor. Verifique sua conexão ou o tamanho dos arquivos.");
       }
 
-      console.log(`✅ ${novosArquivos.length} arquivos no Storage. Atualizando Firestore...`);
+      console.log(`✅ ${novosArquivos.length} arquivos prontos. Atualizando Firestore...`);
 
       const idDoc = `docs_${numeroCotacao}`;
       const docRef = db.collection("documentos_cotacao").doc(idDoc);
-      const snap = await docRef.get();
-      const atuais = snap.exists ? (snap.data().arquivos || []) : [];
 
-      await docRef.set({ arquivos: [...atuais, ...novosArquivos] }, { merge: true });
+      try {
+        const snap = await docRef.get();
+        const atuais = snap.exists ? (snap.data().arquivos || []) : [];
+        await docRef.set({ arquivos: [...atuais, ...novosArquivos] }, { merge: true });
+        console.log("✅ Firestore (Consolidado) atualizado.");
+      } catch (saveErr) {
+        console.warn("⚠️ Documento consolidado muito grande ou erro no Firestore. Tentando gravação individual...", saveErr);
+
+        // Grava cada um individualmente em uma subcoleção como redundância
+        for (const arq of novosArquivos) {
+          const idIndividual = `${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+          await docRef.collection("anexos_individuais").doc(idIndividual).set(arq);
+        }
+        console.log("✅ Arquivos gravados individualmente na subcoleção.");
+      }
 
       alert(`✅ ${novosArquivos.length} arquivo(s) enviados com sucesso!`);
       cancelarUploadManual();
@@ -11982,6 +12011,31 @@
     configurarModalResposta("editar");
   }
   /* ======================================================
+     🔗 HELPER: ABRIR ARQUIVO BASE64 DIRETAMENTE
+     ====================================================== */
+  window.abrirArquivoDireto = function (base64, nome = "Anexo") {
+    if (!base64) return alert("Erro: Dados do arquivo não encontrados.");
+    try {
+      const win = window.open('', '_blank');
+      if (!win) return alert("Por favor, habilite pop-ups para visualizar o documento.");
+
+      let mime = "application/pdf";
+      if (base64.includes("image/png")) mime = "image/png";
+      else if (base64.includes("image/jpeg")) mime = "image/jpeg";
+
+      win.document.write(`
+         <title>${nome}</title>
+         <body style="margin:0; background:#333; display:flex; align-items:center; justify-content:center;">
+           <iframe src="${base64}" frameborder="0" style="width:100%; height:100vh; border:none;"></iframe>
+         </body>
+       `);
+    } catch (e) {
+      console.error("Erro abrirArquivoDireto:", e);
+      alert("Erro ao abrir o arquivo.");
+    }
+  };
+
+  /* ======================================================
      👁️ VISUALIZAR DOCUMENTOS (STRICT MODE - ISOLADO)
      Garante que só abrimos documentos desta cotação específica.
   ====================================================== */
@@ -12061,6 +12115,37 @@
           qs2.forEach(doc => addResposta(doc.data()));
         }
       } catch (e) { console.warn("Erro ao buscar subcoleção:", e); }
+    }
+
+    // D. Documentos da Gestão Financeira (Centralizados + Individuais)
+    if (!emailFornecedor && typeof db !== "undefined") {
+      try {
+        const idDoc = `docs_${idLimpo}`;
+        const docRef = db.collection("documentos_cotacao").doc(idDoc);
+        const docFin = await docRef.get();
+
+        let arquivosFin = [];
+        if (docFin.exists) {
+          arquivosFin = docFin.data().arquivos || [];
+        }
+
+        // Busca redundância em anexos individuais
+        const subSnap = await docRef.collection("anexos_individuais").get();
+        subSnap.forEach(d => {
+          const data = d.data();
+          // Evita duplicados pela URL ou base64
+          const jaExiste = arquivosFin.some(a => (a.url && a.url === data.url) || (a.base64 && a.base64 === data.base64));
+          if (!jaExiste) arquivosFin.push(data);
+        });
+
+        if (arquivosFin.length > 0) {
+          addResposta({
+            fornecedor: "GESTÃO FINANCEIRA (Notas/Boletos)",
+            email: "financeiro@sistema-cotacao.com.br",
+            anexos: arquivosFin
+          });
+        }
+      } catch (e) { console.warn("Erro ao buscar documentos financeiros:", e); }
     }
 
     let todasRespostas = Array.from(todasRespostasMap.values());
