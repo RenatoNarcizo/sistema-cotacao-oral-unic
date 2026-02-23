@@ -6025,134 +6025,7 @@
     input.click();
   };
 
-  /* ======================================================
-     📂 VISUALIZAR DOCUMENTOS (COM MODAL MELHORADO)
-  ====================================================== */
-  window.visualizarDocumentos = async function (numeroCotacao, filtroUsuario = null) {
-    if (!numeroCotacao || String(numeroCotacao).trim() === "" || String(numeroCotacao).toLowerCase() === "undefined") {
-      return alert("⚠️ Número da cotação inválido para visualização.");
-    }
-    const numClean = String(numeroCotacao).trim();
-
-    console.log("🔍 [DOCS] Iniciando visualização:", numClean, "| Filtro Fornecedor:", filtroUsuario);
-
-    const idDoc = `docs_${numClean}`;
-    let arquivos = [];
-
-    try {
-      // 1. Busca documentos na coleção 'documentos_cotacao' (UPLOAD MANUAL / FINANCEIRO)
-      const snapshot = await db.collection("documentos_cotacao").doc(idDoc).get();
-      if (snapshot.exists) {
-        arquivos = snapshot.data().arquivos || [];
-      } else {
-        // Fallback local
-        const localDocs = await dbDocs.buscar(idDoc);
-        arquivos = localDocs || JSON.parse(localStorage.getItem(idDoc)) || [];
-      }
-
-      // 2. Busca documentos da COTAÇÃO (Anexos Originais do Comprador + Respostas)
-      const todasCotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
-      const cotacao = todasCotacoes.find(c => String(c.numero) === numClean || String(c.id) === numClean);
-
-      if (cotacao) {
-        // A. Anexos Diretos (Origem/Comprador)
-        if (Array.isArray(cotacao.anexos)) {
-          cotacao.anexos.forEach(anexo => {
-            const jaExiste = arquivos.some(a => a.nome === anexo.nome && a.tamanho === anexo.tamanho);
-            if (!jaExiste) {
-              arquivos.push({
-                nome: anexo.nome,
-                tipo: "Anexo Cotação",
-                data: cotacao.dataCriacao || new Date().toLocaleDateString(),
-                tamanho: anexo.tamanho || "desc.",
-                usuario: "Comprador (Origem)",
-                base64: anexo.base64,
-                url: anexo.url
-              });
-            }
-          });
-        }
-
-        // B. Anexos das Respostas de Fornecedores (Novo Fallback Base64/Direct)
-        if (Array.isArray(cotacao.respostasFornecedores)) {
-          cotacao.respostasFornecedores.forEach(resp => {
-            const arr = Array.isArray(resp.anexos) ? resp.anexos : (resp.anexo ? [resp.anexo] : []);
-            arr.forEach(anexoResp => {
-              if (anexoResp && (anexoResp.url || anexoResp.base64)) {
-                const jaExiste = arquivos.some(a => (anexoResp.url && a.url === anexoResp.url) || (anexoResp.base64 && a.base64 === anexoResp.base64));
-                if (!jaExiste) {
-                  arquivos.push({
-                    nome: anexoResp.nome || "Anexo Resposta",
-                    tipo: "Resposta Fornecedor",
-                    data: resp.data || new Date().toLocaleDateString(),
-                    tamanho: anexoResp.tamanho || "desc.",
-                    usuario: resp.fornecedor || resp.email,
-                    base64: anexoResp.base64,
-                    url: anexoResp.url
-                  });
-                }
-              }
-            });
-          });
-        }
-      }
-
-      // 3. FILTRAGEM RIGOROSA (Isolamento de Dados)
-      let arquivosExibir = [...arquivos];
-      if (filtroUsuario) {
-        const filtroClean = String(filtroUsuario).toLowerCase().trim();
-        arquivosExibir = arquivos.filter(a => {
-          const usuarioDoc = String(a.usuario || "").toLowerCase().trim();
-          // Se for anexo do comprador (Origem), todos veem. Se for de fornecedor, filtra pelo nome/email.
-          return usuarioDoc.includes("comprador") || usuarioDoc === filtroClean || (a.tipo === "Anexo Cotação");
-        });
-      }
-
-      if (arquivosExibir.length === 0) {
-        alert("📭 Nenhum documento encontrado" + (filtroUsuario ? " para este fornecedor." : "."));
-        return;
-      }
-
-      // 4. Interface (Modal Dinâmico)
-      let modalDocs = document.getElementById('modalDocsFinanceiro');
-      if (!modalDocs) {
-        modalDocs = document.createElement('div');
-        modalDocs.id = 'modalDocsFinanceiro';
-        modalDocs.className = 'modal';
-        modalDocs.style.zIndex = '2147483647';
-        modalDocs.innerHTML = `
-          <div class="modal-content" style="max-width:500px;">
-             <span class="close-btn" onclick="document.getElementById('modalDocsFinanceiro').style.display='none'">&times;</span>
-             <h3 style="color:#661155; margin-bottom:15px;">📂 Documentos da Cotação</h3>
-             <div id="listaDocsContent" style="max-height:400px; overflow-y:auto;"></div>
-          </div>
-        `;
-        document.body.appendChild(modalDocs);
-      }
-
-      const listaDiv = modalDocs.querySelector('#listaDocsContent');
-      listaDiv.innerHTML = arquivosExibir.map((a) => {
-        const idxOriginal = arquivos.indexOf(a);
-        return `
-          <div style="background:#1a1a1a; padding:12px; margin-bottom:8px; border-radius:8px; border:1px solid #333; display:flex; justify-content:space-between; align-items:center;">
-             <div style="flex:1; padding-right:10px;">
-                <strong style="color:white; display:block; word-break:break-all;">${a.nome}</strong>
-                <small style="color:#aaa;">${a.tipo} • ${a.tamanho}</small><br>
-                <small style="color:#0dcaf0;">👤 Enviado por: ${a.usuario}</small>
-                ${a.url ? `<br><small style="color:#00ff99;">☁️ Arquivo em Nuvem</small>` : '<br><small style="color:#f39c12;">📦 Banco Seguro (Local)</small>'}
-             </div>
-             <button onclick="abrirArquivoAnexo('${numClean}', ${idxOriginal})" style="background:#661155; color:white; border:none; border-radius:5px; padding:8px 15px; cursor:pointer; font-weight:bold; white-space:nowrap;">
-                ${a.url ? '👁️ Abrir' : '⬇️ Ver'}
-             </button>
-          </div>
-        `}).join('');
-
-      modalDocs.style.display = 'flex';
-    } catch (e) {
-      console.error("❌ Erro visualizarDocumentos:", e);
-      alert("Erro ao carregar documentos. Verifique o console.");
-    }
-  };
+  // [DELETADO] visualizarDocumentos movida para seção premium no final do script.
 
 
   window.abrirArquivoAnexo = async function (numeroCotacao, index) {
@@ -12075,8 +11948,7 @@
 
     const addResposta = (r) => {
       if (!r) return;
-      const email = (r.email || r.fornecedor || r.nome || "").toLowerCase().trim();
-      if (!email || email === "undefined") return;
+      const email = (r.email || r.fornecedor || r.nome || "Outros").toLowerCase().trim();
 
       const temAnexo = r.anexo || (Array.isArray(r.anexos) && r.anexos.length > 0) || r.base64 || r.url || r.link;
 
@@ -12087,9 +11959,20 @@
       }
     };
 
-    // A. Fonte Local (Filtro Global)
+    // --- COLETA DE DADOS ---
     const todasCotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
     const cot = todasCotacoes.find(c => String(c.numero) === String(idCotacao) || String(c.numero) === String(idLimpo) || String(c.id) === String(idCotacao) || String(c.id) === String(idLimpo));
+
+    // A. Anexos Originais da Cotação (Comprador)
+    if (cot && Array.isArray(cot.anexos) && cot.anexos.length > 0) {
+      addResposta({
+        fornecedor: "COMPRADOR (Origem)",
+        email: "comprador@origem.com.br",
+        anexos: cot.anexos.map(a => ({ ...a, tipo: "Edital/Original" }))
+      });
+    }
+
+    // B. Respostas Gravadas no Objeto Cotação
     if (cot && cot.respostasFornecedores) {
       cot.respostasFornecedores.forEach(addResposta);
     }
@@ -12145,29 +12028,31 @@
           });
         }
 
-        if (arquivosFin.length > 0) {
-          addResposta({
-            fornecedor: "GESTÃO FINANCEIRA (Notas/Boletos)",
-            email: "financeiro@sistema-cotacao.com.br",
-            anexos: arquivosFin
-          });
-          console.log(`✅ [DOCS] Carregados ${arquivosFin.length} documentos da Gestão Financeira.`);
+        // E. Fonte Local (Dexie/LocalStorage Fallback)
+        try {
+          const idDoc = `docs_${idLimpo}`;
+          const arqsLocal = (typeof dbDocs !== "undefined" ? await dbDocs.buscar(idDoc) : null) || JSON.parse(localStorage.getItem(idDoc));
+          if (Array.isArray(arqsLocal) && arqsLocal.length > 0) {
+            addResposta({
+              fornecedor: "ARQUIVOS LOCAIS / CACHE",
+              email: "local@cache.com.br",
+              anexos: arqsLocal
+            });
+          }
+        } catch (errL) { console.warn("Erro ao buscar docs locais:", errL); }
+
+        let todasRespostas = Array.from(todasRespostasMap.values());
+        if (emailFornecedor) {
+          todasRespostas = todasRespostas.filter(r => (r.email || "").toLowerCase().trim() === emailFornecedor.toLowerCase().trim());
         }
-      } catch (e) { console.warn("Erro ao buscar documentos financeiros:", e); }
-    }
 
-    let todasRespostas = Array.from(todasRespostasMap.values());
-    if (emailFornecedor) {
-      todasRespostas = todasRespostas.filter(r => (r.email || "").toLowerCase().trim() === emailFornecedor.toLowerCase().trim());
-    }
+        if (todasRespostas.length === 0) {
+          container.innerHTML = "<div style='text-align:center; padding:80px; color:#555;'><i class='fa-solid fa-ghost fa-3x' style='margin-bottom:20px; opacity:0.3;'></i><br><span style='font-weight:700;'>NENHUMA RESPOSTA ENCONTRADA</span></div>";
+          return;
+        }
 
-    if (todasRespostas.length === 0) {
-      container.innerHTML = "<div style='text-align:center; padding:80px; color:#555;'><i class='fa-solid fa-ghost fa-3x' style='margin-bottom:20px; opacity:0.3;'></i><br><span style='font-weight:700;'>NENHUMA RESPOSTA ENCONTRADA</span></div>";
-      return;
-    }
-
-    // --- RENDERIZAÇÃO PREMIUM PIXEL-PERFECT ---
-    let tableHTML = `
+        // --- RENDERIZAÇÃO PREMIUM PIXEL-PERFECT ---
+        let tableHTML = `
       <table style="width:100%; border-collapse:collapse; color:#fff; font-size:14px; background:#000;">
         <thead>
           <tr style="background:#111; border-bottom:1px solid #333; color:#888; text-transform:uppercase; font-size:11px; font-weight:900; letter-spacing:1px;">
@@ -12179,22 +12064,22 @@
         <tbody>
     `;
 
-    todasRespostas.forEach((r) => {
-      let validAnexos = [];
-      if (Array.isArray(r.anexos)) {
-        r.anexos.forEach(a => { if (a && (a.url || a.base64 || a.link)) validAnexos.push(a); });
-      }
-      if (r.anexo && (r.anexo.url || r.anexo.base64 || r.anexo.link)) {
-        const jaExiste = validAnexos.some(a => (a.url && a.url === r.anexo.url) || (a.base64 && a.base64 === r.anexo.base64));
-        if (!jaExiste) validAnexos.push(r.anexo);
-      }
-      if (r.base64 && !validAnexos.some(a => a.base64 === r.base64)) {
-        validAnexos.push({ nome: r.anexoNome || r.nomeAnexo || "Documento Local", base64: r.base64 });
-      }
+        todasRespostas.forEach((r) => {
+          let validAnexos = [];
+          if (Array.isArray(r.anexos)) {
+            r.anexos.forEach(a => { if (a && (a.url || a.base64 || a.link)) validAnexos.push(a); });
+          }
+          if (r.anexo && (r.anexo.url || r.anexo.base64 || r.anexo.link)) {
+            const jaExiste = validAnexos.some(a => (a.url && a.url === r.anexo.url) || (a.base64 && a.base64 === r.anexo.base64));
+            if (!jaExiste) validAnexos.push(r.anexo);
+          }
+          if (r.base64 && !validAnexos.some(a => a.base64 === r.base64)) {
+            validAnexos.push({ nome: r.anexoNome || r.nomeAnexo || "Documento Local", base64: r.base64 });
+          }
 
-      if (validAnexos.length === 0) return;
+          if (validAnexos.length === 0) return;
 
-      tableHTML += `
+          tableHTML += `
         <tr style="border-bottom:1px solid #1a1a1a; transition: 0.2s;" onmouseover="this.style.background='rgba(58,185,182,0.05)'" onmouseout="this.style.background='transparent'">
           <td style="padding:18px 25px;">
             <div style="font-weight:800; color:#3ab9b6; font-size:15px; margin-bottom:4px; text-transform: uppercase;">${r.fornecedor || r.nome || "FORNECEDOR"}</div>
@@ -12203,236 +12088,236 @@
           <td style="padding:18px 25px; text-align:center; vertical-align: middle;">
       `;
 
-      validAnexos.forEach(anexo => {
-        const nome = anexo.nome || "Anexo";
-        const isBase64 = !!(anexo.base64 && !anexo.url);
-        tableHTML += `
+          validAnexos.forEach(anexo => {
+            const nome = anexo.nome || "Anexo";
+            const isBase64 = !!(anexo.base64 && !anexo.url);
+            tableHTML += `
           <div style="margin:6px 0; display:flex; align-items:center; justify-content:center; gap:10px;">
             <i class="fa-solid ${isBase64 ? 'fa-file-shield' : 'fa-file-pdf'}" style="color:${isBase64 ? '#fbbf24' : '#ff3366'}; font-size:16px;"></i> 
             <span style="font-size:12px; color:#ddd; font-weight:600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 250px;" title="${nome}">${nome}</span>
           </div>`;
-      });
-
-      tableHTML += `</td><td style="padding:18px 25px; text-align:right; vertical-align: middle;">`;
-
-      validAnexos.forEach(anexo => {
-        if (anexo.url || anexo.link) {
-          const url = anexo.url || anexo.link;
-          tableHTML += `<a href="${url}" target="_blank" style="background:#3ab9b6; color:#000; padding:8px 16px; border-radius:6px; font-size:11px; text-decoration:none; margin-left:10px; display:inline-flex; align-items:center; gap:8px; font-weight:900; text-transform:uppercase; box-shadow: 0 4px 0 #2a8f8c;"><i class="fa-solid fa-cloud-arrow-down"></i> ABRIR</a>`;
-        } else if (anexo.base64) {
-          tableHTML += `<button onclick="window.abrirArquivoDireto('${anexo.base64}', '${anexo.nome || 'Anexo'}')" style="background:#fbbf24; color:#000; padding:8px 16px; border-radius:6px; border:none; cursor:pointer; font-size:11px; margin-left:10px; display:inline-flex; align-items:center; gap:8px; font-weight:900; text-transform:uppercase; box-shadow: 0 4px 0 #b4891b;"><i class="fa-solid fa-eye"></i> VER</button>`;
-        }
-      });
-      tableHTML += `</td></tr>`;
-    });
-
-    tableHTML += "</tbody></table>";
-    container.innerHTML = tableHTML;
-  };
-
-  /* ======================================================
-     ❌ FECHAR MODAL DE RESPOSTA (MISSING FUNCTION RESTORED)
-     ====================================================== */
-  function fecharModalResponder() {
-    const modal = document.getElementById("modalResponder");
-    if (modal) modal.style.display = 'none';
-    document.body.style.overflow = "auto";
-  }
-  window.fecharModalResponder = fecharModalResponder;
-
-
-  /* ======================================================
-  🔄 SINCRONIZAÇÃO EM TEMPO REAL (RTDB -> LOCALSTORAGE)
-  ====================================================== */
-  function iniciarOuvinteRTDB() {
-    // Evita múltiplos ouvintes
-    if (window.rtdbListenerAtivo) return;
-
-    if (typeof rtdb !== "undefined") {
-      console.log("📡 Iniciando ouvinte RTDB (Sincronização)...");
-
-      rtdb.ref("cotacoes").on("value", snapshot => {
-        const data = snapshot.val();
-        if (data) {
-          const cotacoesRTDB = Object.values(data).filter(c => c && (c.id || c.numero));
-
-          // 1. Carrega dados atuais (Mix RTDB + Firestore)
-          const localAtual = JSON.parse(localStorage.getItem("cotacoes")) || [];
-          const mapaUnificado = new Map();
-
-          // 2. Preserva tudo que já existe localmente (Firestore History)
-          localAtual.forEach(c => {
-            const id = String(c.numero || c.id || "");
-            if (id) mapaUnificado.set(id, c);
           });
 
-          // 3. Atualiza com dados frescos do RTDB (Sobrescreve se existir, adiciona se novo)
-          cotacoesRTDB.forEach(c => {
-            const id = String(c.numero || c.id || "");
-            if (id) mapaUnificado.set(id, c);
+          tableHTML += `</td><td style="padding:18px 25px; text-align:right; vertical-align: middle;">`;
+
+          validAnexos.forEach(anexo => {
+            if (anexo.url || anexo.link) {
+              const url = anexo.url || anexo.link;
+              tableHTML += `<a href="${url}" target="_blank" style="background:#3ab9b6; color:#000; padding:8px 16px; border-radius:6px; font-size:11px; text-decoration:none; margin-left:10px; display:inline-flex; align-items:center; gap:8px; font-weight:900; text-transform:uppercase; box-shadow: 0 4px 0 #2a8f8c;"><i class="fa-solid fa-cloud-arrow-down"></i> ABRIR</a>`;
+            } else if (anexo.base64) {
+              tableHTML += `<button onclick="window.abrirArquivoDireto('${anexo.base64}', '${anexo.nome || 'Anexo'}')" style="background:#fbbf24; color:#000; padding:8px 16px; border-radius:6px; border:none; cursor:pointer; font-size:11px; margin-left:10px; display:inline-flex; align-items:center; gap:8px; font-weight:900; text-transform:uppercase; box-shadow: 0 4px 0 #b4891b;"><i class="fa-solid fa-eye"></i> VER</button>`;
+            }
+          });
+          tableHTML += `</td></tr>`;
+        });
+
+        tableHTML += "</tbody></table>";
+        container.innerHTML = tableHTML;
+      };
+
+      /* ======================================================
+         ❌ FECHAR MODAL DE RESPOSTA (MISSING FUNCTION RESTORED)
+         ====================================================== */
+      function fecharModalResponder() {
+        const modal = document.getElementById("modalResponder");
+        if (modal) modal.style.display = 'none';
+        document.body.style.overflow = "auto";
+      }
+      window.fecharModalResponder = fecharModalResponder;
+
+
+      /* ======================================================
+      🔄 SINCRONIZAÇÃO EM TEMPO REAL (RTDB -> LOCALSTORAGE)
+      ====================================================== */
+      function iniciarOuvinteRTDB() {
+        // Evita múltiplos ouvintes
+        if (window.rtdbListenerAtivo) return;
+
+        if (typeof rtdb !== "undefined") {
+          console.log("📡 Iniciando ouvinte RTDB (Sincronização)...");
+
+          rtdb.ref("cotacoes").on("value", snapshot => {
+            const data = snapshot.val();
+            if (data) {
+              const cotacoesRTDB = Object.values(data).filter(c => c && (c.id || c.numero));
+
+              // 1. Carrega dados atuais (Mix RTDB + Firestore)
+              const localAtual = JSON.parse(localStorage.getItem("cotacoes")) || [];
+              const mapaUnificado = new Map();
+
+              // 2. Preserva tudo que já existe localmente (Firestore History)
+              localAtual.forEach(c => {
+                const id = String(c.numero || c.id || "");
+                if (id) mapaUnificado.set(id, c);
+              });
+
+              // 3. Atualiza com dados frescos do RTDB (Sobrescreve se existir, adiciona se novo)
+              cotacoesRTDB.forEach(c => {
+                const id = String(c.numero || c.id || "");
+                if (id) mapaUnificado.set(id, c);
+              });
+
+              const listaFinal = Array.from(mapaUnificado.values());
+
+              // Salva Local
+              localStorage.setItem("cotacoes", JSON.stringify(listaFinal));
+              console.log(`☁️ Sync Merge (RTDB+Local): ${listaFinal.length} cotações.`);
+
+              // 🟢 ATUALIZAÇÃO REATIVA DA UI
+              // 1. FORNECEDOR (Atualiza abas visíveis)
+              if (typeof renderizarListaFornecedor === "function") {
+                const abertas = document.getElementById("listaAbertas");
+                if (abertas && abertas.style.display !== 'none') renderizarListaFornecedor('abertas');
+
+                const respondidas = document.getElementById("listaRespondidas");
+                if (respondidas && respondidas.style.display !== 'none') renderizarListaFornecedor('respondidas');
+
+                const encerradas = document.getElementById("listaEncerradas");
+                if (encerradas && encerradas.style.display !== 'none') renderizarListaFornecedor('encerradas');
+              }
+
+              // 2. COMPRADOR (Dashboard)
+              if (typeof carregarCotacoes === "function") {
+                // Pequeno delay para garantir que o LS salvou
+                setTimeout(() => carregarCotacoes(), 100);
+              }
+            }
           });
 
-          const listaFinal = Array.from(mapaUnificado.values());
-
-          // Salva Local
-          localStorage.setItem("cotacoes", JSON.stringify(listaFinal));
-          console.log(`☁️ Sync Merge (RTDB+Local): ${listaFinal.length} cotações.`);
-
-          // 🟢 ATUALIZAÇÃO REATIVA DA UI
-          // 1. FORNECEDOR (Atualiza abas visíveis)
-          if (typeof renderizarListaFornecedor === "function") {
-            const abertas = document.getElementById("listaAbertas");
-            if (abertas && abertas.style.display !== 'none') renderizarListaFornecedor('abertas');
-
-            const respondidas = document.getElementById("listaRespondidas");
-            if (respondidas && respondidas.style.display !== 'none') renderizarListaFornecedor('respondidas');
-
-            const encerradas = document.getElementById("listaEncerradas");
-            if (encerradas && encerradas.style.display !== 'none') renderizarListaFornecedor('encerradas');
-          }
-
-          // 2. COMPRADOR (Dashboard)
-          if (typeof carregarCotacoes === "function") {
-            // Pequeno delay para garantir que o LS salvou
-            setTimeout(() => carregarCotacoes(), 100);
-          }
+          window.rtdbListenerAtivo = true;
+        } else {
+          // Tenta novamente em 1s se o Firebase não carregou ainda
+          setTimeout(iniciarOuvinteRTDB, 1000);
         }
-      });
+      }
 
-      window.rtdbListenerAtivo = true;
-    } else {
-      // Tenta novamente em 1s se o Firebase não carregou ainda
-      setTimeout(iniciarOuvinteRTDB, 1000);
-    }
-  }
+      // ======================================================
+      // ⚡ FUNÇÕES DE EMERGÊNCIA (CARREGADAS DIRETO NO INDEX)
+      // ======================================================
 
-  // ======================================================
-  // ⚡ FUNÇÕES DE EMERGÊNCIA (CARREGADAS DIRETO NO INDEX)
-  // ======================================================
+      // 🛠️ HELPER DE DATA GLOBAL (FIX "Expirado")
+      window.parseDateBR = function (dateStr) {
+        if (!dateStr) return null;
+        const s = String(dateStr).trim();
+        // Se tiver barra (DD/MM/YYYY...)
+        if (s.includes('/')) {
+          const parts = s.split(','); // Tenta separar data e hora
+          const [dia, mes, ano] = parts[0].trim().split('/');
 
-  // 🛠️ HELPER DE DATA GLOBAL (FIX "Expirado")
-  window.parseDateBR = function (dateStr) {
-    if (!dateStr) return null;
-    const s = String(dateStr).trim();
-    // Se tiver barra (DD/MM/YYYY...)
-    if (s.includes('/')) {
-      const parts = s.split(','); // Tenta separar data e hora
-      const [dia, mes, ano] = parts[0].trim().split('/');
+          let horaLimpa = "00:00:00";
+          if (parts[1]) horaLimpa = parts[1].trim();
 
-      let horaLimpa = "00:00:00";
-      if (parts[1]) horaLimpa = parts[1].trim();
+          // Formato ISO para o Date constructor: YYYY-MM-DDTHH:mm:ss
+          return new Date(`${ano}-${mes}-${dia}T${horaLimpa}`);
+        }
+        return new Date(s); // Fallback ISO/USA
+      };
 
-      // Formato ISO para o Date constructor: YYYY-MM-DDTHH:mm:ss
-      return new Date(`${ano}-${mes}-${dia}T${horaLimpa}`);
-    }
-    return new Date(s); // Fallback ISO/USA
-  };
+      /* 🛠️ HELPERS GLOBAIS (USANDO DEFINIÇÕES DO CABEÇALHO) */
 
-  /* 🛠️ HELPERS GLOBAIS (USANDO DEFINIÇÕES DO CABEÇALHO) */
+      window.reabrirCotacao = async function (id) {
+        if (!confirm("⚠️ Deseja REABRIR esta cotação?\n\nIsso estenderá o prazo de fechamento em 3 dias para tentar atrair novos fornecedores.")) return;
 
-  window.reabrirCotacao = async function (id) {
-    if (!confirm("⚠️ Deseja REABRIR esta cotação?\n\nIsso estenderá o prazo de fechamento em 3 dias para tentar atrair novos fornecedores.")) return;
-
-    try {
-      let cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
-      const index = cotacoes.findIndex(c => String(c.numero) === String(id) || String(c.id) === String(id));
-
-      if (index === -1) return alert("Cotação não encontrada.");
-
-      const agora = new Date();
-      agora.setDate(agora.getDate() + 3);
-
-      const cot = cotacoes[index];
-      cot.status = 'aberta';
-      cot.prazoEncerrado = false;
-      cot.reaberta = true; // 🟢 FLAG REABERTA
-      cot.dataFechamento = agora.toLocaleString();
-
-      localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
-
-      // 🔥 SYNC FIRESTORE
-      if (typeof db !== "undefined") {
         try {
-          const docId = String(cot.numero || cot.id);
-          await db.collection("cotacoes").doc(docId).update({
-            status: 'aberta',
-            prazoEncerrado: false,
-            reaberta: true,
-            dataFechamento: cot.dataFechamento
-          });
-          console.log(`✅ Firestore: Cotação ${docId} reaberta.`);
+          let cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
+          const index = cotacoes.findIndex(c => String(c.numero) === String(id) || String(c.id) === String(id));
+
+          if (index === -1) return alert("Cotação não encontrada.");
+
+          const agora = new Date();
+          agora.setDate(agora.getDate() + 3);
+
+          const cot = cotacoes[index];
+          cot.status = 'aberta';
+          cot.prazoEncerrado = false;
+          cot.reaberta = true; // 🟢 FLAG REABERTA
+          cot.dataFechamento = agora.toLocaleString();
+
+          localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
+
+          // 🔥 SYNC FIRESTORE
+          if (typeof db !== "undefined") {
+            try {
+              const docId = String(cot.numero || cot.id);
+              await db.collection("cotacoes").doc(docId).update({
+                status: 'aberta',
+                prazoEncerrado: false,
+                reaberta: true,
+                dataFechamento: cot.dataFechamento
+              });
+              console.log(`✅ Firestore: Cotação ${docId} reaberta.`);
+            } catch (e) {
+              console.warn("⚠️ Falha ao atualizar Firestore:", e);
+            }
+          }
+
+          // ☁️ SYNC RTDB (CRÍTICO)
+          if (typeof rtdb !== "undefined") {
+            rtdb.ref("cotacoes/" + cot.numero).update({
+              status: 'aberta',
+              prazoEncerrado: false,
+              reaberta: true,
+              dataFechamento: cot.dataFechamento
+            }).then(() => console.log("☁️ Reabertura sincronizada no RTDB."))
+              .catch(e => console.error("❌ Erro sync reabertura:", e));
+          }
+
+          alert("✅ Cotação reaberta com sucesso! Prazo estendido.");
+          if (typeof toggleListaRespondidas === 'function') {
+            toggleListaRespondidas('publicadas', true);
+          } else {
+            window.location.reload();
+          }
+
         } catch (e) {
-          console.warn("⚠️ Falha ao atualizar Firestore:", e);
+          console.error(e);
+          alert("Erro ao reabrir cotação: " + e.message);
         }
-      }
+      };
 
-      // ☁️ SYNC RTDB (CRÍTICO)
-      if (typeof rtdb !== "undefined") {
-        rtdb.ref("cotacoes/" + cot.numero).update({
-          status: 'aberta',
-          prazoEncerrado: false,
-          reaberta: true,
-          dataFechamento: cot.dataFechamento
-        }).then(() => console.log("☁️ Reabertura sincronizada no RTDB."))
-          .catch(e => console.error("❌ Erro sync reabertura:", e));
-      }
+      window.excluirCotacao = async function (id) {
+        if (!confirm("⚠️ ATENÇÃO: Tem certeza que deseja EXCLUIR permanentemente esta cotação?")) return;
 
-      alert("✅ Cotação reaberta com sucesso! Prazo estendido.");
-      if (typeof toggleListaRespondidas === 'function') {
-        toggleListaRespondidas('publicadas', true);
-      } else {
-        window.location.reload();
-      }
+        try {
+          const idStr = String(id);
 
-    } catch (e) {
-      console.error(e);
-      alert("Erro ao reabrir cotação: " + e.message);
-    }
-  };
+          // Remove local
+          let cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
+          const novaLista = cotacoes.filter(c => String(c.numero) !== idStr && String(c.id) !== idStr);
+          localStorage.setItem("cotacoes", JSON.stringify(novaLista));
 
-  window.excluirCotacao = async function (id) {
-    if (!confirm("⚠️ ATENÇÃO: Tem certeza que deseja EXCLUIR permanentemente esta cotação?")) return;
+          // Remove respostas
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key.includes(idStr)) localStorage.removeItem(key);
+          }
 
-    try {
-      const idStr = String(id);
+          // ☁️ Remove Firestore (Background)
+          if (typeof db !== "undefined") {
+            db.collection("cotacoes").doc(idStr).delete().catch(console.warn);
+          }
 
-      // Remove local
-      let cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
-      const novaLista = cotacoes.filter(c => String(c.numero) !== idStr && String(c.id) !== idStr);
-      localStorage.setItem("cotacoes", JSON.stringify(novaLista));
+          // ☁️ Remove RTDB (Background)
+          if (typeof rtdb !== "undefined") {
+            rtdb.ref("cotacoes/" + idStr).remove().catch(console.warn);
+          }
 
-      // Remove respostas
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key.includes(idStr)) localStorage.removeItem(key);
-      }
+          alert("✅ Cotação excluída com sucesso!");
+          if (typeof toggleListaRespondidas === 'function') {
+            toggleListaRespondidas('publicadas', true);
+          } else {
+            window.location.reload();
+          }
 
-      // ☁️ Remove Firestore (Background)
-      if (typeof db !== "undefined") {
-        db.collection("cotacoes").doc(idStr).delete().catch(console.warn);
-      }
+        } catch (e) {
+          console.error("Erro ao excluir cotação:", e);
+          alert("Erro ao excluir: " + e.message);
+        }
+      };
 
-      // ☁️ Remove RTDB (Background)
-      if (typeof rtdb !== "undefined") {
-        rtdb.ref("cotacoes/" + idStr).remove().catch(console.warn);
-      }
-
-      alert("✅ Cotação excluída com sucesso!");
-      if (typeof toggleListaRespondidas === 'function') {
-        toggleListaRespondidas('publicadas', true);
-      } else {
-        window.location.reload();
-      }
-
-    } catch (e) {
-      console.error("Erro ao excluir cotação:", e);
-      alert("Erro ao excluir: " + e.message);
-    }
-  };
-
-  // Inicia assim que possível
-  iniciarOuvinteRTDB();
-  window.iniciarOuvinteRTDB = iniciarOuvinteRTDB;
+      // Inicia assim que possível
+      iniciarOuvinteRTDB();
+      window.iniciarOuvinteRTDB = iniciarOuvinteRTDB;
 </script>
 
 <style>

@@ -197,35 +197,6 @@ function renderizarTabelaAnalise(textoOuId, containerOverride = null) {
                            style="cursor:pointer; font-size:14px; color:#3ab9b6;" 
                            onclick="toggleExpansaoColunas()"
                            title="Expandir Visualização"></i>
-                        <script>
-                          // Verifica se existem documentos financeiros para esta cotação e injeta ícone se sim
-                          (async function() {
-                             try {
-                               const idLimpo = "${cotacao.numero || cotacao.id}".replace(/#/g, "").replace(/COT-/gi, "").trim();
-                               const idOrig = "${cotacao.numero || cotacao.id}";
-                               const ids = [`docs_` + idLimpo, `docs_` + idOrig];
-                               let temFin = false;
-                               if (typeof db !== "undefined") {
-                                 for(const id of ids) {
-                                   const snap = await db.collection("documentos_cotacao").doc(id).get();
-                                   if (snap.exists) { temFin = true; break; }
-                                   const sub = await db.collection("documentos_cotacao").doc(id).collection("anexos_individuais").limit(1).get();
-                                   if (!sub.empty) { temFin = true; break; }
-                                 }
-                               }
-                               if (temFin) {
-                                 const icon = document.createElement("i");
-                                 icon.className = "fa-solid fa-file-invoice-dollar";
-                                 icon.style.color = "#fbbf24";
-                                 icon.style.cursor = "pointer";
-                                 icon.style.marginLeft = "8px";
-                                 icon.title = "Ver Notas/Boletos da Gestão Financeira";
-                                 icon.onclick = () => visualizarDocumentos("${cotacao.numero || cotacao.id}");
-                                 document.getElementById("iconExpandirGlobal").parentElement.appendChild(icon);
-                               }
-                             } catch(e) {}
-                          })();
-                        </script>
                     </th>
                     <th style="width:45px; text-align:center;" class="col-idx">#</th>
                     <th class="col-fixa" style="text-align:left; padding-left:10px;">Item</th>
@@ -368,6 +339,56 @@ function renderizarTabelaAnalise(textoOuId, containerOverride = null) {
     }
 
     container.innerHTML = html;
+
+    // 💰 Verifica documentos financeiros no final da renderização
+    verificarDocumentosFinanceiros(cotacao);
+}
+
+/**
+ * 💰 Verifica se existem documentos financeiros para a cotação e injeta ícone se sim
+ */
+async function verificarDocumentosFinanceiros(cotacao) {
+    try {
+        if (!cotacao || typeof db === "undefined") return;
+
+        const numOriginal = String(cotacao.numero || cotacao.id);
+        const idLimpo = numOriginal.replace(/#/g, "").replace(/COT-/gi, "").trim();
+        const ids = ["docs_" + idLimpo, "docs_" + numOriginal];
+
+        let temFin = false;
+        for (const id of ids) {
+            const snap = await db.collection("documentos_cotacao").doc(id).get();
+            if (snap.exists) { temFin = true; break; }
+            const sub = await db.collection("documentos_cotacao").doc(id).collection("anexos_individuais").limit(1).get();
+            if (!sub.empty) { temFin = true; break; }
+        }
+
+        if (temFin) {
+            const el = document.getElementById("iconExpandirGlobal");
+            if (el && el.parentElement) {
+                // Evita duplicidade
+                if (el.parentElement.querySelector(".fa-file-invoice-dollar")) return;
+
+                const icon = document.createElement("i");
+                icon.className = "fa-solid fa-file-invoice-dollar";
+                icon.style.color = "#fbbf24";
+                icon.style.cursor = "pointer";
+                icon.style.marginLeft = "8px";
+                icon.style.fontSize = "14px";
+                icon.title = "Ver Notas/Boletos da Gestão Financeira";
+                icon.onclick = (e) => {
+                    e.stopPropagation();
+                    if (typeof visualizarDocumentos === "function") {
+                        visualizarDocumentos(numOriginal);
+                    }
+                };
+                el.parentElement.appendChild(icon);
+                console.log("💰 [INFO] Documentos financeiros detectados e ícone injetado.");
+            }
+        }
+    } catch (e) {
+        console.warn("⚠️ Erro ao verificar documentos financeiros:", e);
+    }
 }
 
 // Exportação Global
