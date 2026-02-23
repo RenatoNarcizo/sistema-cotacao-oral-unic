@@ -9836,7 +9836,6 @@
       if (typeof db !== "undefined") {
         const snapshot = await db.collection("solicitacoes_compra").get();
         solicitacoes = snapshot.docs.map(doc => doc.data());
-        // Sincroniza local para compatibilidade síncrona se necessário
         localStorage.setItem("solicitacoes_compra", JSON.stringify(solicitacoes));
       }
     } catch (e) {
@@ -9844,41 +9843,114 @@
       solicitacoes = JSON.parse(localStorage.getItem("solicitacoes_compra")) || [];
     }
 
-    lista.innerHTML = "";
-
     if (solicitacoes.length === 0) {
-      lista.innerHTML = `
-      <p style="text-align:center; opacity:0.7;">
-        Nenhuma solicitação encontrada.
-      </p>
-    `;
+      lista.innerHTML = '<p style="text-align:center; opacity:0.7; padding:20px;">Nenhuma solicitação encontrada.</p>';
       return;
     }
 
-    solicitacoes.forEach(s => {
-      const bloco = document.createElement("div");
-      bloco.className = "linha-cotacao";
-
+    // 🔥 Agrupar e Renderizar
+    renderizarListaAgrupada(lista, solicitacoes, (s) => {
       const badge = typeof obterBadgeWorkflow === "function" ? obterBadgeWorkflow(s.status) : s.status;
+      return `
+        <div class="info">
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:5px;">
+            <strong>${s.solicitante}</strong>
+            ${badge}
+          </div>
+          <small>Setor: ${s.setor}</small><br>
+          <small>Tipo: ${s.tipo.toUpperCase()}</small><br>
+          <small>Data: ${s.data}</small>
+        </div>
+        <div class="acoes">
+          <button onclick="verDetalhesSolicitacao('${s.id}')">
+            👁️ Ver Detalhes
+          </button>
+        </div>
+      `;
+    });
+  }
 
-      bloco.innerHTML = `
-                <div class="info">
-                  <div style="display:flex; align-items:center; gap:10px; margin-bottom:5px;">
-                    <strong>${s.solicitante}</strong>
-                    ${badge}
-                  </div>
-                  <small>Setor: ${s.setor}</small><br>
-                  <small>Tipo: ${s.tipo.toUpperCase()}</small><br>
-                  <small>Data: ${s.data}</small>
-                </div>
-                <div class="acoes">
-                  <button onclick="verDetalhesSolicitacao('${s.id}')">
-                    👁️ Ver Detalhes
-                  </button>
-                </div>
-                `;
+  function agruparSolicitacoesPorMes(lista) {
+    const grupos = {};
+    const mesesExtenso = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
-      lista.appendChild(bloco);
+    lista.sort((a, b) => {
+      // Tenta converter data (ex: "23/02/2026, 12:13:48") para objeto Date
+      const parseDate = (dStr) => {
+        if (!dStr) return new Date(0);
+        const parts = dStr.split(",")[0].split("/"); // [dd, mm, yyyy]
+        return new Date(parts[2], parts[1] - 1, parts[0]);
+      };
+      return parseDate(b.data) - parseDate(a.data); // Ordem decrescente
+    });
+
+    lista.forEach(s => {
+      if (!s.data) return;
+      const parts = s.data.split(",")[0].split("/");
+      if (parts.length < 3) return;
+      const mesIdx = parseInt(parts[1]) - 1;
+      const ano = parts[2];
+      const chave = `${mesesExtenso[mesIdx]} ${ano}`;
+
+      if (!grupos[chave]) grupos[chave] = [];
+      grupos[chave].push(s);
+    });
+
+    return grupos;
+  }
+
+  function renderizarListaAgrupada(container, lista, itemRenderer) {
+    const grupos = agruparSolicitacoesPorMes(lista);
+    container.innerHTML = "";
+
+    Object.keys(grupos).forEach((mesAno, index) => {
+      const gId = `grupo_${mesAno.replace(/\s+/g, '_')}`;
+      const solicitacoes = grupos[mesAno];
+
+      const accordion = document.createElement("div");
+      accordion.style.marginBottom = "15px";
+
+      // Cabeçalho do Acordeão
+      const header = document.createElement("div");
+      header.style.cssText = `
+        background: #222;
+        border: 1px solid #661155;
+        border-radius: 8px;
+        padding: 12px 20px;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: 0.3s;
+      `;
+      header.innerHTML = `
+        <span style="font-weight:bold; color:white; font-size:16px;">📅 Solicitações de ${mesAno}</span>
+        <span style="background:#661155; color:white; padding:2px 10px; border-radius:12px; font-size:12px;">${solicitacoes.length}</span>
+      `;
+
+      // Conteúdo do Acordeão
+      const content = document.createElement("div");
+      content.id = gId;
+      content.style.display = index === 0 ? "block" : "none"; // Abre o primeiro mês por padrão
+      content.style.marginTop = "10px";
+      content.style.paddingLeft = "10px";
+
+      header.onclick = () => {
+        const isHidden = content.style.display === "none";
+        content.style.display = isHidden ? "block" : "none";
+        header.style.borderColor = isHidden ? "#661155" : "#333";
+      };
+
+      solicitacoes.forEach(s => {
+        const item = document.createElement("div");
+        item.className = "linha-cotacao";
+        item.innerHTML = itemRenderer(s);
+        content.appendChild(item);
+      });
+
+      accordion.appendChild(header);
+      accordion.appendChild(content);
+      container.appendChild(accordion);
     });
   }
 
@@ -10075,34 +10147,31 @@
       return;
     }
 
-    // Filtra solicitações do usuário atual
     const minhas = solicitacoes.filter(s =>
       s.solicitante.toLowerCase() === (usuarioLogado.nome || "").toLowerCase() ||
       s.solicitante.toLowerCase() === (usuarioLogado.email || "").toLowerCase()
     );
 
     if (minhas.length === 0) {
-      lista.innerHTML = "<p style='text-align:center; opacity:0.6; padding: 10px;'>Você ainda não enviou nenhuma solicitação.</p>";
+      lista.innerHTML = "<p style='text-align:center; opacity:0.6; padding: 20px;'>Você ainda não enviou nenhuma solicitação.</p>";
       return;
     }
 
-    lista.innerHTML = "";
-    minhas.reverse().forEach(s => {
-      const item = document.createElement("div");
-      item.style.cssText = "background:#1a1a1a; border:1px solid #333; border-radius:8px; padding:12px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;";
-
+    // 🔥 Agrupar e Renderizar para o Requisitante
+    renderizarListaAgrupada(lista, minhas, (s) => {
       const badge = typeof obterBadgeWorkflow === "function" ? obterBadgeWorkflow(s.status) : s.status;
-
-      item.innerHTML = `
-        <div style="text-align:left;">
+      return `
+        <div style="text-align:left; flex:1;">
           <strong>${s.data}</strong><br>
           <small>${s.tipo.toUpperCase()} - ${s.itens ? s.itens.length : 0} itens</small>
         </div>
         <div style="text-align:right;">
           ${badge}
         </div>
+        <div style="margin-left:15px;">
+           <button onclick="verDetalhesSolicitacao('${s.id}')" style="background:transparent; border:1px solid #661155; border-radius:4px; color:white; padding:5px 10px; cursor:pointer;">👁️</button>
+        </div>
       `;
-      lista.appendChild(item);
     });
   }
 
