@@ -7064,14 +7064,14 @@
       }
 
       function desenharLogoPadrao(doc, pageWidth) {
-        let logoX = pageWidth - 40;
-        let logoY = 15;
+        let logoX = pageWidth - 45;
+        let logoY = 12;
         const corTurquesa = [58, 185, 182];
         const corRoxo = [102, 17, 85];
         doc.setFillColor(corTurquesa[0], corTurquesa[1], corTurquesa[2]);
-        doc.ellipse(logoX + 7, logoY + 12, 7, 7, "F");
+        doc.ellipse(logoX + 5, logoY + 12, 7, 7, "F");
         doc.setFillColor(corRoxo[0], corRoxo[1], corRoxo[2]);
-        doc.roundedRect(logoX + 11, logoY + 4, 11, 12, 2, 2, "F");
+        doc.roundedRect(logoX + 9, logoY + 4, 12, 13, 2, 2, "F");
         // Textos removidos daqui pois já estão no cabeçalho centralizado
       }
 
