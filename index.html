@@ -5446,7 +5446,9 @@
      COTAÇÃO MANUAL
   ====================================================== */
   function abrirCotacaoManual() {
+    const contextoSolicitacao = window.cotacaoOrigemSolicitacao; // ⚡ Preserva contexto
     limparFormulariosCotacao();
+    window.cotacaoOrigemSolicitacao = contextoSolicitacao; // ⚡ Restaura contexto
     fecharModal();
     fecharTodasAsSecoes();
 
@@ -5482,15 +5484,15 @@
       if (Array.isArray(sol.itens)) {
         sol.itens.forEach(item => {
           adicionarLinhaManual(
-            item.nome || "",
+            item.nome || item.produto || item.item || "",
             item.marca || "",
-            item.quantidade || ""
+            item.quantidade || item.qtd || ""
           );
         });
       }
 
-      // 🔒 limpa para não repetir
-      window.cotacaoOrigemSolicitacao = null;
+      // 🔒 AJUSTE: NÃO limpa aqui, preserva para o momento da publicação!
+      console.log("🔗 Vínculo com Solicitação preservado para publicação.");
     }
 
   }
@@ -10189,15 +10191,6 @@
 
     const sol = window.solicitacaoSelecionada;
 
-    // 🔍 ATUALIZA STATUS PARA "EM COTAÇÃO"
-    sol.status = "em_cotacao";
-    const solicitacoes = JSON.parse(localStorage.getItem("solicitacoes_compra")) || [];
-    const idx = solicitacoes.findIndex(s => s.id === sol.id);
-    if (idx !== -1) {
-      solicitacoes[idx].status = "em_cotacao";
-      localStorage.setItem("solicitacoes_compra", JSON.stringify(solicitacoes));
-    }
-
     // 🔔 NOTIFICAÇÃO: COTAÇÃO INICIADA
     notificarSolicitante(
       "Cotação Iniciada 🔍",
@@ -11110,6 +11103,12 @@
           console.log(`📤 Enviando cotação ${novaCotacao.numero} para RTDB...`);
           await rtdb.ref("cotacoes/" + novaCotacao.numero).set(novaCotacao);
           console.log("✅ V2: Sincronização RTDB CONFIRMADA.");
+
+          // 🔥 ATUALIZA STATUS DA SOLICITAÇÃO DE ORIGEM (SE HOUVER)
+          if (novaCotacao.idSolicitacao && typeof mudarStatusSolicitacao === "function") {
+            await mudarStatusSolicitacao(novaCotacao.idSolicitacao, "em_cotacao");
+            console.log(`✅ Solicitação ${novaCotacao.idSolicitacao} marcada como "em_cotacao" automaticamente.`);
+          }
 
           alert("✅ Cotação publicada com sucesso!\n\nOs fornecedores podem visualizar agora.");
         } catch (errSync) {
