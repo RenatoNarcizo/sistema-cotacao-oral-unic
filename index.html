@@ -9958,7 +9958,7 @@
     });
   }
 
-  function verDetalhesSolicitacao(id) {
+  function verDetalhesSolicitacao(id, isReadOnly = false) {
     const solicitacoes =
       JSON.parse(localStorage.getItem("solicitacoes_compra")) || [];
 
@@ -10029,7 +10029,7 @@
     const statusContainer = document.getElementById("containerAlterarStatus");
 
     if (statusContainer) {
-      if (ehComprador) {
+      if (ehComprador && !isReadOnly) {
         statusContainer.innerHTML = `
           <strong>Alterar Status:</strong>
           <select id="selectStatus_${sol.id}" style="margin-left:10px; background:#111; color:white; border:1px solid #661155; border-radius:4px; padding:4px;">
@@ -10039,11 +10039,11 @@
           </select>
         `;
       } else {
-        statusContainer.innerHTML = ""; // Requisitante não vê
+        statusContainer.innerHTML = ""; // Requisitante ou Somente Leitura não vê
       }
     }
 
-    ajustarAcoesSolicitacaoPorPerfil();
+    ajustarAcoesSolicitacaoPorPerfil(isReadOnly);
 
     document.getElementById("modalDetalhesSolicitacao").style.display = "flex";
     document.body.style.overflow = "hidden"; // 🔒 Lock background scroll
@@ -10188,7 +10188,7 @@
           ${badge}
         </div>
         <div style="margin-left:15px;">
-           <button onclick="verDetalhesSolicitacao('${s.id}')" style="background:transparent; border:1px solid #661155; border-radius:4px; color:white; padding:5px 10px; cursor:pointer;">👁️</button>
+           <button onclick="verDetalhesSolicitacao('${s.id}', true)" style="background:transparent; border:1px solid #661155; border-radius:4px; color:white; padding:5px 10px; cursor:pointer;">👁️</button>
         </div>
       `;
     });
@@ -10307,23 +10307,30 @@
   }
 
 
-  function ajustarAcoesSolicitacaoPorPerfil() {
+  function ajustarAcoesSolicitacaoPorPerfil(isReadOnly = false) {
     const usuario = JSON.parse(localStorage.getItem("usuarioLogado"));
     const divAcoes = document.getElementById("acoesSolicitacao");
 
     if (!divAcoes || !usuario) return;
 
-    const sol = window.solicitacaoSelecionada;
-    const btnCriar = document.getElementById("btnCriarCotacaoSolicitacao");
-    const btnSalvar = document.getElementById("btnSalvarStatusModal");
-    const btnCancelar = document.getElementById("btnCancelarSolicitacaoModal");
-    const btnVerMotivo = document.getElementById("btnVerMotivoCancelamentoSolicitacao");
+    if (isReadOnly) {
+      divAcoes.style.display = "none";
+      const sol = window.solicitacaoSelecionada;
+      const btnVerMotivo = document.getElementById("btnVerMotivoCancelamentoSolicitacao");
 
-    // Reset visibility
-    if (btnCriar) btnCriar.style.display = "none";
-    if (btnSalvar) btnSalvar.style.display = "none";
-    if (btnCancelar) btnCancelar.style.display = "none";
-    if (btnVerMotivo) btnVerMotivo.style.display = "none";
+      // Se estiver cancelada, mantém apenas o botão de motivo visível
+      if (sol && sol.status === "cancelada") {
+        divAcoes.style.display = "flex";
+        if (btnVerMotivo) {
+          // Esconde os demais e mostra o ver motivo
+          document.getElementById("btnCriarCotacaoSolicitacao").style.display = "none";
+          document.getElementById("btnSalvarStatusModal").style.display = "none";
+          document.getElementById("btnCancelarSolicitacaoModal").style.display = "none";
+          btnVerMotivo.style.display = "flex";
+        }
+      }
+      return;
+    }
 
     const tipo = (usuario && usuario.tipo) ? usuario.tipo.toLowerCase() : "";
     const ehComprador = tipo === "comprador" || tipo === "administrador";
