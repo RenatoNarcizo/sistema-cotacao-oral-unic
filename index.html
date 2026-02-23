@@ -10313,9 +10313,14 @@
 
     if (!divAcoes || !usuario) return;
 
+    const sol = window.solicitacaoSelecionada;
+    const btnCriar = document.getElementById("btnCriarCotacaoSolicitacao");
+    const btnSalvar = document.getElementById("btnSalvarStatusModal");
+    const btnCancelar = document.getElementById("btnCancelarSolicitacaoModal");
+    const btnVerMotivo = document.getElementById("btnVerMotivoCancelamentoSolicitacao");
+
     if (isReadOnly) {
       divAcoes.style.display = "none";
-      const sol = window.solicitacaoSelecionada;
       const btnVerMotivo = document.getElementById("btnVerMotivoCancelamentoSolicitacao");
 
       // Se estiver cancelada, mantém apenas o botão de motivo visível
@@ -10338,9 +10343,9 @@
     if (ehComprador) {
       divAcoes.style.display = "flex";
 
-      if (sol.status === "cancelada") {
+      if (sol && sol.status === "cancelada") {
         if (btnVerMotivo) btnVerMotivo.style.display = "flex";
-      } else if (sol.status === "finalizada") {
+      } else if (sol && sol.status === "finalizada") {
         // Nada além de ver detalhes
       } else {
         if (btnCriar) btnCriar.style.display = "flex";
@@ -10349,7 +10354,7 @@
       }
     } else if (tipo === "requisitante") {
       // Requisitante vê o motivo se cancelada
-      if (sol.status === "cancelada") {
+      if (sol && sol.status === "cancelada") {
         divAcoes.style.display = "flex";
         if (btnVerMotivo) btnVerMotivo.style.display = "flex";
       } else {
