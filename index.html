@@ -12120,23 +12120,30 @@
     // D. Documentos da Gestão Financeira (Centralizados + Individuais)
     if (!emailFornecedor && typeof db !== "undefined") {
       try {
-        const idDoc = `docs_${idLimpo}`;
-        const docRef = db.collection("documentos_cotacao").doc(idDoc);
-        const docFin = await docRef.get();
-
+        const idsTentativa = [`docs_${idLimpo}`, `docs_${idCotacao}`];
         let arquivosFin = [];
-        if (docFin.exists) {
-          arquivosFin = docFin.data().arquivos || [];
-        }
 
-        // Busca redundância em anexos individuais
-        const subSnap = await docRef.collection("anexos_individuais").get();
-        subSnap.forEach(d => {
-          const data = d.data();
-          // Evita duplicados pela URL ou base64
-          const jaExiste = arquivosFin.some(a => (a.url && a.url === data.url) || (a.base64 && a.base64 === data.base64));
-          if (!jaExiste) arquivosFin.push(data);
-        });
+        for (const idDoc of idsTentativa) {
+          const docRef = db.collection("documentos_cotacao").doc(idDoc);
+          const docFin = await docRef.get();
+
+          if (docFin.exists) {
+            const arqs = docFin.data().arquivos || [];
+            arqs.forEach(a => {
+              if (!arquivosFin.some(existente => (existente.url && existente.url === a.url) || (existente.base64 && existente.base64 === a.base64))) {
+                arquivosFin.push(a);
+              }
+            });
+          }
+
+          // Busca redundância em anexos individuais para cada ID de documento
+          const subSnap = await docRef.collection("anexos_individuais").get();
+          subSnap.forEach(d => {
+            const data = d.data();
+            const jaExiste = arquivosFin.some(a => (a.url && a.url === data.url) || (a.base64 && a.base64 === data.base64));
+            if (!jaExiste) arquivosFin.push(data);
+          });
+        }
 
         if (arquivosFin.length > 0) {
           addResposta({
@@ -12144,6 +12151,7 @@
             email: "financeiro@sistema-cotacao.com.br",
             anexos: arquivosFin
           });
+          console.log(`✅ [DOCS] Carregados ${arquivosFin.length} documentos da Gestão Financeira.`);
         }
       } catch (e) { console.warn("Erro ao buscar documentos financeiros:", e); }
     }
