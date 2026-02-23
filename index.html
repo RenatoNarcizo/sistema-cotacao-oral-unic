@@ -9913,7 +9913,7 @@
     const novoStatus = select.value;
 
     if (confirm(`Deseja alterar o status para "${novoStatus.replace("_", " ").toUpperCase()}"?`)) {
-      await mudarStatusSolicitacao(id, novoStatus);
+      await mudarStatusSolicitacao(sol.id, novoStatus);
       alert("✅ Status atualizado com sucesso!");
     }
   }
