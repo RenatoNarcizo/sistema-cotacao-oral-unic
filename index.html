@@ -7068,10 +7068,20 @@
         let logoY = 12;
         const corTurquesa = [58, 185, 182];
         const corRoxo = [102, 17, 85];
+
+        // 1. Círculo Turquesa (Base)
         doc.setFillColor(corTurquesa[0], corTurquesa[1], corTurquesa[2]);
-        doc.ellipse(logoX + 5, logoY + 12, 7, 7, "F");
+        doc.circle(logoX + 8, logoY + 16, 8, "F");
+
+        // 2. Quadrado Roxo (Topo)
         doc.setFillColor(corRoxo[0], corRoxo[1], corRoxo[2]);
-        doc.roundedRect(logoX + 9, logoY + 4, 12, 13, 2, 2, "F");
+        doc.roundedRect(logoX + 13, logoY + 5, 14, 14, 3, 3, "F");
+
+        // 3. Interseção Branca (Efeito Lente/Folha)
+        // Este elemento cria o "desenho" central que define a marca Oral Unic
+        doc.setFillColor(255, 255, 255);
+        doc.ellipse(logoX + 15, logoY + 15, 6, 7.5, "F");
+
         // Textos removidos daqui pois já estão no cabeçalho centralizado
       }
 
