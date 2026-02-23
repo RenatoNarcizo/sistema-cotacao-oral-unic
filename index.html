@@ -3833,17 +3833,47 @@
         <!-- conteúdo gerado via JS -->
       </div>
 
-      <!-- 🔽 BOTÃO NOVO -->
-      <div id="acoesSolicitacao" style="text-align:center; margin-top:25px; display:none;">
-        <button onclick="criarCotacaoDaSolicitacao()" style="
+      <!-- 🔽 BOTÕES DE AÇÃO -->
+      <div id="acoesSolicitacao"
+        style="text-align:center; margin-top:25px; display:none; gap:10px; justify-content:center;">
+        <button id="btnCriarCotacaoSolicitacao" onclick="criarCotacaoDaSolicitacao()" style="
           background:#661155;
           color:white;
-          padding:12px 30px;
+          padding:12px 25px;
           border:none;
           border-radius:8px;
           cursor:pointer;
+          display:flex;
+          align-items:center;
+          gap:8px;
         ">
-          📊 Criar Cotação a partir desta Solicitação
+          📊 Criar Cotação
+        </button>
+        <button id="btnSalvarStatusModal" onclick="salvarStatusConfirmado()" style="
+          background:#198754;
+          color:white;
+          padding:12px 25px;
+          border:none;
+          border-radius:8px;
+          cursor:pointer;
+          display:flex;
+          align-items:center;
+          gap:8px;
+        ">
+          💾 Salvar
+        </button>
+        <button id="btnCancelarSolicitacaoModal" onclick="cancelarSolicitacaoComMotivo()" style="
+          background:#dc3545;
+          color:white;
+          padding:12px 25px;
+          border:none;
+          border-radius:8px;
+          cursor:pointer;
+          display:flex;
+          align-items:center;
+          gap:8px;
+        ">
+          ❌ Cancelar
         </button>
       </div>
 
@@ -9836,12 +9866,6 @@
                             <option value="em_cotacao" ${sol.status === 'em_cotacao' ? 'selected' : ''}>🔍 Em Cotação</option>
                             <option value="finalizada" ${sol.status === 'finalizada' ? 'selected' : ''}>✅ Finalizada</option>
                           </select>
-                          <button onclick="salvarStatusConfirmado('${sol.id}')" style="margin-left:10px; background:#198754; color:white; border:none; padding:5px 12px; border-radius:4px; cursor:pointer;">
-                            💾 Salvar Status
-                          </button>
-                          <button onclick="cancelarSolicitacaoComMotivo('${sol.id}')" style="margin-left:10px; background:#dc3545; color:white; border:none; padding:5px 12px; border-radius:4px; cursor:pointer;">
-                            ❌ Cancelar Solicitação
-                          </button>
                         </div>
                       </div>
 
@@ -9881,8 +9905,10 @@
     document.body.style.overflow = "hidden"; // 🔒 Lock background scroll
   }
 
-  async function salvarStatusConfirmado(id) {
-    const select = document.getElementById(`selectStatus_${id}`);
+  async function salvarStatusConfirmado() {
+    const sol = window.solicitacaoSelecionada;
+    if (!sol) return;
+    const select = document.getElementById(`selectStatus_${sol.id}`);
     if (!select) return;
     const novoStatus = select.value;
 
@@ -9892,7 +9918,10 @@
     }
   }
 
-  async function cancelarSolicitacaoComMotivo(id) {
+  async function cancelarSolicitacaoComMotivo() {
+    const sol = window.solicitacaoSelecionada;
+    if (!sol) return;
+    const id = sol.id;
     const motivo = prompt("Informe o motivo do cancelamento:");
     if (motivo === null) return; // cancelou o prompt
     if (motivo.trim() === "") {
@@ -10139,7 +10168,13 @@
     if (!divAcoes || !usuario) return;
 
     if (usuario.tipo === "comprador" || usuario.tipo === "administrador") {
-      divAcoes.style.display = "block";
+      divAcoes.style.display = "flex";
+      // Gerencia botões individuais se necessário (ex: esconder Criar Cotação se já faturado)
+      const sol = window.solicitacaoSelecionada;
+      const btnCriar = document.getElementById("btnCriarCotacaoSolicitacao");
+      if (btnCriar && sol) {
+        btnCriar.style.display = sol.status === "finalizada" || sol.status === "cancelada" ? "none" : "flex";
+      }
     } else {
       divAcoes.style.display = "none";
     }
