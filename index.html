@@ -10022,9 +10022,10 @@
                             `;
 
 
-    // 🔥 Ajusta ações e status por perfil
+    // 🔥 Ajusta ações e status por perfil (Normalizado)
     const usuario = JSON.parse(localStorage.getItem("usuarioLogado"));
-    const ehComprador = usuario && (usuario.tipo === "comprador" || usuario.tipo === "administrador");
+    const tipo = (usuario && usuario.tipo) ? usuario.tipo.toLowerCase() : "";
+    const ehComprador = tipo === "comprador" || tipo === "administrador";
     const statusContainer = document.getElementById("containerAlterarStatus");
 
     if (statusContainer) {
@@ -10324,7 +10325,8 @@
     if (btnCancelar) btnCancelar.style.display = "none";
     if (btnVerMotivo) btnVerMotivo.style.display = "none";
 
-    const ehComprador = usuario.tipo === "comprador" || usuario.tipo === "administrador";
+    const tipo = (usuario && usuario.tipo) ? usuario.tipo.toLowerCase() : "";
+    const ehComprador = tipo === "comprador" || tipo === "administrador";
 
     if (ehComprador) {
       divAcoes.style.display = "flex";
@@ -10338,7 +10340,7 @@
         if (btnSalvar) btnSalvar.style.display = "flex";
         if (btnCancelar) btnCancelar.style.display = "flex";
       }
-    } else if (usuario.tipo === "requisitante") {
+    } else if (tipo === "requisitante") {
       // Requisitante vê o motivo se cancelada
       if (sol.status === "cancelada") {
         divAcoes.style.display = "flex";
