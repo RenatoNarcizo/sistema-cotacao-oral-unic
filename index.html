@@ -3875,6 +3875,19 @@
         ">
           ❌ Cancelar
         </button>
+        <button id="btnVerMotivoCancelamentoSolicitacao" onclick="mostrarMotivoCancelamentoSolicitacao()" style="
+          background:#333;
+          color:white;
+          padding:12px 25px;
+          border:1px solid #661155;
+          border-radius:8px;
+          cursor:pointer;
+          display:none;
+          align-items:center;
+          gap:8px;
+        ">
+          📄 Ver Motivo
+        </button>
       </div>
 
     </div>
@@ -10169,17 +10182,54 @@
 
     if (!divAcoes || !usuario) return;
 
-    if (usuario.tipo === "comprador" || usuario.tipo === "administrador") {
+    const sol = window.solicitacaoSelecionada;
+    const btnCriar = document.getElementById("btnCriarCotacaoSolicitacao");
+    const btnSalvar = document.getElementById("btnSalvarStatusModal");
+    const btnCancelar = document.getElementById("btnCancelarSolicitacaoModal");
+    const btnVerMotivo = document.getElementById("btnVerMotivoCancelamentoSolicitacao");
+
+    // Reset visibility
+    if (btnCriar) btnCriar.style.display = "none";
+    if (btnSalvar) btnSalvar.style.display = "none";
+    if (btnCancelar) btnCancelar.style.display = "none";
+    if (btnVerMotivo) btnVerMotivo.style.display = "none";
+
+    const ehComprador = usuario.tipo === "comprador" || usuario.tipo === "administrador";
+
+    if (ehComprador) {
       divAcoes.style.display = "flex";
-      // Gerencia botões individuais se necessário (ex: esconder Criar Cotação se já faturado)
-      const sol = window.solicitacaoSelecionada;
-      const btnCriar = document.getElementById("btnCriarCotacaoSolicitacao");
-      if (btnCriar && sol) {
-        btnCriar.style.display = sol.status === "finalizada" || sol.status === "cancelada" ? "none" : "flex";
+
+      if (sol.status === "cancelada") {
+        if (btnVerMotivo) btnVerMotivo.style.display = "flex";
+      } else if (sol.status === "finalizada") {
+        // Nada além de ver detalhes
+      } else {
+        if (btnCriar) btnCriar.style.display = "flex";
+        if (btnSalvar) btnSalvar.style.display = "flex";
+        if (btnCancelar) btnCancelar.style.display = "flex";
+      }
+    } else if (usuario.tipo === "requisitante") {
+      // Requisitante vê o motivo se cancelada
+      if (sol.status === "cancelada") {
+        divAcoes.style.display = "flex";
+        if (btnVerMotivo) btnVerMotivo.style.display = "flex";
+      } else {
+        divAcoes.style.display = "none";
       }
     } else {
       divAcoes.style.display = "none";
     }
+  }
+
+  function mostrarMotivoCancelamentoSolicitacao() {
+    const sol = window.solicitacaoSelecionada;
+    if (!sol || !sol.motivoCancelamento) {
+      alert("Motivo do cancelamento não encontrado.");
+      return;
+    }
+
+    const data = sol.dataCancelamento || "Data não informada";
+    alert(`❌ Detalhes do Cancelamento:\n\n📅 Data: ${data}\n📝 Motivo: ${sol.motivoCancelamento}`);
   }
 
 
