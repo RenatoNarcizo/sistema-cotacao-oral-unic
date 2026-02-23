@@ -4221,7 +4221,7 @@
           email: "atendpro.suprimentos@gmail.com",
           senha: "123",
           tipo: "fornecedor",
-          nome: "Renato Narcizo"
+          nome: "Atende Pro"
         },
         {
           email: "gerencia.cgms@gmail.com",
@@ -11608,7 +11608,11 @@
       // 7. Montar Resposta Final (COM ID VINCULADO)
       const resposta = {
         cotacaoId: String(numCotacao),
-        fornecedor: usuario.nome,
+        fornecedor: (function () {
+          const flist = JSON.parse(localStorage.getItem("fornecedores")) || [];
+          const f = flist.find(item => (item.email || "").toLowerCase().trim() === usuario.email.toLowerCase().trim());
+          return f ? f.nome : usuario.nome;
+        })(),
         email: usuario.email.toLowerCase().trim(),
         itens: itensRespondidos,
         data: new Date().toISOString(),
