@@ -7048,7 +7048,7 @@
     Object.entries(itensPorFornecedor).forEach(([fornecedorNome, itens]) => {
       const doc = new jsPDF("p", "mm", "a4");
       const pageWidth = doc.internal.pageSize.getWidth();
-      let y = 15;
+      let y = 45;
 
       /* ================= LOGO ================= */
       const customLogo = localStorage.getItem("logoBase64");
@@ -7074,10 +7074,10 @@
         doc.setTextColor(corRoxo[0], corRoxo[1], corRoxo[2]);
         doc.setFont("helvetica", "bold");
         doc.setFontSize(14);
-        doc.text("ORAL UNIC", logoX - 35, logoY + 10, { align: "right" });
+        doc.text("ORAL UNIC", logoX - 10, logoY + 25, { align: "right" });
         doc.setFontSize(7);
         doc.setFont("helvetica", "normal");
-        doc.text("IMPLANTES PREMIUM", logoX - 35, logoY + 14, { align: "right" });
+        doc.text("IMPLANTES PREMIUM", logoX - 10, logoY + 29, { align: "right" });
       }
 
       /* ================= CABEÇALHO ================= */
