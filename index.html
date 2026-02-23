@@ -6471,8 +6471,19 @@
 
           console.log(`📤 Carregando individual: ${file.name} ([${tipo}]) em ${path}...`);
           const storageRef = storage.ref(path);
-          const uploadTask = await storageRef.put(file);
-          const downloadURL = await uploadTask.ref.getDownloadURL();
+
+          // Monitor de progresso simples
+          const uploadTask = storageRef.put(file);
+          uploadTask.on('state_changed', (snap) => {
+            const prog = (snap.bytesTransferred / snap.totalBytes) * 100;
+            if (prog % 20 === 0) console.log(`📊 [${file.name}] Progresso: ${prog.toFixed(0)}%`);
+          });
+
+          const snapshot = await comTimeout(uploadTask, 30000, `Upload de ${file.name}`);
+          console.log(`✅ Upload concluído (${file.name}). Buscando URL...`);
+
+          const downloadURL = await comTimeout(snapshot.ref.getDownloadURL(), 10000, `Busca de URL de ${file.name}`);
+          console.log(`🔗 URL gerada para ${file.name}: ${downloadURL}`);
 
           return {
             nome: file.name,
