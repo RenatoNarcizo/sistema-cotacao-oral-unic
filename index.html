@@ -7074,14 +7074,14 @@
         doc.circle(logoX + 8, logoY + 16, 8, "F");
 
         // 2. Quadrado Roxo (Topo)
-        // Posicionado para criar overlap centralizado
+        // Posicionado para criar overlap centralizado e simétrico
         doc.setFillColor(corRoxo[0], corRoxo[1], corRoxo[2]);
-        doc.roundedRect(logoX + 11, logoY + 5, 14, 14, 3, 3, "F");
+        doc.roundedRect(logoX + 11, logoY + 5, 12, 14, 3, 3, "F");
 
-        // 3. Interseção Branca (Efeito Lente/Folha)
-        // Centralizado no ponto médio da sobreposição (13.5, 13.5)
+        // 3. Interseção Branca (Efeito Lente/Smile)
+        // Ajustado para encaixe milimétrico na área de sobreposição
         doc.setFillColor(255, 255, 255);
-        doc.ellipse(logoX + 13.5, logoY + 13.5, 4, 6.5, "F");
+        doc.ellipse(logoX + 13.5, logoY + 13.5, 2.5, 5.5, "F");
 
         // Textos removidos daqui pois já estão no cabeçalho centralizado
       }
