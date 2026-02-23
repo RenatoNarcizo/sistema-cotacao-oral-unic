@@ -2312,10 +2312,11 @@
         </div>
 
         <!-- Área de Feedback e Envio -->
-        <div id="feedbackUploadManual" style="margin-top: 20px; display: none;">
-          <p id="msgArquivoSelecionado"
-            style="color: #0dcaf0; margin-bottom: 10px; font-size:14px; background:#333; padding:10px; border-radius:5px; border:1px dashed #661155; display:inline-block;">
-          </p>
+        <div id="feedbackUploadManual"
+          style="margin-top: 20px; display: none; text-align: left; max-width: 500px; margin-left: auto; margin-right: auto;">
+          <div id="msgArquivoSelecionado"
+            style="color: #0dcaf0; margin-bottom: 10px; font-size:14px; background:#1a1a1a; padding:15px; border-radius:8px; border:1px dashed #661155; width: 100%; box-sizing: border-box;">
+          </div>
           <div style="margin-top:10px;">
             <button onclick="enviarArquivoManual()"
               style="padding: 10px 25px; background: #00ff99; color: #111; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px;">
@@ -3263,7 +3264,7 @@
       <!-- 📎 Anexo (CONTAINER REINICIÁVEL) -->
       <div id="containerAnexoResponder" style="margin-top:15px;">
         <label>Anexar Orçamento (PDF ou imagem):</label>
-        <input type="file" id="respAnexo" accept=".pdf,image/*" style="
+        <input type="file" id="respAnexo" accept=".pdf,image/*" multiple style="
           width:100%;
           background:#1a1a1a;
           border:1px solid #661155;
@@ -6075,21 +6076,23 @@
         // B. Anexos das Respostas de Fornecedores (Novo Fallback Base64/Direct)
         if (Array.isArray(cotacao.respostasFornecedores)) {
           cotacao.respostasFornecedores.forEach(resp => {
-            const anexoResp = resp.anexo || (Array.isArray(resp.anexos) ? resp.anexos[0] : null);
-            if (anexoResp && (anexoResp.url || anexoResp.base64)) {
-              const jaExiste = arquivos.some(a => (anexoResp.url && a.url === anexoResp.url) || (anexoResp.base64 && a.base64 === anexoResp.base64));
-              if (!jaExiste) {
-                arquivos.push({
-                  nome: anexoResp.nome || "Anexo Resposta",
-                  tipo: "Resposta Fornecedor",
-                  data: resp.data || new Date().toLocaleDateString(),
-                  tamanho: anexoResp.tamanho || "desc.",
-                  usuario: resp.fornecedor || resp.email,
-                  base64: anexoResp.base64,
-                  url: anexoResp.url
-                });
+            const arr = Array.isArray(resp.anexos) ? resp.anexos : (resp.anexo ? [resp.anexo] : []);
+            arr.forEach(anexoResp => {
+              if (anexoResp && (anexoResp.url || anexoResp.base64)) {
+                const jaExiste = arquivos.some(a => (anexoResp.url && a.url === anexoResp.url) || (anexoResp.base64 && a.base64 === anexoResp.base64));
+                if (!jaExiste) {
+                  arquivos.push({
+                    nome: anexoResp.nome || "Anexo Resposta",
+                    tipo: "Resposta Fornecedor",
+                    data: resp.data || new Date().toLocaleDateString(),
+                    tamanho: anexoResp.tamanho || "desc.",
+                    usuario: resp.fornecedor || resp.email,
+                    base64: anexoResp.base64,
+                    url: anexoResp.url
+                  });
+                }
               }
-            }
+            });
           });
         }
       }
@@ -6401,21 +6404,25 @@
 
     input.onchange = function (e) {
       if (e.target.files.length > 0) {
-        // Guarda arquivos na memória temporária
         arquivoSelecionadoTemp = {
           files: Array.from(e.target.files),
           numeroCotacao: numero,
           tipo: tipoDoc
         };
 
-        // Exibe feedback
         const feedback = document.getElementById("feedbackUploadManual");
         const msg = document.getElementById("msgArquivoSelecionado");
 
         feedback.style.display = "block";
-        msg.innerHTML = `📌 <strong>${e.target.files.length} arquivo(s)</strong> selecionado(s) para <br> Cotação: <strong>${numero}</strong> <br> Tipo: <strong>${tipoDoc}</strong>`;
+        const listaNomes = arquivoSelecionadoTemp.files.map(f => `<li style="margin-bottom:5px;">📎 ${f.name} <small>(${(f.size / 1024).toFixed(1)} KB)</small></li>`).join('');
+        msg.innerHTML = `
+          <div style="margin-bottom:10px;">
+            📌 <strong>${e.target.files.length} arquivo(s)</strong> para:<br>
+            Cotação: <strong style="color:white;">${numero}</strong> • Tipo: <strong style="color:white;">${tipoDoc}</strong>
+          </div>
+          <ul style="margin:0; padding-left:20px; color:#aaa; font-size:12px;">${listaNomes}</ul>
+        `;
 
-        // Desabilita botões de seleção para forçar terminar
         document.getElementById("inputNumeroCotacaoManual").disabled = true;
       }
     };
@@ -6431,7 +6438,12 @@
     // Processa todos os arquivos (CLOUD STORAGE)
     const uploadPromises = files.map(async file => {
       try {
-        const storageRef = storage.ref(`financeiro/${numeroCotacao}/${Date.now()}_${file.name}`);
+        const timestamp = Date.now();
+        const randomPart = Math.floor(Math.random() * 1000);
+        const nomeSeguro = file.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9.-]/g, "_");
+        const path = `financeiro/${numeroCotacao}/${timestamp}_${randomPart}_${nomeSeguro}`;
+
+        const storageRef = storage.ref(path);
         const uploadTask = await storageRef.put(file);
         const downloadURL = await uploadTask.ref.getDownloadURL();
 
@@ -11525,8 +11537,8 @@
         return alert("⚠️ Informe pelo menos um preço válido.");
       }
 
-      // 6. Upload de Anexo (com Timeout e Fallback Inteligente)
-      let anexoDados = { nome: "", url: "", base64: "" };
+      // 6. Upload de Anexo (Múltiplos Arquivos)
+      let anexosArray = [];
 
       // 🔴 PERSISTÊNCIA: Se não selecionou arquivo novo, manter o que já existia
       // PRIORIDADE: Tenta pegar da chave individual (que preserva o Base64)
@@ -11539,66 +11551,58 @@
         respAntiga = respondidas.find(r => (r.email || "").toLowerCase().trim() === usuario.email.toLowerCase().trim());
       }
 
-      if (respAntiga && respAntiga.anexo) {
-        anexoDados = { ...respAntiga.anexo };
-        console.log(`♻️ [DEBUG] Mantendo anexo anterior: ${anexoDados.nome} (URL: ${!!anexoDados.url}, B64: ${!!anexoDados.base64})`);
+      if (respAntiga) {
+        if (Array.isArray(respAntiga.anexos)) {
+          anexosArray = [...respAntiga.anexos];
+        } else if (respAntiga.anexo) {
+          anexosArray = [respAntiga.anexo];
+        }
+        console.log(`♻️ [DEBUG] Mantendo anexos anteriores: ${anexosArray.length}`);
       }
 
       if (fileInput && fileInput.files.length > 0) {
-        const file = fileInput.files[0];
-        const nomeLimpo = file.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9.-]/g, "_");
-        anexoDados.nome = file.name;
+        const files = Array.from(fileInput.files);
 
-        console.log(`📤 Perfilando upload: ${file.name} -> ${nomeLimpo} (${(file.size / 1024).toFixed(1)} KB)`);
+        for (const file of files) {
+          const nomeLimpo = file.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9.-]/g, "_");
+          let anexoIndividual = {
+            nome: file.name,
+            url: "",
+            base64: "",
+            tamanho: (file.size / 1024).toFixed(1) + " KB"
+          };
 
-        if (typeof storage !== "undefined") {
-          try {
-            // 🏗️ ESTRUTURA HIERÁRQUICA RIGOROSA (COTACAO > FORNECEDOR > ARQUIVO)
-            const path = `cotacoes/${numCotacao}/${usuario.email}/${Date.now()}_${nomeLimpo}`;
-            const metadata = { contentType: file.type || 'application/octet-stream' };
+          console.log(`📤 Perfilando upload: ${file.name} -> ${nomeLimpo} (${(file.size / 1024).toFixed(1)} KB)`);
 
-            console.log("🔄 Bucket:", storage.ref().bucket);
-            console.log("🔄 Iniciando put() no Storage...");
-            const uploadTask = storage.ref(path).put(file, metadata);
+          if (typeof storage !== "undefined") {
+            try {
+              const timestamp = Date.now();
+              const randomPart = Math.floor(Math.random() * 1000);
+              const path = `cotacoes/${numCotacao}/${usuario.email}/${timestamp}_${randomPart}_${nomeLimpo}`;
+              const metadata = { contentType: file.type || 'application/octet-stream' };
 
-            // Monitor de "travamento" (se não sair de 0% em 10s, avisa no log)
-            let progressTrigger = setTimeout(() => {
-              console.warn("⚠️ Upload parece travado em 0%.");
-            }, 10000);
+              console.log(`🔄 Iniciando upload de ${file.name}...`);
+              const uploadTask = storage.ref(path).put(file, metadata);
 
-            uploadTask.on('state_changed',
-              (snap) => {
-                const progresso = (snap.bytesTransferred / snap.totalBytes) * 100;
-                console.log(`📊 Upload progress: ${progresso.toFixed(0)}%`);
-                if (progresso > 0) clearTimeout(progressTrigger);
-              },
-              (err) => console.error("❌ ERRO STORAGE:", err.code)
-            );
+              const url = await comTimeout(
+                uploadTask.then(s => s.ref.getDownloadURL()),
+                25000,
+                "Upload de Arquivo"
+              );
+              anexoIndividual.url = url;
+              console.log(`✅ Upload concluído (${file.name}):`, url);
+              anexosArray.push(anexoIndividual);
+            } catch (e) {
+              console.warn(`⚠️ [DEBUG] Falha no Storage para ${file.name}:`, e.message);
 
-            // Timeout de 25 segundos p/ disparar fallback
-            const url = await comTimeout(
-              uploadTask.then(s => s.ref.getDownloadURL()),
-              25000,
-              "Upload de Arquivo"
-            );
-            anexoDados.url = url;
-            console.log("✅ Upload concluído via Storage:", url);
-          } catch (e) {
-            console.warn("⚠️ [DEBUG] Falha ou timeout no Storage:", e.message);
-            // GARANTE QUE O NOME NÃO SE PERCA NO CATCH
-            if (!anexoDados.nome && file) anexoDados.nome = file.name;
-
-            if (file.size > 1024 * 1024) { // 1MB limit for Firestore Base64
-              alert("O arquivo é muito grande para o modo alternativo (> 1MB).");
-              if (!confirm("Deseja enviar sem o anexo?")) throw new Error("Abortado pelo usuário.");
-            } else {
-              if (confirm("O envio em nuvem falhou ou está travado.\n\nDeseja usar o 'Envio de Banco Seguro' (Base64)?\n\nIsso garantirá que o comprador receba o documento.")) {
-                console.log("🔄 [DEBUG] Ativando Fallback Base64...");
-                const base64Data = await fileToBase64(file);
-                anexoDados.base64 = base64Data;
-                anexoDados.url = ""; // Limpa URL se falhou o storage
-              } else if (!confirm("Deseja enviar a resposta sem o arquivo?")) {
-                throw new Error("Upload cancelado pelo usuário.");
+              if (file.size < 1024 * 1024) {
+                if (confirm(`Falha no upload de ${file.name}. Deseja usar o 'Banco Seguro' (Base64) para este arquivo?`)) {
+                  const base64Data = await fileToBase64(file);
+                  anexoIndividual.base64 = base64Data;
+                  anexosArray.push(anexoIndividual);
+                }
+              } else {
+                alert(`Arquivo ${file.name} muito grande e falhou no upload.`);
               }
             }
           }
@@ -11616,8 +11620,8 @@
         email: usuario.email.toLowerCase().trim(),
         itens: itensRespondidos,
         data: new Date().toISOString(),
-        anexo: anexoDados,
-        anexos: [anexoDados]
+        anexo: anexosArray[0] || null,
+        anexos: anexosArray
       };
 
       // 8. Sync Cloud (com Timeouts)
@@ -11676,33 +11680,42 @@
           await db.collection("cotacoes").doc(String(numCotacao)).collection("respostas_individuais").doc(usuario.email.toLowerCase().trim()).set(respostaSegura);
         }
 
-        if (anexoDados.url || anexoDados.base64) {
+        if (anexosArray.length > 0) {
           const docRef = db.collection("cotacoes").doc(String(numCotacao)).collection("respostas").doc(usuario.email.toLowerCase().trim());
           const respostaFirestore = JSON.parse(JSON.stringify(resposta));
-          if (anexoDados.base64 && anexoDados.base64.length > 800000 && respostaFirestore.anexo) {
+
+          // Remove Base64 grandes paraFirestore
+          if (respostaFirestore.anexos) {
+            respostaFirestore.anexos.forEach(a => {
+              if (a.base64 && a.base64.length > 800000) delete a.base64;
+            });
+          }
+          if (respostaFirestore.anexo && respostaFirestore.anexo.base64 && respostaFirestore.anexo.base64.length > 800000) {
             delete respostaFirestore.anexo.base64;
           }
+
           await docRef.set(respostaFirestore, { merge: true });
 
           const globalDocRef = db.collection("documentos_cotacao").doc(`docs_${numCotacao}`);
           const snap = await globalDocRef.get();
           let arquivos = snap.exists ? (snap.data().arquivos || []) : [];
 
-          const novoAnexoLimpo = {
-            nome: anexoDados.nome,
-            url: anexoDados.url || "",
-            base64: "", // 🔥 NUNCA NO COLETIVO
-            data: new Date().toLocaleDateString(),
-            usuario: resposta.fornecedor,
-            tamanho: file ? (file.size / 1024).toFixed(1) + " KB" : "-",
-            tipo: "Resposta Fornecedor"
-          };
+          anexosArray.forEach(anexo => {
+            const novoAnexoLimpo = {
+              nome: anexo.nome,
+              url: anexo.url || "",
+              base64: "",
+              data: new Date().toLocaleDateString(),
+              usuario: resposta.fornecedor,
+              tamanho: anexo.tamanho || "-",
+              tipo: "Resposta Fornecedor"
+            };
 
-          const existe = arquivos.some(a => (anexoDados.url && a.url === anexoDados.url) || (a.nome === novoAnexoLimpo.nome && a.usuario === novoAnexoLimpo.usuario));
-          if (!existe) {
-            arquivos.push(novoAnexoLimpo);
-            await globalDocRef.set({ arquivos: arquivos }, { merge: true });
-          }
+            const existe = arquivos.some(a => (anexo.url && a.url === anexo.url) || (a.nome === novoAnexoLimpo.nome && a.usuario === novoAnexoLimpo.usuario));
+            if (!existe) arquivos.push(novoAnexoLimpo);
+          });
+
+          await globalDocRef.set({ arquivos: arquivos }, { merge: true });
         }
       }
 
