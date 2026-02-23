@@ -6327,6 +6327,11 @@
           });
         }
       }
+    } catch (err) {
+      console.error("❌ Erro ao carregar financeiro:", err);
+      if (listaComprador) {
+        listaComprador.innerHTML = `<p style='color:#ff8080; text-align:center; padding:20px;'><i class='fa-solid fa-triangle-exclamation'></i> Erro ao carregar dados. Verifique sua conexão.</p>`;
+      }
     }
   };
 
