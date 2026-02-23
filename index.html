@@ -3886,10 +3886,61 @@
           align-items:center;
           gap:8px;
         ">
-          📄 Ver Motivo
-        </button>
+          <button id="btnVerMotivoCancelamentoSolicitacao" onclick="mostrarMotivoCancelamentoSolicitacao()" style="
+          background:#333;
+          color:white;
+          padding:12px 25px;
+          border:1px solid #661155;
+          border-radius:8px;
+          cursor:pointer;
+          display:none;
+          align-items:center;
+          gap:8px;
+        ">
+            📄 Ver Motivo
+          </button>
       </div>
 
+    </div>
+  </div>
+
+  <!-- ❌ MODAL – DETALHES DO CANCELAMENTO DA SOLICITAÇÃO -->
+  <div id="modalMotivoCancelamentoSolicitacao" class="modal"
+    style="display:none; align-items:center; justify-content:center;">
+    <div class="modal-content"
+      style="max-width:500px; background:#111; border:1px solid #dc3545; box-shadow:0 0 20px rgba(220, 53, 69, 0.4); position:relative; padding:25px;">
+      <button class="close-btn"
+        onclick="document.getElementById('modalMotivoCancelamentoSolicitacao').style.display='none'"
+        style="position:absolute; top:10px; right:15px; background:transparent; border:none; color:white; font-size:24px; cursor:pointer;">&times;</button>
+
+      <div style="text-align:center; margin-bottom:20px;">
+        <span style="font-size:40px;">❌</span>
+        <h2 style="color:#dc3545; margin:10px 0 5px 0;">Detalhes do Cancelamento</h2>
+        <p style="color:#aaa; font-size:14px;">Esta solicitação foi descontinuada</p>
+      </div>
+
+      <div style="background:#1a1a1a; padding:15px; border-radius:8px; border:1px solid #333; margin-bottom:15px;">
+        <div style="margin-bottom:12px;">
+          <label style="color:#dc3545; font-size:12px; font-weight:bold; text-transform:uppercase;">📅 Data e
+            Hora</label>
+          <div id="cancelData" style="color:white; font-size:15px; margin-top:4px;"></div>
+        </div>
+        <div style="margin-bottom:12px;">
+          <label style="color:#dc3545; font-size:12px; font-weight:bold; text-transform:uppercase;">👤 Cancelado
+            por</label>
+          <div id="cancelAutor" style="color:white; font-size:15px; margin-top:4px;"></div>
+        </div>
+        <div>
+          <label style="color:#dc3545; font-size:12px; font-weight:bold; text-transform:uppercase;">📝 Motivo</label>
+          <div id="cancelMotivo"
+            style="color:white; font-size:15px; margin-top:4px; white-space:pre-wrap; line-height:1.4;"></div>
+        </div>
+      </div>
+
+      <button onclick="document.getElementById('modalMotivoCancelamentoSolicitacao').style.display='none'"
+        style="width:100%; background:#333; color:white; border:1px solid #444; padding:10px; border-radius:6px; cursor:pointer; font-weight:bold;">
+        Fechar
+      </button>
     </div>
   </div>
 
@@ -9945,12 +9996,16 @@
     }
 
     if (confirm("Confirma o cancelamento desta solicitação?")) {
+      const usuarioLogado = JSON.parse(localStorage.getItem("usuarioLogado"));
+      const autorCancelamento = usuarioLogado ? (usuarioLogado.nome || usuarioLogado.email) : "Sistema";
+
       const solicitacoes = JSON.parse(localStorage.getItem("solicitacoes_compra")) || [];
       const idx = solicitacoes.findIndex(s => s.id === id);
 
       if (idx !== -1) {
         solicitacoes[idx].status = "cancelada";
         solicitacoes[idx].motivoCancelamento = motivo;
+        solicitacoes[idx].autorCancelamento = autorCancelamento;
         solicitacoes[idx].dataCancelamento = new Date().toLocaleString();
 
         localStorage.setItem("solicitacoes_compra", JSON.stringify(solicitacoes));
@@ -9961,6 +10016,7 @@
             await db.collection("solicitacoes_compra").doc(id).update({
               status: "cancelada",
               motivoCancelamento: motivo,
+              autorCancelamento: autorCancelamento,
               dataCancelamento: solicitacoes[idx].dataCancelamento
             });
             console.log("✅ Cancelamento sincronizado com Firebase!");
@@ -10228,8 +10284,11 @@
       return;
     }
 
-    const data = sol.dataCancelamento || "Data não informada";
-    alert(`❌ Detalhes do Cancelamento:\n\n📅 Data: ${data}\n📝 Motivo: ${sol.motivoCancelamento}`);
+    document.getElementById("cancelData").textContent = sol.dataCancelamento || "Não informada";
+    document.getElementById("cancelAutor").textContent = sol.autorCancelamento || "Não informado";
+    document.getElementById("cancelMotivo").textContent = sol.motivoCancelamento;
+
+    document.getElementById("modalMotivoCancelamentoSolicitacao").style.display = "flex";
   }
 
 
