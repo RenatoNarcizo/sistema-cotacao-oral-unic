@@ -6087,165 +6087,187 @@
   /* ======================================================
      💰 CARREGAR LISTA FINANCEIRA (FORNECEDORES) - NOVO
   ====================================================== */
-  window.carregarFinanceiroFornecedor = function () {
+  /* ======================================================
+     💰 CARREGAR LISTA FINANCEIRA (FORNECEDORES) - HÍBRIDO (NUVEM + LOCAL)
+  ====================================================== */
+  window.carregarFinanceiroFornecedor = async function () {
     const usuario = getUsuarioLogado();
-
-    // Elementos das duas visões
     const formManual = document.getElementById("formManualFinanceiro");
     const listaComprador = document.getElementById("listaFinanceiroComprador");
 
     // Reset da visão
     if (formManual) formManual.style.display = "none";
     if (listaComprador) {
-      listaComprador.style.display = "none";
-      listaComprador.innerHTML = "";
+      listaComprador.style.display = "block";
+      listaComprador.innerHTML = `
+        <div style="text-align:center; padding:40px; color:#3ab9b6;">
+          <i class="fa-solid fa-circle-notch fa-spin fa-2x"></i><br><br>
+          <span style="font-weight:700; letter-spacing:1px; font-size:12px;">SINCRONIZANDO COM A NUVEM...</span>
+        </div>`;
     }
 
-    /* ===========================
-       🚚 VISÃO DO FORNECEDOR
-    =========================== */
-    if (usuario.tipo === "fornecedor") {
-      if (formManual) {
-        formManual.style.display = "block";
-        const input = document.getElementById("inputNumeroCotacaoManual");
-        if (input) {
-          input.value = "";
-          input.focus();
+    try {
+      /* ===========================
+         🚚 VISÃO DO FORNECEDOR
+      =========================== */
+      if (usuario.tipo === "fornecedor") {
+        if (formManual) {
+          formManual.style.display = "block";
+          const input = document.getElementById("inputNumeroCotacaoManual");
+          if (input) {
+            input.value = "";
+            input.focus();
+          }
         }
-      }
-    }
-    /* ===========================
-       🛒 VISÃO DO COMPRADOR
-    =========================== */
-    else {
-      if (listaComprador) {
-        listaComprador.style.display = "block"; // Em lista, bloco é melhor que grid
-        listaComprador.innerHTML = "";
 
-        // Busca cotações com documentos
-        const cotacoes = JSON.parse(localStorage.getItem('cotacoes')) || [];
-        const itensComDocs = [];
+        // --- HISTÓRICO DE ENVIOS DO FORNECEDOR ---
+        if (listaComprador) {
+          listaComprador.innerHTML = `<h3 style="color:#661155; font-size:16px; margin-bottom:15px; border-bottom:1px solid #333; padding-bottom:8px;">
+            <i class="fa-solid fa-history"></i> Meu Histórico de Envios
+          </h3>`;
 
-        cotacoes.forEach(c => {
-          const idDoc = `docs_${c.numero}`;
-          const docs = JSON.parse(localStorage.getItem(idDoc)) || [];
-
-          if (docs.length > 0) {
-            // Helper para montar resumo dos tipos (ex: "2 Notas, 1 Boleto")
-            const qtdNotas = docs.filter(d => d.tipo === 'Nota Fiscal').length;
-            const qtdBoletos = docs.filter(d => d.tipo === 'Boleto').length;
-            const resumo = [];
-            if (qtdNotas > 0) resumo.push(`${qtdNotas} NF(s)`);
-            if (qtdBoletos > 0) resumo.push(`${qtdBoletos} Boleto(s)`);
-            const resumoTexto = resumo.join(" + ") || `${docs.length} arq(s)`;
-
-            // Coleta nomes únicos dos fornecedores nos documentos
-            const nomesFornecedores = [...new Set(docs.map(d => d.usuario).filter(Boolean))];
-            const nomeExibicao = nomesFornecedores.length > 0 ? nomesFornecedores.join(", ") : null;
-
-            itensComDocs.push({
-              cotacao: c,
-              docs: docs,
-              resumoTexto: resumoTexto,
-              fornecedores: nomeExibicao
+          let meusEnvios = [];
+          if (typeof db !== "undefined") {
+            const snap = await db.collection("documentos_cotacao").get();
+            snap.forEach(doc => {
+              const data = doc.data();
+              const arqs = data.arquivos || [];
+              const filtrados = arqs.filter(a => (a.usuario === usuario.nome || a.email === usuario.email));
+              if (filtrados.length > 0) {
+                meusEnvios.push({ idCotacao: doc.id.replace("docs_", ""), docs: filtrados });
+              }
             });
           }
-        });
+
+          if (meusEnvios.length === 0) {
+            listaComprador.innerHTML += "<p style='color:#666; text-align:center; padding:20px;'>Você ainda não enviou documentos pelo sistema.</p>";
+          } else {
+            let htmlDocs = `<div style="display:flex; flex-direction:column; gap:10px;">`;
+            meusEnvios.forEach(item => {
+              htmlDocs += `
+                <div style="background:#111; border:1px solid #333; padding:12px 15px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
+                  <div>
+                    <strong style="color:#3ab9b6; font-size:14px;">Cotação #${item.idCotacao}</strong>
+                    <div style="font-size:11px; color:#888;">${item.docs.length} arquivo(s) enviados</div>
+                  </div>
+                  <button onclick="visualizarDocumentos('${item.idCotacao}', '${usuario.email}')" style="background:#661155; color:white; border:none; padding:5px 12px; border-radius:4px; cursor:pointer; font-size:11px; font-weight:bold;">VER ANEXOS</button>
+                </div>`;
+            });
+            htmlDocs += `</div>`;
+            listaComprador.innerHTML += htmlDocs;
+          }
+        }
+      }
+      /* ===========================
+         🛒 VISÃO DO COMPRADOR
+      =========================== */
+      else {
+        if (!listaComprador) return;
+        listaComprador.innerHTML = "";
+
+        // 1. Coleta dados de múltiplas fontes (Firestore + LocalStorage)
+        const cotacoesLocal = JSON.parse(localStorage.getItem('cotacoes')) || [];
+        const itensComDocsMap = new Map();
+
+        // A. Dados LocalStorage (Legacy/Cache)
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key.startsWith("docs_")) {
+            const num = key.replace("docs_", "");
+            const docs = JSON.parse(localStorage.getItem(key)) || [];
+            if (docs.length > 0) {
+              const cot = cotacoesLocal.find(c => String(c.numero) === String(num)) || { numero: num, descricao: "Cotação Direta" };
+              itensComDocsMap.set(num, { cotacao: cot, docs: docs });
+            }
+          }
+        }
+
+        // B. Dados Firestore (Nuvem - Realtime)
+        if (typeof db !== "undefined") {
+          const cloudSnap = await db.collection("documentos_cotacao").get();
+          cloudSnap.forEach(doc => {
+            const num = doc.id.replace("docs_", "");
+            const data = doc.data();
+            const cloudDocs = data.arquivos || [];
+
+            if (cloudDocs.length > 0) {
+              const existente = itensComDocsMap.get(num);
+              if (existente) {
+                // Merge sem duplicidade
+                cloudDocs.forEach(cd => {
+                  if (!existente.docs.some(ld => (ld.url && ld.url === cd.url) || (ld.base64 && ld.base64 === cd.base64))) {
+                    existente.docs.push(cd);
+                  }
+                });
+              } else {
+                const cot = cotacoesLocal.find(c => String(c.numero) === String(num)) || { numero: num, descricao: "Documentos Recebidos" };
+                itensComDocsMap.set(num, { cotacao: cot, docs: cloudDocs });
+              }
+            }
+          });
+        }
+
+        const itensComDocs = Array.from(itensComDocsMap.values());
 
         if (itensComDocs.length === 0) {
-          listaComprador.innerHTML = "<p style='color:#ccc; text-align:center; padding:20px;'>Nenhum documento financeiro recebido até o momento.</p>";
+          listaComprador.innerHTML = "<div style='text-align:center; padding:60px; color:#555;'><i class='fa-solid fa-folder-open fa-3x' style='opacity:0.2;'></i><br><br><span style='font-weight:700;'>NENHUM DOCUMENTO FINANCEIRO ENCONTRADO</span></div>";
           return;
         }
 
-        // Agrupamento por Mês (baseado na data de criação da cotação)
+        // 2. Agrupamento por Mês
         const gruposMes = {};
-
         itensComDocs.forEach(item => {
           let dataRef = new Date();
-          // Tenta pegar a data de criação
           if (item.cotacao.dataCriacao) {
             const partes = item.cotacao.dataCriacao.split(/[\/\s,]+/);
-            // DD/MM/YYYY ...
-            if (partes.length >= 3) {
-              // Nota: mês js é 0-indexado
-              dataRef = new Date(partes[2], partes[1] - 1, partes[0]);
-            }
+            if (partes.length >= 3) dataRef = new Date(partes[2], partes[1] - 1, partes[0]);
           }
-
-          if (isNaN(dataRef.getTime())) dataRef = new Date();
-
           const mesAno = dataRef.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
-          // Capitaliza a primeira letra
           const mesFormatado = mesAno.charAt(0).toUpperCase() + mesAno.slice(1);
-
           if (!gruposMes[mesFormatado]) gruposMes[mesFormatado] = [];
           gruposMes[mesFormatado].push(item);
         });
 
-        // Ordenar chaves cronologicamente? 
-        // Para simplificar, vamos iterar na ordem que aparecem ou chaves (que pode ser aleatório)
-        // Se quiséssemos ordem correta, precisaríamos de uma lógica de sort de datas. 
-        // Vamos mostrar os meses mais recentes primeiro (assumindo que o array cotacoes já vem +- ordenado ou reordenamos).
-
-        // Vamos apenas iterar pelas chaves
+        // 3. Renderização Final
         Object.keys(gruposMes).forEach(mes => {
           const grupo = gruposMes[mes];
-
-          // Criação do HTML do Grupo
           const section = document.createElement("div");
-          section.style.marginBottom = "25px";
-
+          section.style.marginBottom = "30px";
           section.innerHTML = `
-              <h3 style="color:#661155; border-bottom: 1px solid #444; padding-bottom:5px; margin-bottom:10px; font-size:16px;">
-                 📅 ${mes}
-              </h3>
-              <div style="display:flex; flex-direction:column; gap:10px;">
-                 ${grupo.map(item => `
-                    <div style="
-                        display:flex; 
-                        justify-content:space-between; 
-                        align-items:center; 
-                        background:#1a1a1a; 
-                        border:1px solid #333; 
-                        padding:12px 15px; 
-                        border-radius:6px;
-                    ">
-                        <div style="flex:1;">
-                           <strong style="color:white; font-size:15px; display:block;">${item.cotacao.descricao || "Cotação #" + item.cotacao.numero}</strong>
-                           <span style="color:#888; font-size:12px;">#${item.cotacao.numero} • Data: ${item.cotacao.dataCriacao}</span>
-                           ${item.fornecedores ? `<div style="margin-top:2px; color:#aaa; font-size:12px;">👤 Fornecedor(es): <strong>${item.fornecedores}</strong></div>` : ''}
-                        </div>
+            <h3 style="color:#3ab9b6; border-bottom: 2px solid #661155; padding-bottom:8px; margin-bottom:15px; font-size:16px; font-weight:800; display:flex; align-items:center; gap:10px;">
+              <i class="fa-solid fa-calendar-alt"></i> ${mes}
+            </h3>
+            <div style="display:flex; flex-direction:column; gap:12px;">
+              ${grupo.map(item => {
+            const qtdNF = item.docs.filter(d => d.tipo === 'Nota Fiscal').length;
+            const qtdBOL = item.docs.filter(d => d.tipo === 'Boleto').length;
+            const resumo = [];
+            if (qtdNF > 0) resumo.push(`<span style="color:#3ab9b6;">${qtdNF} NF(s)</span>`);
+            if (qtdBOL > 0) resumo.push(`<span style="color:#ffc107;">${qtdBOL} Boleto(s)</span>`);
 
-                        <div style="flex:0 0 auto; margin: 0 20px; text-align:center;">
-                              <span style="background:#333; color:#0dcaf0; font-size:11px; padding:4px 8px; border-radius:4px; white-space:nowrap;">
-                                 📎 ${item.resumoTexto}
-                              </span>
-                        </div>
-                        
-                        <div style="flex:0 0 auto;">
-                            <button onclick="visualizarDocumentos('${item.cotacao.numero}')" 
-                                    style="
-                                    background:#661155; 
-                                    color:white; 
-                                    border:none; 
-                                    padding:6px 12px; 
-                                    border-radius:4px; 
-                                    cursor:pointer; 
-                                    font-size:12px;
-                                    font-weight:bold;
-                                    box-shadow:0 0 3px rgba(102,17,85,0.5);
-                                    ">
-                                📂 Abrir
-                            </button>
-                        </div>
+            const nomesUser = [...new Set(item.docs.map(d => d.usuario).filter(Boolean))].join(", ") || "Externo";
+
+            return `
+                  <div style="display:flex; justify-content:space-between; align-items:center; background:#111; border:1px solid #333; padding:15px 20px; border-radius:10px; transition:0.3s;" onmouseover="this.style.borderColor='#661155'; this.style.transform='translateX(5px)';" onmouseout="this.style.borderColor='#333'; this.style.transform='none';">
+                    <div style="flex:1;">
+                      <strong style="color:white; font-size:16px; display:block; margin-bottom:2px;">${item.cotacao.descricao}</strong>
+                      <span style="color:#888; font-size:12px;">Cotação #${item.cotacao.numero} • Doc(s) de: <strong>${nomesUser}</strong></span>
                     </div>
-                 `).join('')}
-              </div>
-           `;
-
+                    <div style="flex:0 0 auto; margin: 0 25px; text-align:right;">
+                      <div style="font-size:11px; font-weight:bold; text-transform:uppercase; letter-spacing:0.5px;">${resumo.join(" + ") || "Arquivos"}</div>
+                    </div>
+                    <div style="flex:0 0 auto;">
+                      <button onclick="visualizarDocumentos('${item.cotacao.numero}')" style="background:#661155; color:white; border:none; padding:8px 20px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:900; text-transform:uppercase; box-shadow: 0 4px 0 #4a0c3e; transition:0.2s;" onmousedown="this.style.transform='translateY(2px)'; this.style.boxShadow='none';" onmouseup="this.style.transform='none'; this.style.boxShadow='0 4px 0 #4a0c3e';">📂 ABRIR TUDO</button>
+                    </div>
+                  </div>`;
+          }).join('')}
+            </div>`;
           listaComprador.appendChild(section);
         });
       }
+    } catch (err) {
+      console.error("❌ Erro ao carregar financeiro:", err);
+      if (listaComprador) listaComprador.innerHTML = `<p style='color:#ff8080; text-align:center; padding:20px;'><i class='fa-solid fa-triangle-exclamation'></i> Erro ao carregar dados da nuvem. Verifique sua conexão.</p>`;
     }
   };
 
@@ -6404,8 +6426,12 @@
       try {
         const snap = await docRef.get();
         const atuais = snap.exists ? (snap.data().arquivos || []) : [];
-        await docRef.set({ arquivos: [...atuais, ...novosArquivos] }, { merge: true });
-        console.log("✅ Firestore (Consolidado) atualizado.");
+        const listaSincronizada = [...atuais, ...novosArquivos];
+        await docRef.set({ arquivos: listaSincronizada }, { merge: true });
+
+        // 🔥 Atualiza LocalStorage para visualização instantânea (Cache)
+        localStorage.setItem(idDoc, JSON.stringify(listaSincronizada));
+        console.log("✅ Firestore & LocalStorage sincronizados.");
       } catch (saveErr) {
         console.warn("⚠️ Documento consolidado muito grande ou erro no Firestore. Tentando gravação individual...", saveErr);
 
