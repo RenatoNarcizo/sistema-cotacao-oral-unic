@@ -6199,128 +6199,135 @@
         // B. Dados Firestore (Nuvem - Realtime)
         if (typeof db !== "undefined") {
           const cloudSnap = await db.collection("documentos_cotacao").get();
-        });
-      }
+          cloudSnap.forEach(doc => {
+            const num = doc.id.replace("docs_", "");
+            const data = doc.data();
+            const cloudDocs = data.arquivos || [];
 
-      const itensComDocs = Array.from(itensComDocsMap.values());
-      cacheFinanceiro = itensComDocs; // Armazena para busca rápida
-    }
-
-      /* ===========================
-         RENDERIZAÇÃO REATIVAL (COMPRADOR)
-      =========================== */
-      if (usuario.tipo !== "fornecedor" && listaComprador) {
-      // Preserva o input de busca se ele já existir, senão o innerHTML limpa
-      const filterInput = document.getElementById("inputBuscaFinanceiro");
-      const filterVal = (filtro || (filterInput ? filterInput.value : "")).toLowerCase().trim();
-
-      // 1. Filtragem local
-      const dadosFiltrados = cacheFinanceiro.filter(item => {
-        if (!filterVal) return true;
-        const desc = (item.cotacao.descricao || "").toLowerCase();
-        const num = (String(item.cotacao.numero) || "").toLowerCase();
-        const fornecedores = item.docs.map(d => (d.usuario || "").toLowerCase()).join(" ");
-        return desc.includes(filterVal) || num.includes(filterVal) || fornecedores.includes(filterVal);
-      });
-
-      // Limpa apenas a área de resultados (não o input de busca)
-      // Se quisermos preservar o input, temos que gerenciar o container de resultados
-      let containerResultados = document.getElementById("resultadosFinanceiros");
-      if (!containerResultados) {
-        // Se não existir, criamos (primeira carga)
-        // Mas o replace_file_content anterior já colocou o input.
-        // Vamos apenas garantir que não limpamos o input se ele estiver lá.
-        const inputContainer = document.querySelector("#listaFinanceiroComprador > div:first-child");
-        listaComprador.innerHTML = "";
-        if (inputContainer) listaComprador.appendChild(inputContainer);
-
-        containerResultados = document.createElement("div");
-        containerResultados.id = "resultadosFinanceiros";
-        listaComprador.appendChild(containerResultados);
-      }
-      containerResultados.innerHTML = "";
-
-      if (dadosFiltrados.length === 0) {
-        containerResultados.innerHTML = `<div style='text-align:center; padding:60px; color:#555;'>
-            <i class='fa-solid fa-magnifying-glass fa-3x' style='opacity:0.2; margin-bottom:15px;'></i><br>
-            <span style='font-weight:700;'>NENHUM RESULTADO PARA "${filterVal.toUpperCase()}"</span>
-          </div>`;
-        return;
-      }
-
-      // 2. Agrupamento por Mês
-      const gruposMes = {};
-      dadosFiltrados.forEach(item => {
-        let dataRef = new Date();
-        if (item.cotacao.dataCriacao) {
-          const partes = item.cotacao.dataCriacao.split(/[\/\s,]+/);
-          if (partes.length >= 3) dataRef = new Date(partes[2], partes[1] - 1, partes[0]);
+            if (cloudDocs.length > 0) {
+              const existente = itensComDocsMap.get(num);
+              if (existente) {
+                // Merge sem duplicidade
+                cloudDocs.forEach(cd => {
+                  if (!existente.docs.some(ld => (ld.url && ld.url === cd.url) || (ld.base64 && ld.base64 === cd.base64))) {
+                    existente.docs.push(cd);
+                  }
+                });
+              } else {
+                const cot = cotacoesLocal.find(c => String(c.numero) === String(num)) || { numero: num, descricao: "Documentos Recebidos" };
+                itensComDocsMap.set(num, { cotacao: cot, docs: cloudDocs });
+              }
+            }
+          });
         }
-        const mesAno = dataRef.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
-        const mesFormatado = mesAno.charAt(0).toUpperCase() + mesAno.slice(1);
-        if (!gruposMes[mesFormatado]) gruposMes[mesFormatado] = [];
-        gruposMes[mesFormatado].push(item);
-      });
 
-      // 3. Renderização Final com Estilo Premium (Foto 2)
-      Object.keys(gruposMes).forEach(mes => {
-        const grupo = gruposMes[mes];
-        const section = document.createElement("div");
-        section.style.marginBottom = "25px";
-        section.style.background = "rgba(40, 40, 40, 0.3)";
-        section.style.borderRadius = "12px";
-        section.style.overflow = "hidden";
-        section.style.border = "1px solid #222";
+        const itensComDocs = Array.from(itensComDocsMap.values());
+        cacheFinanceiro = itensComDocs; // Armazena para busca rápida
 
-        section.innerHTML = `
-            <div style="background: rgba(30, 30, 30, 0.8); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #661155;">
-              <h3 style="color: white; margin: 0; font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 10px;">
-                <span style="font-size: 18px;">🗓️</span> Solicitações de ${mes}
-              </h3>
-              <span style="background: #661155; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 800; min-width: 25px; text-align: center;">
-                ${grupo.length}
-              </span>
-            </div>
-            <div style="padding: 15px; display: flex; flex-direction: column; gap: 10px;">
-              ${grupo.map(item => {
-          const qtdNF = item.docs.filter(d => d.tipo === 'Nota Fiscal').length;
-          const qtdBOL = item.docs.filter(d => d.tipo === 'Boleto').length;
-          const resumo = [];
-          if (qtdNF > 0) resumo.push(`<span style="color:#3ab9b6; font-weight:800;">${qtdNF} NF(s)</span>`);
-          if (qtdBOL > 0) resumo.push(`<span style="color:#fbbf24; font-weight:800;">${qtdBOL} Boleto(s)</span>`);
+        /* ===========================
+           RENDERIZAÇÃO REATIVA (COMPRADOR)
+        =========================== */
+        // Preserva o input de busca se ele já existir, senão o innerHTML limpa
+        const filterInput = document.getElementById("inputBuscaFinanceiro");
+        const filterVal = (filtro || (filterInput ? filterInput.value : "")).toLowerCase().trim();
 
-          const nomesUser = [...new Set(item.docs.map(d => d.usuario).filter(Boolean))].join(", ") || "Externo";
+        // 1. Filtragem local
+        const dadosFiltrados = cacheFinanceiro.filter(item => {
+          if (!filterVal) return true;
+          const desc = (item.cotacao.descricao || "").toLowerCase();
+          const num = (String(item.cotacao.numero) || "").toLowerCase();
+          const fornecedores = item.docs.map(d => (d.usuario || "").toLowerCase()).join(" ");
+          return desc.includes(filterVal) || num.includes(filterVal) || fornecedores.includes(filterVal);
+        });
 
-          return `
-                  <div style="display:flex; justify-content:space-between; align-items:center; background:#181818; border:1px solid #333; padding:12px 15px; border-radius:10px; transition:0.3s;" 
-                       onmouseover="this.style.borderColor='#661155'; this.style.background='#222';" 
-                       onmouseout="this.style.borderColor='#333'; this.style.background='#181818';">
-                    <div style="flex:1; cursor: pointer;" onclick="visualizarDocumentos('${item.cotacao.numero}')">
-                      <strong style="color:white; font-size:14px; display:block; margin-bottom:2px; text-transform: uppercase;">${item.cotacao.descricao}</strong>
-                      <span style="color:#777; font-size:11px; letter-spacing:0.5px;">COTAÇÃO #${item.cotacao.numero} • POR: <strong style="color:#999;">${nomesUser.toUpperCase()}</strong></span>
-                    </div>
-                    <div style="flex:0 0 auto; margin: 0 20px; text-align:right;">
-                      <div style="font-size:11px; font-weight:900; letter-spacing:0.5px;">${resumo.join(" + ") || "ARQUIVOS"}</div>
-                    </div>
-                    <div style="flex:0 0 auto;">
-                      <button onclick="visualizarDocumentos('${item.cotacao.numero}')" 
-                              style="background:transparent; color:#3ab9b6; border:1px solid #3ab9b6; padding:6px 15px; border-radius:6px; cursor:pointer; font-size:10px; font-weight:900; text-transform:uppercase; transition: 0.2s;"
-                              onmouseover="this.style.background='#3ab9b6'; this.style.color='#000';"
-                              onmouseout="this.style.background='transparent'; this.style.color='#3ab9b6';">
-                        <i class="fa-solid fa-eye"></i> EXIBIR
-                      </button>
-                    </div>
-                  </div>`;
-        }).join('')}
+        // Limpa apenas a área de resultados
+        let containerResultados = document.getElementById("resultadosFinanceiros");
+        if (!containerResultados) {
+          const inputContainer = document.querySelector("#listaFinanceiroComprador > div:first-child");
+          listaComprador.innerHTML = "";
+          if (inputContainer) listaComprador.appendChild(inputContainer);
+
+          containerResultados = document.createElement("div");
+          containerResultados.id = "resultadosFinanceiros";
+          listaComprador.appendChild(containerResultados);
+        }
+        containerResultados.innerHTML = "";
+
+        if (dadosFiltrados.length === 0) {
+          containerResultados.innerHTML = `<div style='text-align:center; padding:60px; color:#555;'>
+              <i class='fa-solid fa-magnifying-glass fa-3x' style='opacity:0.2; margin-bottom:15px;'></i><br>
+              <span style='font-weight:700;'>NENHUM RESULTADO PARA "${filterVal.toUpperCase()}"</span>
             </div>`;
-        containerResultados.appendChild(section);
-      });
+        } else {
+          // 2. Agrupamento por Mês
+          const gruposMes = {};
+          dadosFiltrados.forEach(item => {
+            let dataRef = new Date();
+            if (item.cotacao.dataCriacao) {
+              const partes = item.cotacao.dataCriacao.split(/[\/\s,]+/);
+              if (partes.length >= 3) dataRef = new Date(partes[2], partes[1] - 1, partes[0]);
+            }
+            const mesAno = dataRef.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+            const mesFormatado = mesAno.charAt(0).toUpperCase() + mesAno.slice(1);
+            if (!gruposMes[mesFormatado]) gruposMes[mesFormatado] = [];
+            gruposMes[mesFormatado].push(item);
+          });
+
+          // 3. Renderização Final com Estilo Premium
+          Object.keys(gruposMes).forEach(mes => {
+            const grupo = gruposMes[mes];
+            const section = document.createElement("div");
+            section.style.marginBottom = "25px";
+            section.style.background = "rgba(40, 40, 40, 0.3)";
+            section.style.borderRadius = "12px";
+            section.style.overflow = "hidden";
+            section.style.border = "1px solid #222";
+
+            section.innerHTML = `
+              <div style="background: rgba(30, 30, 30, 0.8); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #661155;">
+                <h3 style="color: white; margin: 0; font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 10px;">
+                  <span style="font-size: 18px;">🗓️</span> Solicitações de ${mes}
+                </h3>
+                <span style="background: #661155; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 800; min-width: 25px; text-align: center;">
+                  ${grupo.length}
+                </span>
+              </div>
+              <div style="padding: 15px; display: flex; flex-direction: column; gap: 10px;">
+                ${grupo.map(item => {
+              const qtdNF = item.docs.filter(d => d.tipo === 'Nota Fiscal').length;
+              const qtdBOL = item.docs.filter(d => d.tipo === 'Boleto').length;
+              const resumo = [];
+              if (qtdNF > 0) resumo.push(`<span style="color:#3ab9b6; font-weight:800;">${qtdNF} NF(s)</span>`);
+              if (qtdBOL > 0) resumo.push(`<span style="color:#fbbf24; font-weight:800;">${qtdBOL} Boleto(s)</span>`);
+              const nomesUser = [...new Set(item.docs.map(d => d.usuario).filter(Boolean))].join(", ") || "Externo";
+
+              return `
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:#181818; border:1px solid #333; padding:12px 15px; border-radius:10px; transition:0.3s;" 
+                         onmouseover="this.style.borderColor='#661155'; this.style.background='#222';" 
+                         onmouseout="this.style.borderColor='#333'; this.style.background='#181818';">
+                      <div style="flex:1; cursor: pointer;" onclick="visualizarDocumentos('${item.cotacao.numero}')">
+                        <strong style="color:white; font-size:14px; display:block; margin-bottom:2px; text-transform: uppercase;">${item.cotacao.descricao}</strong>
+                        <span style="color:#777; font-size:11px; letter-spacing:0.5px;">COTAÇÃO #${item.cotacao.numero} • POR: <strong style="color:#999;">${nomesUser.toUpperCase()}</strong></span>
+                      </div>
+                      <div style="flex:0 0 auto; margin: 0 20px; text-align:right;">
+                        <div style="font-size:11px; font-weight:900; letter-spacing:0.5px;">${resumo.join(" + ") || "ARQUIVOS"}</div>
+                      </div>
+                      <div style="flex:0 0 auto;">
+                        <button onclick="visualizarDocumentos('${item.cotacao.numero}')" 
+                                style="background:transparent; color:#3ab9b6; border:1px solid #3ab9b6; padding:6px 15px; border-radius:6px; cursor:pointer; font-size:10px; font-weight:900; text-transform:uppercase; transition: 0.2s;"
+                                onmouseover="this.style.background='#3ab9b6'; this.style.color='#000';"
+                                onmouseout="this.style.background='transparent'; this.style.color='#3ab9b6';">
+                          <i class="fa-solid fa-eye"></i> EXIBIR
+                        </button>
+                      </div>
+                    </div>`;
+            }).join('')}
+              </div>`;
+            containerResultados.appendChild(section);
+          });
+        }
+      }
     }
-  }
-    } catch (err) {
-    console.error("❌ Erro ao carregar financeiro:", err);
-    if (listaComprador) listaComprador.innerHTML = `<p style='color:#ff8080; text-align:center; padding:20px;'><i class='fa-solid fa-triangle-exclamation'></i> Erro ao carregar dados da nuvem. Verifique sua conexão.</p>`;
-  }
   };
 
 
