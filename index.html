@@ -6284,8 +6284,11 @@
           });
 
           // 3. Renderização Final com Estilo Premium
-          Object.keys(gruposMes).forEach(mes => {
+          Object.keys(gruposMes).forEach((mes, idx) => {
             const grupo = gruposMes[mes];
+            const sectionId = `financeiro-grupo-${idx}`;
+            const iconId = `financeiro-icon-${idx}`;
+
             const section = document.createElement("div");
             section.style.marginBottom = "25px";
             section.style.background = "rgba(40, 40, 40, 0.3)";
@@ -6294,15 +6297,20 @@
             section.style.border = "1px solid #222";
 
             section.innerHTML = `
-              <div style="background: rgba(30, 30, 30, 0.8); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #661155;">
+              <div onclick="window.toggleSecaoFinanceira('${sectionId}', '${iconId}')" 
+                   style="background: rgba(30, 30, 30, 0.8); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #661155; cursor: pointer; transition: 0.3s;"
+                   onmouseover="this.style.background='rgba(50, 50, 50, 0.8)';"
+                   onmouseout="this.style.background='rgba(30, 30, 30, 0.8)';"
+              >
                 <h3 style="color: white; margin: 0; font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 10px;">
-                  <span style="font-size: 18px;">🗓️</span> Solicitações de ${mes}
+                  <i id="${iconId}" class="fa-solid fa-chevron-down" style="font-size: 12px; color: #661155; transition: 0.3s;"></i>
+                  <span style="font-size: 14px;">🗓️</span> Solicitações de ${mes}
                 </h3>
                 <span style="background: #661155; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 800; min-width: 25px; text-align: center;">
                   ${grupo.length}
                 </span>
               </div>
-              <div style="padding: 15px; display: flex; flex-direction: column; gap: 10px;">
+              <div id="${sectionId}" style="padding: 15px; display: flex; flex-direction: column; gap: 10px;">
                 ${grupo.map(item => {
               const qtdNF = (item.docs || []).filter(d => d.tipo === 'Nota Fiscal').length;
               const qtdBOL = (item.docs || []).filter(d => d.tipo === 'Boleto').length;
@@ -7041,7 +7049,7 @@
               <strong>Cotação #${c.numero}</strong>
             </div>
             <div style="margin-top:4px; font-size:13px; color:#ccc;">
-              ${usuario.tipo === "fornecedor"
+              ${usuario.tipo === 'fornecedor'
             ? "✅ Você respondeu"
             : `Respostas recebidas: <b>${qtdRespostas}</b>`}
               ${c.status === "reanalise"
@@ -8425,6 +8433,20 @@
 </script>
 
 <script>
+  /* ===============================
+     TOGGLE SEÇÃO FINANCEIRA
+  =============================== */
+  window.toggleSecaoFinanceira = function (sectionId, iconId) {
+    const section = document.getElementById(sectionId);
+    const icon = document.getElementById(iconId);
+
+    if (section && icon) {
+      const isHidden = section.style.display === 'none';
+      section.style.display = isHidden ? 'flex' : 'none';
+      icon.classList.toggle('fa-chevron-down', isHidden);
+      icon.classList.toggle('fa-chevron-right', !isHidden);
+    }
+  };
 
   /* abrirAnaliseCotacao foi removida por redundância */
 
@@ -8683,12 +8705,8 @@
     if (listaAnalise) {
       // Recarrega do LOCALSTORAGE (que acabamos de atualizar)
       // Isso evita o round-trip com o Firebase que poderia trazer dados antigos
-      if (typeof carregarCotacoes === 'function') {
-        // Hack: Força leitura local temporariamente se a função suportasse, 
-        // mas como não suporta, vamos confiar que o carregarCotacoes vai ler do Firestore 
-        // e talvez sobrescrever.
-        // MELHOR: Não chamar carregarCotacoes('analise'). O usuário vai mudar de tela.
-      }
+      // Isso evita o round-trip com o Firebase que poderia trazer dados antigos
+      // MELHOR: Não chamar carregarCotacoes('analise'). O usuário vai mudar de tela.
     }
   }
 
@@ -10082,7 +10100,6 @@
                             <h3 style="color:#661155;">📎 Arquivos Anexados</h3>
                             ${renderizarArquivosSolicitacao(sol)}
                             `;
-
 
     // 🔥 Ajusta ações e status por perfil (Normalizado)
     const usuario = JSON.parse(localStorage.getItem("usuarioLogado"));
