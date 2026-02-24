@@ -2288,8 +2288,10 @@
         color:white;
         box-shadow:0 0 15px rgba(102,17,85,0.6);
     ">
-      <h2 style="color:#661155; margin-bottom:20px;">📄 Recebimento de Notas Fiscais e Boletos</h2>
-      <p style="margin-bottom:20px; color:#ccc;">Acompanhe abaixo os documentos enviados pelos fornecedores.</p>
+      <h2 id="tituloFinanceiro" style="color:#661155; margin-bottom:20px;">📄 Recebimento de Notas Fiscais e Boletos
+      </h2>
+      <p id="descFinanceiro" style="margin-bottom:20px; color:#ccc;">Acompanhe abaixo os documentos enviados pelos
+        fornecedores.</p>
 
       <!-- FORMULÁRIO MANUAL -->
       <!-- FORMULÁRIO MANUAL -->
@@ -6106,6 +6108,8 @@
     const usuario = getUsuarioLogado();
     const formManual = document.getElementById("formManualFinanceiro");
     const listaComprador = document.getElementById("listaFinanceiroComprador");
+    const titulo = document.getElementById("tituloFinanceiro");
+    const desc = document.getElementById("descFinanceiro");
 
     // Reset da visão
     if (formManual) formManual.style.display = "none";
@@ -6125,6 +6129,9 @@
          🚚 VISÃO DO FORNECEDOR
       =========================== */
       if (usuario.tipo === "fornecedor") {
+        if (titulo) titulo.innerHTML = "📄 Envio Notas Fiscais e Boletos";
+        if (desc) desc.innerHTML = "Utilize o formulário abaixo para enviar novos documentos.";
+
         if (formManual) {
           formManual.style.display = "block";
           const input = document.getElementById("inputNumeroCotacaoManual");
@@ -6176,6 +6183,9 @@
          🛒 VISÃO DO COMPRADOR
       =========================== */
       else {
+        if (titulo) titulo.innerHTML = "📄 Recebimento de Notas Fiscais e Boletos";
+        if (desc) desc.innerHTML = "Acompanhe abaixo os documentos enviados pelos fornecedores.";
+
         if (!listaComprador) return;
         listaComprador.innerHTML = "";
 
