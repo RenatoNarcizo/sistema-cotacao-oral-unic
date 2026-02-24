@@ -6294,12 +6294,12 @@
               </div>
               <div style="padding: 15px; display: flex; flex-direction: column; gap: 10px;">
                 ${grupo.map(item => {
-              const qtdNF = item.docs.filter(d => d.tipo === 'Nota Fiscal').length;
-              const qtdBOL = item.docs.filter(d => d.tipo === 'Boleto').length;
+              const qtdNF = (item.docs || []).filter(d => d.tipo === 'Nota Fiscal').length;
+              const qtdBOL = (item.docs || []).filter(d => d.tipo === 'Boleto').length;
               const resumo = [];
               if (qtdNF > 0) resumo.push(`<span style="color:#3ab9b6; font-weight:800;">${qtdNF} NF(s)</span>`);
               if (qtdBOL > 0) resumo.push(`<span style="color:#fbbf24; font-weight:800;">${qtdBOL} Boleto(s)</span>`);
-              const nomesUser = [...new Set(item.docs.map(d => d.usuario).filter(Boolean))].join(", ") || "Externo";
+              const nomesUser = [...new Set((item.docs || []).map(d => d.usuario).filter(Boolean))].join(", ") || "Externo";
 
               return `
                     <div style="display:flex; justify-content:space-between; align-items:center; background:#181818; border:1px solid #333; padding:12px 15px; border-radius:10px; transition:0.3s;" 
@@ -8053,7 +8053,7 @@
     const div = document.getElementById("conteudoVerFornecedor");
 
     div.innerHTML = `
-        < div style = "background:#111;border:1px solid #661155;border-radius:10px;padding:20px;color:white;" >
+        <div style="background:#111;border:1px solid #661155;border-radius:10px;padding:20px;color:white;">
       <p><strong>Nome da Empresa:</strong> ${f.nome || "-"}</p>
       <p><strong>CNPJ:</strong> ${f.cnpj || "-"}</p>
       <p><strong>Endereço:</strong>
@@ -8065,7 +8065,7 @@
       <p><strong>E-mails:</strong> ${f.emails || "-"}</p>
       <p><strong>Responsável:</strong> ${f.responsavel || "-"}</p>
       <p><strong>Tipo:</strong> ${f.tipo || "-"}</p>
-    </div >
+    </div>
         `;
 
     document.getElementById("modalVerFornecedor").style.display = "flex";
@@ -10360,7 +10360,7 @@
 
 
   function ajustarAcoesSolicitacaoPorPerfil(isReadOnly = false) {
-    const usuario = JSON.parse(localStorage.getItem("usuarioLogado"));
+    const usuario = getUsuarioLogado();
     const divAcoes = document.getElementById("acoesSolicitacao");
 
     if (!divAcoes || !usuario) return;
@@ -10371,20 +10371,17 @@
     const btnCancelar = document.getElementById("btnCancelarSolicitacaoModal");
     const btnVerMotivo = document.getElementById("btnVerMotivoCancelamentoSolicitacao");
 
-    if (isReadOnly) {
-      divAcoes.style.display = "none";
-      const btnVerMotivo = document.getElementById("btnVerMotivoCancelamentoSolicitacao");
+    // Reset de visibilidade de todos os botões antes de aplicar a lógica
+    [btnCriar, btnSalvar, btnCancelar, btnVerMotivo].forEach(btn => {
+      if (btn) btn.style.display = "none";
+    });
 
-      // Se estiver cancelada, mantém apenas o botão de motivo visível
+    if (isReadOnly) {
       if (sol && sol.status === "cancelada") {
         divAcoes.style.display = "flex";
-        if (btnVerMotivo) {
-          // Esconde os demais e mostra o ver motivo
-          document.getElementById("btnCriarCotacaoSolicitacao").style.display = "none";
-          document.getElementById("btnSalvarStatusModal").style.display = "none";
-          document.getElementById("btnCancelarSolicitacaoModal").style.display = "none";
-          btnVerMotivo.style.display = "flex";
-        }
+        if (btnVerMotivo) btnVerMotivo.style.display = "flex";
+      } else {
+        divAcoes.style.display = "none";
       }
       return;
     }
@@ -10400,6 +10397,7 @@
       } else if (sol && sol.status === "finalizada") {
         // Nada além de ver detalhes
       } else {
+        // Para pendente ou em cotação, mostra as ações principais
         if (btnCriar) btnCriar.style.display = "flex";
         if (btnSalvar) btnSalvar.style.display = "flex";
         if (btnCancelar) btnCancelar.style.display = "flex";
