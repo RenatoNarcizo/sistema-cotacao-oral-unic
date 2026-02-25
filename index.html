@@ -2985,20 +2985,30 @@
       </div>
 
       <!-- LISTA DE MATERIAIS -->
-      <div id="listaMateriais" style="display:none; margin-top:25px;">
-        <h3 style="color:#661155;">📃 Materiais Cadastrados</h3>
-        <table style="width:100%; border-collapse:collapse; margin-top:10px;">
-          <thead>
-            <tr style="background:#661155;">
-              <th>Nome</th>
-              <th>Código</th>
-              <th>Embalagem</th>
-              <th>Qtd/Emb</th>
-              <th style="text-align:center;">Ações</th>
-            </tr>
-          </thead>
-          <tbody id="materiaisTabela" style="background:#1a1a1a;"></tbody>
-        </table>
+      <div id="listaMateriais" style="
+        display:none;
+        margin-top:25px;
+        background: #111;
+        border: 1px solid #661155;
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+      ">
+        <h3 style="color:#661155; text-align:center; margin-bottom:15px;">📋 Materiais Cadastrados</h3>
+        <div style="overflow-x:auto;">
+          <table style="width:100%; border-collapse:collapse;">
+            <thead>
+              <tr style="background:#661155; color:white;">
+                <th style="padding:10px; text-align:left;">Nome</th>
+                <th style="padding:10px; text-align:left;">Código</th>
+                <th style="padding:10px; text-align:left;">Embalagem</th>
+                <th style="padding:10px; text-align:left;">Qtd/Emb</th>
+                <th style="padding:10px; text-align:center;">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="materiaisTabela" style="background:#1a1a1a; color:white;"></tbody>
+          </table>
+        </div>
       </div>
     </div>
   </section>
@@ -8175,40 +8185,41 @@
 
   // Monta a lista de materiais (NÃO controla visibilidade)
   function mostrarListaMateriais() {
-    const listaDiv = document.getElementById("listaMateriais");
     const tabela = document.getElementById("materiaisTabela");
+    const lista = document.getElementById("listaMateriais");
 
-    if (!listaDiv || !tabela) return;
+    if (!tabela || !lista) return;
+
+    tabela.innerHTML = "";
 
     const materiais = JSON.parse(localStorage.getItem("materiais")) || [];
-    tabela.innerHTML = "";
 
     if (materiais.length === 0) {
       tabela.innerHTML = `
-        < tr >
-        <td colspan="5" style="text-align:center;padding:10px;">
-          Nenhum material cadastrado.
-        </td>
-      </tr >
-        `;
+        <tr>
+          <td colspan="5" style="text-align:center; padding:10px;">
+            Nenhum Material Cadastrado ainda.
+          </td>
+        </tr>
+      `;
       return;
     }
 
-    materiais.sort((a, b) => a.nome.localeCompare(b.nome));
+    materiais.sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
 
     materiais.forEach((m, i) => {
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        < td > ${m.nome}</td >
-      <td>${m.codigo || "-"}</td>
-      <td>${m.embalagem || "-"}</td>
-      <td>${m.qtdEmb || "-"}</td>
-      <td style="text-align:center;">
-        <div style="display:flex; justify-content:center; gap:8px;">
-          <button onclick="editarMaterial(${i})">✏️</button>
-          <button onclick="excluirMaterial(${i})">🗑️</button>
-        </div>
-      </td>
+        <td style="padding:10px; border-bottom:1px solid #333;">${m.nome}</td>
+        <td style="padding:10px; border-bottom:1px solid #333;">${m.codigo || "-"}</td>
+        <td style="padding:10px; border-bottom:1px solid #333;">${m.embalagem || "-"}</td>
+        <td style="padding:10px; border-bottom:1px solid #333;">${m.qtdEmb || "-"}</td>
+        <td style="padding:10px; border-bottom:1px solid #333; text-align:center;">
+          <div style="display:flex; justify-content:center; gap:8px;">
+            <button onclick="editarMaterial(${i})" style="background:transparent; border:none; color:#3ab9b6; cursor:pointer;" title="Editar"><i class="fa-solid fa-pen"></i></button>
+            <button onclick="excluirMaterial(${i})" style="background:transparent; border:none; color:#ff4444; cursor:pointer;" title="Excluir"><i class="fa-solid fa-trash"></i></button>
+          </div>
+        </td>
       `;
       tabela.appendChild(tr);
     });
@@ -8217,18 +8228,17 @@
 
   // Abre a lista SOMENTE quando clicar em "Lista de Materiais"
   function abrirListaMateriais() {
-    const listaDiv = document.getElementById("listaMateriais");
-    if (!listaDiv) return;
+    const lista = document.getElementById("listaMateriais");
+    if (!lista) return;
 
-    // se estiver aberta, fecha
-    if (listaDiv.style.display === "block") {
-      listaDiv.style.display = "none";
-      return;
+    const visivel = window.getComputedStyle(lista).display !== "none";
+
+    if (visivel) {
+      lista.style.display = "none";
+    } else {
+      mostrarListaMateriais();
+      lista.style.display = "block";
     }
-
-    // se estiver fechada, monta e abre
-    mostrarListaMateriais();
-    listaDiv.style.display = "block";
   }
 
   function salvarMaterial() {
@@ -8265,7 +8275,7 @@
 
     // 🔁 atualiza lista SOMENTE se estiver aberta
     const lista = document.getElementById("listaMateriais");
-    if (lista && lista.style.display === "block") {
+    if (lista && window.getComputedStyle(lista).display !== "none") {
       mostrarListaMateriais();
     }
   }
