@@ -8051,15 +8051,15 @@
         const tr = document.createElement("tr");
 
         tr.innerHTML = `
-        <td>${f.nome || "-"}</td>
-        <td>${f.endereco || f.logradouro || ""} ${f.numero || ""}</td>
-        <td>${f.whats || f.whatsapp || "-"}</td>
-        <td>${f.responsavel || "-"}</td>
-        <td style="text-align:center;">
+        <td style="padding:10px; border-bottom:1px solid #333;">${f.nome || "-"}</td>
+        <td style="padding:10px; border-bottom:1px solid #333;">${f.endereco || f.logradouro || ""} ${f.numero || ""}</td>
+        <td style="padding:10px; border-bottom:1px solid #333;">${f.whats || f.whatsapp || "-"}</td>
+        <td style="padding:10px; border-bottom:1px solid #333;">${f.responsavel || "-"}</td>
+        <td style="padding:10px; border-bottom:1px solid #333; text-align:center;">
           <div style="display:flex; justify-content:center; gap:8px;">
-            <button onclick="verFichaFornecedor(${index})" title="Ver ficha">👁️</button>
-            <button onclick="editarFornecedor(${index})" title="Editar">✏️</button>
-            <button onclick='window.excluirFornecedor(${index})' title="Excluir">🗑️</button>
+            <button class="btn-acao-premium" onclick="verFichaFornecedor(${index})" title="Ver Ficha"><i class="fa-solid fa-eye"></i></button>
+            <button class="btn-acao-premium" onclick="editarFornecedor(${index})" title="Editar"><i class="fa-solid fa-pen"></i></button>
+            <button class="btn-acao-premium" onclick='window.excluirFornecedor(${index})' style="background:#500a40;" title="Excluir"><i class="fa-solid fa-trash"></i></button>
           </div>
         </td>
       `;
@@ -8188,6 +8188,36 @@
 
   window.fecharModalVerFornecedor = function () {
     document.getElementById("modalVerFornecedor").style.display = "none";
+  };
+
+  /* ===============================
+     👁️ VER FICHA DO SERVIÇO
+  =============================== */
+
+  window.verFichaServico = function (index) {
+    const servicos = JSON.parse(localStorage.getItem("servicos")) || [];
+    const s = servicos[index];
+    if (!s) return;
+
+    const div = document.getElementById("conteudoVerServico");
+    if (!div) return;
+
+    div.innerHTML = `
+      <div style="background:#111; border:1px solid #661155; border-radius:10px; padding:20px; color:white;">
+        <p><strong>🛠️ Nome do Serviço:</strong> ${s.nome || "-"}</p>
+        <p><strong>🔢 Código:</strong> ${s.codigo || "-"}</p>
+        <p><strong>🏷️ Categoria:</strong> ${s.categoria || "-"}</p>
+        <p><strong>📝 Descrição:</strong> ${s.descricao || "-"}</p>
+        <p><strong>💰 Preço de Referência:</strong> ${s.preco ? "R$ " + s.preco : "-"}</p>
+      </div>
+    `;
+
+    document.getElementById("modalVerServico").style.display = "flex";
+  };
+
+  window.fecharModalVerServico = function () {
+    const modal = document.getElementById("modalVerServico");
+    if (modal) modal.style.display = "none";
   };
 
   /* ===============================
@@ -8442,17 +8472,18 @@
     servicos.forEach((s, i) => {
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        < td > ${s.nome}</td >
-      <td>${s.codigo || "-"}</td>
-      <td>${s.categoria}</td>
-      <td>${s.preco || "-"}</td>
-      <td style="text-align:center;">
-        <div style="display:flex; justify-content:center; gap:8px;">
-          <button onclick="editarServico(${i})">✏️</button>
-          <button onclick="excluirServico(${i})">🗑️</button>
-        </div>
-      </td>
-    `;
+        <td style="padding:10px; border-bottom:1px solid #333;">${s.nome}</td>
+        <td style="padding:10px; border-bottom:1px solid #333;">${s.codigo || "-"}</td>
+        <td style="padding:10px; border-bottom:1px solid #333;">${s.categoria}</td>
+        <td style="padding:10px; border-bottom:1px solid #333;">${s.preco || "-"}</td>
+        <td style="padding:10px; border-bottom:1px solid #333; text-align:center;">
+          <div style="display:flex; justify-content:center; gap:8px;">
+            <button class="btn-acao-premium" onclick="verFichaServico(${i})" title="Ver Ficha"><i class="fa-solid fa-eye"></i></button>
+            <button class="btn-acao-premium" onclick="editarServico(${i})" title="Editar"><i class="fa-solid fa-pen"></i></button>
+            <button class="btn-acao-premium" onclick="excluirServico(${i})" style="background:#500a40;" title="Excluir"><i class="fa-solid fa-trash"></i></button>
+          </div>
+        </td>
+      `;
       tabela.appendChild(tr);
     });
   }
@@ -12594,6 +12625,32 @@
   }
 </style>
 <script src="premium_render.js?v=10022"></script>
+
+<!-- 👁️ MODAL – DETALHES DO FORNECEDOR -->
+<div id="modalVerFornecedor" class="modal">
+  <div class="modal-content" style="max-width: 500px;">
+    <button class="close-btn" onclick="fecharModalVerFornecedor()">&times;</button>
+    <h2 style="color: #661155; text-align: center; margin-bottom: 20px;">🏢 Ficha do Fornecedor</h2>
+    <div id="conteudoVerFornecedor"></div>
+    <div style="margin-top: 20px; text-align: center;">
+      <button onclick="fecharModalVerFornecedor()"
+        style="width: 150px; background: #333; border: 1px solid #661155; color: white;">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- 👁️ MODAL – DETALHES DO SERVIÇO -->
+<div id="modalVerServico" class="modal">
+  <div class="modal-content" style="max-width: 500px;">
+    <button class="close-btn" onclick="fecharModalVerServico()">&times;</button>
+    <h2 style="color: #661155; text-align: center; margin-bottom: 20px;">🛠️ Detalhes do Serviço</h2>
+    <div id="conteudoVerServico"></div>
+    <div style="margin-top: 20px; text-align: center;">
+      <button onclick="fecharModalVerServico()"
+        style="width: 150px; background: #333; border: 1px solid #661155; color: white;">Fechar</button>
+    </div>
+  </div>
+</div>
 
 <!-- 👁️ MODAL – DETALHES DO MATERIAL -->
 <div id="modalVerMaterial" class="modal">
