@@ -148,7 +148,6 @@
       background: #882277;
     }
 
-    /* 🎨 BOTÕES PREMIUM (ÍCONE + TEXTO) */
     .btn-acao-premium {
       display: inline-flex;
       align-items: center;
@@ -172,82 +171,6 @@
 
     .btn-acao-premium:hover {
       background: #882277;
-      transform: translateY(-2px);
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-    }
-
-    .btn-acao-premium i {
-      font-size: 14px;
-    }
-
-    /* 📝 FORM GRID - PADRONIZAÇÃO DE LAYOUT */
-    .form-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      column-gap: 15px;
-      row-gap: 18px;
-      margin-top: 15px;
-    }
-
-    .form-grid>div {
-      display: flex;
-      flex-direction: column;
-    }
-
-    .form-grid .full-width {
-      grid-column: 1 / span 2;
-    }
-
-    .form-grid label {
-      font-size: 13px;
-      color: #ccc;
-      margin-bottom: 5px;
-      font-weight: 600;
-    }
-
-    .form-grid input,
-    .form-grid select,
-    .form-grid textarea {
-      width: 100%;
-      background: #1a1a1a;
-      border: 1px solid #661155;
-      border-radius: 5px;
-      color: white;
-      padding: 10px;
-      box-sizing: border-box;
-      outline: none;
-    }
-
-    .form-grid input:focus,
-    .form-grid select:focus {
-      border-color: #3ab9b6;
-      box-shadow: 0 0 5px rgba(58, 185, 182, 0.3);
-    }
-
-    /* 💎 BOTÕES DE AÇÃO PREMIUM */
-    .btn-acao-premium {
-      background: #661155;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      width: 38px;
-      height: 38px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: transform 0.2s, background 0.2s;
-      font-size: 16px;
-      margin: 0;
-    }
-
-    .btn-acao-premium:hover {
-      background: #882277;
-      transform: scale(1.1);
-    }
-
-    .btn-acao-premium i {
-      pointer-events: none;
     }
 
     .btn-outline {
@@ -2390,10 +2313,8 @@
         color:white;
         box-shadow:0 0 15px rgba(102,17,85,0.6);
     ">
-      <h2 id="tituloFinanceiro" style="color:#661155; margin-bottom:20px;">📄 Recebimento de Notas Fiscais e Boletos
-      </h2>
-      <p id="descFinanceiro" style="margin-bottom:20px; color:#ccc;">Acompanhe abaixo os documentos enviados pelos
-        fornecedores.</p>
+      <h2 style="color:#661155; margin-bottom:20px;">📄 Recebimento de Notas Fiscais e Boletos</h2>
+      <p style="margin-bottom:20px; color:#ccc;">Acompanhe abaixo os documentos enviados pelos fornecedores.</p>
 
       <!-- FORMULÁRIO MANUAL -->
       <!-- FORMULÁRIO MANUAL -->
@@ -2416,11 +2337,10 @@
         </div>
 
         <!-- Área de Feedback e Envio -->
-        <div id="feedbackUploadManual"
-          style="margin-top: 20px; display: none; text-align: left; max-width: 500px; margin-left: auto; margin-right: auto;">
-          <div id="msgArquivoSelecionado"
-            style="color: #0dcaf0; margin-bottom: 10px; font-size:14px; background:#1a1a1a; padding:15px; border-radius:8px; border:1px dashed #661155; width: 100%; box-sizing: border-box;">
-          </div>
+        <div id="feedbackUploadManual" style="margin-top: 20px; display: none;">
+          <p id="msgArquivoSelecionado"
+            style="color: #0dcaf0; margin-bottom: 10px; font-size:14px; background:#333; padding:10px; border-radius:5px; border:1px dashed #661155; display:inline-block;">
+          </p>
           <div style="margin-top:10px;">
             <button onclick="enviarArquivoManual()"
               style="padding: 10px 25px; background: #00ff99; color: #111; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px;">
@@ -2436,16 +2356,6 @@
 
       <!-- LISTA DO COMPRADOR (HISTÓRICO) -->
       <div id="listaFinanceiroComprador" style="display:none; margin-top:20px;">
-        <!-- Filtro de Busca -->
-        <div style="margin-bottom: 25px; position: relative; width: 100%;">
-          <input type="text" id="inputBuscaFinanceiro" onkeyup="carregarFinanceiroFornecedor(this.value)"
-            placeholder="Filtrar por cotação, fornecedor ou item..."
-            style="width: 100%; padding: 15px 45px 15px 20px; background: #111; color: white; border: 1px solid #333; border-radius: 12px; font-size: 14px; box-sizing: border-box; outline: none; border:1px solid #661155; transition: 0.3s; box-shadow: 0 4px 15px rgba(0,0,0,0.3);"
-            onfocus="this.style.borderColor='#3ab9b6'; this.style.boxShadow='0 0 10px rgba(58,185,182,0.3)'"
-            onblur="this.style.borderColor='#661155'; this.style.boxShadow='0 4px 15px rgba(0,0,0,0.3)'">
-          <i class="fa-solid fa-magnifying-glass" style="position: absolute; right: 20px; top: 18px; color: #555;"></i>
-        </div>
-
         <!-- JS Preenche com cards de cotações que têm documentos -->
       </div>
 
@@ -2836,74 +2746,92 @@
       <div id="conteudoFornManual">
         <h3 style="color:#ccc; margin-bottom:15px;">Novo Fornecedor Interno</h3>
 
-        <!-- FORMULÁRIO PADRONIZADO -->
-        <div class="form-grid">
+        <!-- FORMULÁRIO -->
+        <div style="
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      column-gap:15px;
+      row-gap:22px;
+      margin-top:15px;
+    ">
 
           <!-- Nome / CNPJ -->
-          <div>
+          <div style="margin-right:8px;">
             <label>Nome da Empresa</label>
-            <input id="fornNome" type="text" placeholder="Ex: Oral Unic">
+            <input id="fornNome" type="text"
+              style="width:100%;background:#1a1a1a;border:1px solid #661155;border-radius:5px;color:white;padding:8px;">
           </div>
 
-          <div>
+          <div style="margin-left:8px;">
             <label>CNPJ</label>
-            <input id="fornCnpj" type="text" placeholder="00.000.000/0000-00">
+            <input id="fornCnpj" type="text"
+              style="width:100%;background:#1a1a1a;border:1px solid #661155;border-radius:5px;color:white;padding:8px;">
           </div>
 
           <!-- Logradouro -->
-          <div class="full-width">
-            <label>Logradouro / Endereço Completo</label>
-            <input id="fornLogradouro" type="text" placeholder="Rua, Avenida...">
+          <div style="grid-column:1 / span 2;">
+            <label>Logradouro</label>
+            <input id="fornLogradouro" type="text"
+              style="width:100%;background:#1a1a1a;border:1px solid #661155;border-radius:5px;color:white;padding:8px;">
           </div>
 
           <!-- Número / Bairro -->
-          <div>
+          <div style="margin-right:8px;">
             <label>Número</label>
-            <input id="fornNumero" type="text" placeholder="Ex: 123">
+            <input id="fornNumero" type="text"
+              style="width:100%;background:#1a1a1a;border:1px solid #661155;border-radius:5px;color:white;padding:8px;">
           </div>
 
-          <div>
+          <div style="margin-left:8px;">
             <label>Bairro</label>
-            <input id="fornBairro" type="text" placeholder="Ex: Centro">
+            <input id="fornBairro" type="text"
+              style="width:100%;background:#1a1a1a;border:1px solid #661155;border-radius:5px;color:white;padding:8px;">
           </div>
 
           <!-- Cidade / CEP -->
-          <div>
+          <div style="margin-right:8px;">
             <label>Cidade</label>
-            <input id="fornCidade" type="text" placeholder="Ex: São Paulo">
+            <input id="fornCidade" type="text"
+              style="width:100%;background:#1a1a1a;border:1px solid #661155;border-radius:5px;color:white;padding:8px;">
           </div>
 
-          <div>
+          <div style="margin-left:8px;">
             <label>CEP</label>
-            <input id="fornCep" type="text" placeholder="00000-000">
+            <input id="fornCep" type="text"
+              style="width:100%;background:#1a1a1a;border:1px solid #661155;border-radius:5px;color:white;padding:8px;">
           </div>
 
           <!-- Telefone / WhatsApp -->
-          <div>
+          <div style="margin-right:8px;">
             <label>Telefone</label>
-            <input id="fornTelefone" type="text" placeholder="(00) 0000-0000">
+            <input id="fornTelefone" type="text"
+              style="width:100%;background:#1a1a1a;border:1px solid #661155;border-radius:5px;color:white;padding:8px;">
           </div>
 
-          <div>
+          <div style="margin-left:8px;">
             <label>WhatsApp</label>
-            <input id="fornWhats" type="text" placeholder="(00) 90000-0000">
+            <input id="fornWhats" type="text"
+              style="width:100%;background:#1a1a1a;border:1px solid #661155;border-radius:5px;color:white;padding:8px;">
           </div>
 
           <!-- Emails -->
-          <div class="full-width">
-            <label>E-mails (Separe por vírgula se houver mais de um)</label>
-            <input id="fornEmails" type="text" placeholder="vendas@fornecedor.com.br">
+          <div style="grid-column:1 / span 2;">
+            <label>E-mails</label>
+            <input id="fornEmails" type="text"
+              style="width:100%;background:#1a1a1a;border:1px solid #661155;border-radius:5px;color:white;padding:8px;">
           </div>
 
           <!-- Responsável / Tipo -->
-          <div>
+          <div style="margin-right:8px;">
             <label>Responsável pela Cotação</label>
-            <input id="fornResponsavel" type="text" placeholder="Ex: João Silva">
+            <input id="fornResponsavel" type="text"
+              style="width:100%;background:#1a1a1a;border:1px solid #661155;border-radius:5px;color:white;padding:8px;">
           </div>
 
-          <div>
+          <div style="margin-left:8px;">
             <label>Tipo de Produto / Serviço</label>
-            <select id="fornTipo">
+            <select id="fornTipo"
+              style="width:100%;background:#1a1a1a;border:1px solid #661155;border-radius:5px;color:white;padding:8px;">
               <option value="">Selecione...</option>
               <option>Materiais Elétricos</option>
               <option>Construção Civil</option>
@@ -3030,19 +2958,19 @@
         </div>
 
         <div>
-          <label>Código do Produto (opcional)</label>
+          <label>Código do Produto</label>
           <input type="text" id="matCodigo" placeholder="Ex: PRF-001" style="width:100%; background:#1a1a1a; border:1px solid #661155;
                  border-radius:5px; color:white; padding:8px;">
         </div>
 
         <div>
-          <label>Embalagem (opcional)</label>
+          <label>Embalagem</label>
           <input type="text" id="matEmbalagem" placeholder="Ex: Caixa" style="width:100%; background:#1a1a1a; border:1px solid #661155;
                  border-radius:5px; color:white; padding:8px;">
         </div>
 
         <div>
-          <label>Qtd / Embalagem (opcional)</label>
+          <label>Qtd / Embalagem</label>
           <input type="number" id="matQtdEmb" placeholder="Ex: 100" style="width:100%; background:#1a1a1a; border:1px solid #661155;
                  border-radius:5px; color:white; padding:8px;">
         </div>
@@ -3069,30 +2997,20 @@
       </div>
 
       <!-- LISTA DE MATERIAIS -->
-      <div id="listaMateriais" style="
-        display:none;
-        margin-top:25px;
-        background: #111;
-        border: 1px solid #661155;
-        border-radius: 10px;
-        padding: 20px;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-      ">
-        <h3 style="color:#661155; text-align:center; margin-bottom:15px;">📋 Materiais Cadastrados</h3>
-        <div style="overflow-x:auto;">
-          <table style="width:100%; border-collapse:collapse;">
-            <thead>
-              <tr style="background:#661155; color:white;">
-                <th style="padding:10px; text-align:left;">Nome</th>
-                <th style="padding:10px; text-align:left;">Código</th>
-                <th style="padding:10px; text-align:left;">Embalagem</th>
-                <th style="padding:10px; text-align:left;">Qtd/Emb</th>
-                <th style="padding:10px; text-align:center;">Ações</th>
-              </tr>
-            </thead>
-            <tbody id="materiaisTabela" style="background:#1a1a1a; color:white;"></tbody>
-          </table>
-        </div>
+      <div id="listaMateriais" style="display:none; margin-top:25px;">
+        <h3 style="color:#661155;">📃 Materiais Cadastrados</h3>
+        <table style="width:100%; border-collapse:collapse; margin-top:10px;">
+          <thead>
+            <tr style="background:#661155;">
+              <th>Nome</th>
+              <th>Código</th>
+              <th>Embalagem</th>
+              <th>Qtd/Emb</th>
+              <th style="text-align:center;">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="materiaisTabela" style="background:#1a1a1a;"></tbody>
+        </table>
       </div>
     </div>
   </section>
@@ -3359,15 +3277,18 @@
               <th style="text-align: center;">Marca</th>
               <th style="text-align: center;">Quantidade</th>
               <th style="text-align: center;">Preço Unitário (R$)</th>
+            </tr>
           </thead>
+
           <tbody id="tabelaResponderCorpo" style="background:#1a1a1a;"></tbody>
         </table>
       </div>
+
       <!-- 📎 Anexo -->
       <!-- 📎 Anexo (CONTAINER REINICIÁVEL) -->
       <div id="containerAnexoResponder" style="margin-top:15px;">
         <label>Anexar Orçamento (PDF ou imagem):</label>
-        <input type="file" id="respAnexo" accept=".pdf,image/*" multiple style="
+        <input type="file" id="respAnexo" accept=".pdf,image/*" style="
           width:100%;
           background:#1a1a1a;
           border:1px solid #661155;
@@ -3937,101 +3858,20 @@
         <!-- conteúdo gerado via JS -->
       </div>
 
-      <!-- 🔽 BOTÕES DE AÇÃO -->
-      <div id="acoesSolicitacao"
-        style="text-align:center; margin-top:25px; display:none; gap:10px; justify-content:center;">
-        <button id="btnCriarCotacaoSolicitacao" onclick="criarCotacaoDaSolicitacao()" style="
+      <!-- 🔽 BOTÃO NOVO -->
+      <div id="acoesSolicitacao" style="text-align:center; margin-top:25px; display:none;">
+        <button onclick="criarCotacaoDaSolicitacao()" style="
           background:#661155;
           color:white;
-          padding:12px 25px;
+          padding:12px 30px;
           border:none;
           border-radius:8px;
           cursor:pointer;
-          display:flex;
-          align-items:center;
-          gap:8px;
         ">
-          📊 Criar Cotação
-        </button>
-        <button id="btnSalvarStatusModal" onclick="salvarStatusConfirmado()" style="
-          background:#198754;
-          color:white;
-          padding:12px 25px;
-          border:none;
-          border-radius:8px;
-          cursor:pointer;
-          display:flex;
-          align-items:center;
-          gap:8px;
-        ">
-          💾 Salvar
-        </button>
-        <button id="btnCancelarSolicitacaoModal" onclick="cancelarSolicitacaoComMotivo()" style="
-          background:#dc3545;
-          color:white;
-          padding:12px 25px;
-          border:none;
-          border-radius:8px;
-          cursor:pointer;
-          display:flex;
-          align-items:center;
-          gap:8px;
-        ">
-          ❌ Cancelar
-        </button>
-        <button id="btnVerMotivoCancelamentoSolicitacao" onclick="mostrarMotivoCancelamentoSolicitacao()" style="
-          background:#333;
-          color:white;
-          padding:12px 25px;
-          border:1px solid #661155;
-          border-radius:8px;
-          cursor:pointer;
-          display:none;
-          align-items:center;
-          gap:8px;
-        ">
-          📄 Ver Motivo
+          📊 Criar Cotação a partir desta Solicitação
         </button>
       </div>
 
-    </div>
-  </div>
-
-  <!-- ❌ MODAL – DETALHES DO CANCELAMENTO DA SOLICITAÇÃO -->
-  <div id="modalMotivoCancelamentoSolicitacao" class="modal"
-    style="display:none; align-items:center; justify-content:center;">
-    <div class="modal-content"
-      style="max-width:500px; background:#111; border:1px solid #dc3545; box-shadow:0 0 20px rgba(220, 53, 69, 0.4); position:relative; padding:25px;">
-
-
-      <div style="text-align:center; margin-bottom:20px;">
-        <span style="font-size:40px;">❌</span>
-        <h2 style="color:#dc3545; margin:10px 0 5px 0;">Detalhes do Cancelamento</h2>
-        <p style="color:#aaa; font-size:14px;">Esta solicitação foi descontinuada</p>
-      </div>
-
-      <div style="background:#1a1a1a; padding:15px; border-radius:8px; border:1px solid #333; margin-bottom:15px;">
-        <div style="margin-bottom:12px;">
-          <label style="color:#dc3545; font-size:12px; font-weight:bold; text-transform:uppercase;">📅 Data e
-            Hora</label>
-          <div id="cancelData" style="color:white; font-size:15px; margin-top:4px;"></div>
-        </div>
-        <div style="margin-bottom:12px;">
-          <label style="color:#dc3545; font-size:12px; font-weight:bold; text-transform:uppercase;">👤 Cancelado
-            por</label>
-          <div id="cancelAutor" style="color:white; font-size:15px; margin-top:4px;"></div>
-        </div>
-        <div>
-          <label style="color:#dc3545; font-size:12px; font-weight:bold; text-transform:uppercase;">📝 Motivo</label>
-          <div id="cancelMotivo"
-            style="color:white; font-size:15px; margin-top:4px; white-space:pre-wrap; line-height:1.4;"></div>
-        </div>
-      </div>
-
-      <button onclick="document.getElementById('modalMotivoCancelamentoSolicitacao').style.display='none'"
-        style="width:100%; background:#333; color:white; border:1px solid #444; padding:10px; border-radius:6px; cursor:pointer; font-weight:bold;">
-        Fechar
-      </button>
     </div>
   </div>
 
@@ -4325,7 +4165,7 @@
           email: "atendpro.suprimentos@gmail.com",
           senha: "123",
           tipo: "fornecedor",
-          nome: "Atende Pro"
+          nome: "Renato Narcizo"
         },
         {
           email: "gerencia.cgms@gmail.com",
@@ -4513,10 +4353,6 @@
       console.warn("Função sync manual não encontrada");
     }
 
-    if (typeof sincronizarMateriaisEServicos === "function") {
-      sincronizarMateriaisEServicos();
-    }
-
     console.log("✅ Login realizado com sucesso para:", usuario.email);
   }
 
@@ -4568,16 +4404,11 @@
       try {
         localStorage.setItem("cotacoes", JSON.stringify(listaFinal));
       } catch (e) {
-        console.warn("⚠️ LocalStorage cheio ao salvar lista de cotações.", e);
+        console.warn("⚠️ LocalStorage cheio ao salvar lista de cotações. Operando sem cache persistente.", e);
       }
       console.log(`✅ Sync Completo: ${listaFinal.length} cotações recuperadas.`);
 
-      // Atualiza Dashboard Comprador
-      if (typeof carregarCotacoes === "function") {
-        setTimeout(() => carregarCotacoes(), 500);
-      }
-
-      // Atualiza UI Fornecedor
+      // Atualiza UI
       if (typeof renderizarListaFornecedor === "function") {
         try {
           const u = JSON.parse(sessionStorage.getItem("usuario_logado"));
@@ -4588,11 +4419,13 @@
           }
         } catch (e) { }
       }
+
+      // Atualiza Dashboard Comprador
+      if (typeof carregarCotacoes === "function") {
+        setTimeout(() => carregarCotacoes(), 500);
+      }
     }
-    console.log("✅ Sincronização Unificada Completa!");
-  };
-
-
+  }
 
   /* ======================================================
       🔐 FUNÇÃO: CONFIRMAR TROCA DE SENHA (FIREBASE)
@@ -5608,9 +5441,7 @@
      COTAÇÃO MANUAL
   ====================================================== */
   function abrirCotacaoManual() {
-    const contextoSolicitacao = window.cotacaoOrigemSolicitacao; // ⚡ Preserva contexto
     limparFormulariosCotacao();
-    window.cotacaoOrigemSolicitacao = contextoSolicitacao; // ⚡ Restaura contexto
     fecharModal();
     fecharTodasAsSecoes();
 
@@ -5646,15 +5477,15 @@
       if (Array.isArray(sol.itens)) {
         sol.itens.forEach(item => {
           adicionarLinhaManual(
-            item.nome || item.produto || item.item || "",
+            item.nome || "",
             item.marca || "",
-            item.quantidade || item.qtd || ""
+            item.quantidade || ""
           );
         });
       }
 
-      // 🔒 AJUSTE: NÃO limpa aqui, preserva para o momento da publicação!
-      console.log("🔗 Vínculo com Solicitação preservado para publicação.");
+      // 🔒 limpa para não repetir
+      window.cotacaoOrigemSolicitacao = null;
     }
 
   }
@@ -6135,7 +5966,132 @@
     input.click();
   };
 
-  // [DELETADO] visualizarDocumentos movida para seção premium no final do script.
+  /* ======================================================
+     📂 VISUALIZAR DOCUMENTOS (COM MODAL MELHORADO)
+  ====================================================== */
+  window.visualizarDocumentos = async function (numeroCotacao, filtroUsuario = null) {
+    if (!numeroCotacao || String(numeroCotacao).trim() === "" || String(numeroCotacao).toLowerCase() === "undefined") {
+      return alert("⚠️ Número da cotação inválido para visualização.");
+    }
+    const numClean = String(numeroCotacao).trim();
+
+    console.log("🔍 [DOCS] Iniciando visualização:", numClean, "| Filtro Fornecedor:", filtroUsuario);
+
+    const idDoc = `docs_${numClean}`;
+    let arquivos = [];
+
+    try {
+      // 1. Busca documentos na coleção 'documentos_cotacao' (UPLOAD MANUAL / FINANCEIRO)
+      const snapshot = await db.collection("documentos_cotacao").doc(idDoc).get();
+      if (snapshot.exists) {
+        arquivos = snapshot.data().arquivos || [];
+      } else {
+        // Fallback local
+        const localDocs = await dbDocs.buscar(idDoc);
+        arquivos = localDocs || JSON.parse(localStorage.getItem(idDoc)) || [];
+      }
+
+      // 2. Busca documentos da COTAÇÃO (Anexos Originais do Comprador + Respostas)
+      const todasCotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
+      const cotacao = todasCotacoes.find(c => String(c.numero) === numClean || String(c.id) === numClean);
+
+      if (cotacao) {
+        // A. Anexos Diretos (Origem/Comprador)
+        if (Array.isArray(cotacao.anexos)) {
+          cotacao.anexos.forEach(anexo => {
+            const jaExiste = arquivos.some(a => a.nome === anexo.nome && a.tamanho === anexo.tamanho);
+            if (!jaExiste) {
+              arquivos.push({
+                nome: anexo.nome,
+                tipo: "Anexo Cotação",
+                data: cotacao.dataCriacao || new Date().toLocaleDateString(),
+                tamanho: anexo.tamanho || "desc.",
+                usuario: "Comprador (Origem)",
+                base64: anexo.base64,
+                url: anexo.url
+              });
+            }
+          });
+        }
+
+        // B. Anexos das Respostas de Fornecedores (Novo Fallback Base64/Direct)
+        if (Array.isArray(cotacao.respostasFornecedores)) {
+          cotacao.respostasFornecedores.forEach(resp => {
+            const anexoResp = resp.anexo || (Array.isArray(resp.anexos) ? resp.anexos[0] : null);
+            if (anexoResp && (anexoResp.url || anexoResp.base64)) {
+              const jaExiste = arquivos.some(a => (anexoResp.url && a.url === anexoResp.url) || (anexoResp.base64 && a.base64 === anexoResp.base64));
+              if (!jaExiste) {
+                arquivos.push({
+                  nome: anexoResp.nome || "Anexo Resposta",
+                  tipo: "Resposta Fornecedor",
+                  data: resp.data || new Date().toLocaleDateString(),
+                  tamanho: anexoResp.tamanho || "desc.",
+                  usuario: resp.fornecedor || resp.email,
+                  base64: anexoResp.base64,
+                  url: anexoResp.url
+                });
+              }
+            }
+          });
+        }
+      }
+
+      // 3. FILTRAGEM RIGOROSA (Isolamento de Dados)
+      let arquivosExibir = [...arquivos];
+      if (filtroUsuario) {
+        const filtroClean = String(filtroUsuario).toLowerCase().trim();
+        arquivosExibir = arquivos.filter(a => {
+          const usuarioDoc = String(a.usuario || "").toLowerCase().trim();
+          // Se for anexo do comprador (Origem), todos veem. Se for de fornecedor, filtra pelo nome/email.
+          return usuarioDoc.includes("comprador") || usuarioDoc === filtroClean || (a.tipo === "Anexo Cotação");
+        });
+      }
+
+      if (arquivosExibir.length === 0) {
+        alert("📭 Nenhum documento encontrado" + (filtroUsuario ? " para este fornecedor." : "."));
+        return;
+      }
+
+      // 4. Interface (Modal Dinâmico)
+      let modalDocs = document.getElementById('modalDocsFinanceiro');
+      if (!modalDocs) {
+        modalDocs = document.createElement('div');
+        modalDocs.id = 'modalDocsFinanceiro';
+        modalDocs.className = 'modal';
+        modalDocs.style.zIndex = '2147483647';
+        modalDocs.innerHTML = `
+          <div class="modal-content" style="max-width:500px;">
+             <span class="close-btn" onclick="document.getElementById('modalDocsFinanceiro').style.display='none'">&times;</span>
+             <h3 style="color:#661155; margin-bottom:15px;">📂 Documentos da Cotação</h3>
+             <div id="listaDocsContent" style="max-height:400px; overflow-y:auto;"></div>
+          </div>
+        `;
+        document.body.appendChild(modalDocs);
+      }
+
+      const listaDiv = modalDocs.querySelector('#listaDocsContent');
+      listaDiv.innerHTML = arquivosExibir.map((a) => {
+        const idxOriginal = arquivos.indexOf(a);
+        return `
+          <div style="background:#1a1a1a; padding:12px; margin-bottom:8px; border-radius:8px; border:1px solid #333; display:flex; justify-content:space-between; align-items:center;">
+             <div style="flex:1; padding-right:10px;">
+                <strong style="color:white; display:block; word-break:break-all;">${a.nome}</strong>
+                <small style="color:#aaa;">${a.tipo} • ${a.tamanho}</small><br>
+                <small style="color:#0dcaf0;">👤 Enviado por: ${a.usuario}</small>
+                ${a.url ? `<br><small style="color:#00ff99;">☁️ Arquivo em Nuvem</small>` : '<br><small style="color:#f39c12;">📦 Banco Seguro (Local)</small>'}
+             </div>
+             <button onclick="abrirArquivoAnexo('${numClean}', ${idxOriginal})" style="background:#661155; color:white; border:none; border-radius:5px; padding:8px 15px; cursor:pointer; font-weight:bold; white-space:nowrap;">
+                ${a.url ? '👁️ Abrir' : '⬇️ Ver'}
+             </button>
+          </div>
+        `}).join('');
+
+      modalDocs.style.display = 'flex';
+    } catch (e) {
+      console.error("❌ Erro visualizarDocumentos:", e);
+      alert("Erro ao carregar documentos. Verifique o console.");
+    }
+  };
 
 
   window.abrirArquivoAnexo = async function (numeroCotacao, index) {
@@ -6197,320 +6153,164 @@
   /* ======================================================
      💰 CARREGAR LISTA FINANCEIRA (FORNECEDORES) - NOVO
   ====================================================== */
-  /* ======================================================
-     💰 CARREGAR LISTA FINANCEIRA (FORNECEDORES) - HÍBRIDO (NUVEM + LOCAL)
-  ====================================================== */
-  let cacheFinanceiro = null; // Cache para busca instantânea
-
-  window.carregarFinanceiroFornecedor = async function (filtro = "") {
+  window.carregarFinanceiroFornecedor = function () {
     const usuario = getUsuarioLogado();
+
+    // Elementos das duas visões
     const formManual = document.getElementById("formManualFinanceiro");
     const listaComprador = document.getElementById("listaFinanceiroComprador");
-    const titulo = document.getElementById("tituloFinanceiro");
-    const desc = document.getElementById("descFinanceiro");
 
     // Reset da visão
     if (formManual) formManual.style.display = "none";
     if (listaComprador) {
-      listaComprador.style.display = "block";
-      if (!filtro && !cacheFinanceiro) {
-        listaComprador.innerHTML = `
-          <div style="text-align:center; padding:40px; color:#3ab9b6;">
-            <i class="fa-solid fa-circle-notch fa-spin fa-2x"></i><br><br>
-            <span style="font-weight:700; letter-spacing:1px; font-size:12px;">SINCRONIZANDO COM A NUVEM...</span>
-          </div>`;
-      }
+      listaComprador.style.display = "none";
+      listaComprador.innerHTML = "";
     }
 
-    try {
-      /* ===========================
-         🚚 VISÃO DO FORNECEDOR
-      =========================== */
-      if (usuario.tipo === "fornecedor") {
-        if (titulo) titulo.innerHTML = "📄 Envio Notas Fiscais e Boletos";
-        if (desc) desc.innerHTML = "Utilize o formulário abaixo para enviar novos documentos.";
-
-        if (formManual) {
-          formManual.style.display = "block";
-          const input = document.getElementById("inputNumeroCotacaoManual");
-          if (input) {
-            input.value = "";
-            input.focus();
-          }
-        }
-
-        // --- HISTÓRICO DE ENVIOS DO FORNECEDOR (REFORMULADO) ---
-        if (listaComprador) {
-          listaComprador.innerHTML = `
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; border-bottom: 2px solid #661155; padding-bottom: 10px;">
-              <h3 style="color: white; font-size: 18px; margin: 0; font-weight: 800; display: flex; align-items: center; gap: 10px;">
-                <i class="fa-solid fa-history" style="color: #3ab9b6;"></i> Histórico de Envios
-              </h3>
-            </div>`;
-
-          let meusEnvios = [];
-          if (typeof db !== "undefined") {
-            const snap = await db.collection("documentos_cotacao").get();
-            const cotacoesLocal = JSON.parse(localStorage.getItem('cotacoes')) || [];
-
-            snap.forEach(doc => {
-              const data = doc.data();
-              const arqs = data.arquivos || [];
-              const filtrados = arqs.filter(a => (a.usuario === usuario.nome || a.email === usuario.email));
-              if (filtrados.length > 0) {
-                const idCot = doc.id.replace("docs_", "");
-                const cot = cotacoesLocal.find(c => String(c.numero) === String(idCot)) || { numero: idCot, descricao: "Documento Enviado", dataCriacao: new Date().toLocaleString() };
-                meusEnvios.push({ idCotacao: idCot, cotacao: cot, docs: filtrados });
-              }
-            });
-          }
-
-          if (meusEnvios.length === 0) {
-            listaComprador.innerHTML += "<p style='color:#666; text-align:center; padding:40px; background: rgba(0,0,0,0.2); border-radius: 10px;'>Você ainda não enviou documentos pelo sistema.</p>";
-          } else {
-            // 2. Agrupamento por Mês
-            const gruposMes = {};
-            meusEnvios.sort((a, b) => {
-              const dA = window.parseDateBR(a.cotacao.dataCriacao) || new Date(0);
-              const dB = window.parseDateBR(b.cotacao.dataCriacao) || new Date(0);
-              return dB - dA;
-            });
-
-            meusEnvios.forEach(item => {
-              let dataRef = window.parseDateBR(item.cotacao.dataCriacao) || new Date();
-              const mesAno = dataRef.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
-              const mesFormatado = mesAno.charAt(0).toUpperCase() + mesAno.slice(1);
-              if (!gruposMes[mesFormatado]) gruposMes[mesFormatado] = [];
-              gruposMes[mesFormatado].push(item);
-            });
-
-            // 3. Renderização Final com Estilo Premium
-            Object.keys(gruposMes).forEach((mes, idx) => {
-              const grupo = gruposMes[mes];
-              const sectionId = `ship-grupo-${idx}`;
-              const iconId = `ship-icon-${idx}`;
-
-              const section = document.createElement("div");
-              section.style.marginBottom = "20px";
-              section.style.background = "rgba(40, 40, 40, 0.3)";
-              section.style.borderRadius = "12px";
-              section.style.overflow = "hidden";
-              section.style.border = "1px solid #222";
-
-              section.innerHTML = `
-                <div onclick="window.toggleSecaoFinanceira('${sectionId}', '${iconId}')" 
-                     style="background: rgba(30, 30, 30, 0.8); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #661155; cursor: pointer; transition: 0.3s;"
-                     onmouseover="this.style.background='rgba(50, 50, 50, 0.8)';"
-                     onmouseout="this.style.background='rgba(30, 30, 30, 0.8)';"
-                >
-                  <h3 style="color: white; margin: 0; font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 10px;">
-                    <i id="${iconId}" class="fa-solid fa-chevron-down" style="font-size: 12px; color: #661155; transition: 0.3s;"></i>
-                    <span style="font-size: 14px;">🗓️</span> Envios de ${mes}
-                  </h3>
-                  <span style="background: #661155; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 800; min-width: 25px; text-align: center;">
-                    ${grupo.length}
-                  </span>
-                </div>
-                <div id="${sectionId}" style="padding: 15px; display: flex; flex-direction: column; gap: 10px;">
-                  ${grupo.map(item => {
-                const nDocs = item.docs.length;
-                return `
-                      <div style="display:flex; justify-content:space-between; align-items:center; background:#181818; border:1px solid #333; padding:12px 15px; border-radius:10px; transition:0.3s;" 
-                           onmouseover="this.style.borderColor='#661155'; this.style.background='#222';" 
-                           onmouseout="this.style.borderColor='#333'; this.style.background='#181818';">
-                        <div style="flex:1; cursor: pointer;" onclick="visualizarDocumentos('${item.idCotacao}', '${usuario.email}')">
-                          <strong style="color:white; font-size:14px; display:block; margin-bottom:2px; text-transform: uppercase;">${item.cotacao.descricao}</strong>
-                          <span style="color:#777; font-size:11px; letter-spacing:0.5px;">COTAÇÃO #${item.idCotacao} • DATA: <strong style="color:#999;">${item.cotacao.dataCriacao}</strong></span>
-                        </div>
-                        <div style="flex:0 0 auto; margin: 0 20px; text-align:right;">
-                          <div style="font-size:11px; font-weight:900; color:#3ab9b6; letter-spacing:0.5px;">${nDocs} ARQUIVO(S)</div>
-                        </div>
-                        <div style="flex:0 0 auto;">
-                          <button onclick="visualizarDocumentos('${item.idCotacao}', '${usuario.email}')" 
-                                  style="background:transparent; color:#3ab9b6; border:1px solid #3ab9b6; padding:6px 15px; border-radius:6px; cursor:pointer; font-size:10px; font-weight:900; text-transform:uppercase; transition: 0.2s;"
-                                  onmouseover="this.style.background='#3ab9b6'; this.style.color='#000';"
-                                  onmouseout="this.style.background='transparent'; this.style.color='#3ab9b6';">
-                            <i class="fa-solid fa-eye"></i> EXIBIR
-                          </button>
-                        </div>
-                      </div>`;
-              }).join('')}
-                </div>`;
-              listaComprador.appendChild(section);
-            });
-          }
+    /* ===========================
+       🚚 VISÃO DO FORNECEDOR
+    =========================== */
+    if (usuario.tipo === "fornecedor") {
+      if (formManual) {
+        formManual.style.display = "block";
+        const input = document.getElementById("inputNumeroCotacaoManual");
+        if (input) {
+          input.value = "";
+          input.focus();
         }
       }
-      /* ===========================
-         🛒 VISÃO DO COMPRADOR
-      =========================== */
-      else {
-        if (titulo) titulo.innerHTML = "📄 Recebimento de Notas Fiscais e Boletos";
-        if (desc) desc.innerHTML = "Acompanhe abaixo os documentos enviados pelos fornecedores.";
-
-        if (!listaComprador) return;
+    }
+    /* ===========================
+       🛒 VISÃO DO COMPRADOR
+    =========================== */
+    else {
+      if (listaComprador) {
+        listaComprador.style.display = "block"; // Em lista, bloco é melhor que grid
         listaComprador.innerHTML = "";
 
-        // 1. Coleta dados de múltiplas fontes (Firestore + LocalStorage)
-        const cotacoesLocal = JSON.parse(localStorage.getItem('cotacoes')) || [];
-        const itensComDocsMap = new Map();
+        // Busca cotações com documentos
+        const cotacoes = JSON.parse(localStorage.getItem('cotacoes')) || [];
+        const itensComDocs = [];
 
-        // A. Dados LocalStorage (Legacy/Cache)
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key.startsWith("docs_")) {
-            const num = key.replace("docs_", "");
-            const docs = JSON.parse(localStorage.getItem(key)) || [];
-            if (docs.length > 0) {
-              const cot = cotacoesLocal.find(c => String(c.numero) === String(num)) || { numero: num, descricao: "Cotação Direta" };
-              itensComDocsMap.set(num, { cotacao: cot, docs: docs });
-            }
+        cotacoes.forEach(c => {
+          const idDoc = `docs_${c.numero}`;
+          const docs = JSON.parse(localStorage.getItem(idDoc)) || [];
+
+          if (docs.length > 0) {
+            // Helper para montar resumo dos tipos (ex: "2 Notas, 1 Boleto")
+            const qtdNotas = docs.filter(d => d.tipo === 'Nota Fiscal').length;
+            const qtdBoletos = docs.filter(d => d.tipo === 'Boleto').length;
+            const resumo = [];
+            if (qtdNotas > 0) resumo.push(`${qtdNotas} NF(s)`);
+            if (qtdBoletos > 0) resumo.push(`${qtdBoletos} Boleto(s)`);
+            const resumoTexto = resumo.join(" + ") || `${docs.length} arq(s)`;
+
+            // Coleta nomes únicos dos fornecedores nos documentos
+            const nomesFornecedores = [...new Set(docs.map(d => d.usuario).filter(Boolean))];
+            const nomeExibicao = nomesFornecedores.length > 0 ? nomesFornecedores.join(", ") : null;
+
+            itensComDocs.push({
+              cotacao: c,
+              docs: docs,
+              resumoTexto: resumoTexto,
+              fornecedores: nomeExibicao
+            });
           }
-        }
-
-        // B. Dados Firestore (Nuvem - Realtime)
-        if (typeof db !== "undefined") {
-          const cloudSnap = await db.collection("documentos_cotacao").get();
-          cloudSnap.forEach(doc => {
-            const num = doc.id.replace("docs_", "");
-            const data = doc.data();
-            const cloudDocs = data.arquivos || [];
-
-            if (cloudDocs.length > 0) {
-              const existente = itensComDocsMap.get(num);
-              if (existente) {
-                // Merge sem duplicidade
-                cloudDocs.forEach(cd => {
-                  if (!existente.docs.some(ld => (ld.url && ld.url === cd.url) || (ld.base64 && ld.base64 === cd.base64))) {
-                    existente.docs.push(cd);
-                  }
-                });
-              } else {
-                const cot = cotacoesLocal.find(c => String(c.numero) === String(num)) || { numero: num, descricao: "Documentos Recebidos" };
-                itensComDocsMap.set(num, { cotacao: cot, docs: cloudDocs });
-              }
-            }
-          });
-        }
-
-        const itensComDocs = Array.from(itensComDocsMap.values());
-        cacheFinanceiro = itensComDocs; // Armazena para busca rápida
-
-        /* ===========================
-           RENDERIZAÇÃO REATIVA (COMPRADOR)
-        =========================== */
-        // Preserva o input de busca se ele já existir, senão o innerHTML limpa
-        const filterInput = document.getElementById("inputBuscaFinanceiro");
-        const filterVal = (filtro || (filterInput ? filterInput.value : "")).toLowerCase().trim();
-
-        // 1. Filtragem local
-        const dadosFiltrados = cacheFinanceiro.filter(item => {
-          if (!filterVal) return true;
-          const desc = (item.cotacao.descricao || "").toLowerCase();
-          const num = (String(item.cotacao.numero) || "").toLowerCase();
-          const fornecedores = item.docs.map(d => (d.usuario || "").toLowerCase()).join(" ");
-          return desc.includes(filterVal) || num.includes(filterVal) || fornecedores.includes(filterVal);
         });
 
-        // Limpa apenas a área de resultados
-        let containerResultados = document.getElementById("resultadosFinanceiros");
-        if (!containerResultados) {
-          const inputContainer = document.querySelector("#listaFinanceiroComprador > div:first-child");
-          listaComprador.innerHTML = "";
-          if (inputContainer) listaComprador.appendChild(inputContainer);
-
-          containerResultados = document.createElement("div");
-          containerResultados.id = "resultadosFinanceiros";
-          listaComprador.appendChild(containerResultados);
+        if (itensComDocs.length === 0) {
+          listaComprador.innerHTML = "<p style='color:#ccc; text-align:center; padding:20px;'>Nenhum documento financeiro recebido até o momento.</p>";
+          return;
         }
-        containerResultados.innerHTML = "";
 
-        if (dadosFiltrados.length === 0) {
-          containerResultados.innerHTML = `<div style='text-align:center; padding:60px; color:#555;'>
-              <i class='fa-solid fa-magnifying-glass fa-3x' style='opacity:0.2; margin-bottom:15px;'></i><br>
-              <span style='font-weight:700;'>NENHUM RESULTADO PARA "${filterVal.toUpperCase()}"</span>
-            </div>`;
-        } else {
-          // 2. Agrupamento por Mês
-          const gruposMes = {};
-          dadosFiltrados.forEach(item => {
-            let dataRef = new Date();
-            if (item.cotacao.dataCriacao) {
-              const partes = item.cotacao.dataCriacao.split(/[\/\s,]+/);
-              if (partes.length >= 3) dataRef = new Date(partes[2], partes[1] - 1, partes[0]);
+        // Agrupamento por Mês (baseado na data de criação da cotação)
+        const gruposMes = {};
+
+        itensComDocs.forEach(item => {
+          let dataRef = new Date();
+          // Tenta pegar a data de criação
+          if (item.cotacao.dataCriacao) {
+            const partes = item.cotacao.dataCriacao.split(/[\/\s,]+/);
+            // DD/MM/YYYY ...
+            if (partes.length >= 3) {
+              // Nota: mês js é 0-indexado
+              dataRef = new Date(partes[2], partes[1] - 1, partes[0]);
             }
-            const mesAno = dataRef.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
-            const mesFormatado = mesAno.charAt(0).toUpperCase() + mesAno.slice(1);
-            if (!gruposMes[mesFormatado]) gruposMes[mesFormatado] = [];
-            gruposMes[mesFormatado].push(item);
-          });
+          }
 
-          // 3. Renderização Final com Estilo Premium
-          Object.keys(gruposMes).forEach((mes, idx) => {
-            const grupo = gruposMes[mes];
-            const sectionId = `financeiro-grupo-${idx}`;
-            const iconId = `financeiro-icon-${idx}`;
+          if (isNaN(dataRef.getTime())) dataRef = new Date();
 
-            const section = document.createElement("div");
-            section.style.marginBottom = "25px";
-            section.style.background = "rgba(40, 40, 40, 0.3)";
-            section.style.borderRadius = "12px";
-            section.style.overflow = "hidden";
-            section.style.border = "1px solid #222";
+          const mesAno = dataRef.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+          // Capitaliza a primeira letra
+          const mesFormatado = mesAno.charAt(0).toUpperCase() + mesAno.slice(1);
 
-            section.innerHTML = `
-              <div onclick="window.toggleSecaoFinanceira('${sectionId}', '${iconId}')" 
-                   style="background: rgba(30, 30, 30, 0.8); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #661155; cursor: pointer; transition: 0.3s;"
-                   onmouseover="this.style.background='rgba(50, 50, 50, 0.8)';"
-                   onmouseout="this.style.background='rgba(30, 30, 30, 0.8)';"
-              >
-                <h3 style="color: white; margin: 0; font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 10px;">
-                  <i id="${iconId}" class="fa-solid fa-chevron-down" style="font-size: 12px; color: #661155; transition: 0.3s;"></i>
-                  <span style="font-size: 14px;">🗓️</span> Solicitações de ${mes}
-                </h3>
-                <span style="background: #661155; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 800; min-width: 25px; text-align: center;">
-                  ${grupo.length}
-                </span>
+          if (!gruposMes[mesFormatado]) gruposMes[mesFormatado] = [];
+          gruposMes[mesFormatado].push(item);
+        });
+
+        // Ordenar chaves cronologicamente? 
+        // Para simplificar, vamos iterar na ordem que aparecem ou chaves (que pode ser aleatório)
+        // Se quiséssemos ordem correta, precisaríamos de uma lógica de sort de datas. 
+        // Vamos mostrar os meses mais recentes primeiro (assumindo que o array cotacoes já vem +- ordenado ou reordenamos).
+
+        // Vamos apenas iterar pelas chaves
+        Object.keys(gruposMes).forEach(mes => {
+          const grupo = gruposMes[mes];
+
+          // Criação do HTML do Grupo
+          const section = document.createElement("div");
+          section.style.marginBottom = "25px";
+
+          section.innerHTML = `
+              <h3 style="color:#661155; border-bottom: 1px solid #444; padding-bottom:5px; margin-bottom:10px; font-size:16px;">
+                 📅 ${mes}
+              </h3>
+              <div style="display:flex; flex-direction:column; gap:10px;">
+                 ${grupo.map(item => `
+                    <div style="
+                        display:flex; 
+                        justify-content:space-between; 
+                        align-items:center; 
+                        background:#1a1a1a; 
+                        border:1px solid #333; 
+                        padding:12px 15px; 
+                        border-radius:6px;
+                    ">
+                        <div style="flex:1;">
+                           <strong style="color:white; font-size:15px; display:block;">${item.cotacao.descricao || "Cotação #" + item.cotacao.numero}</strong>
+                           <span style="color:#888; font-size:12px;">#${item.cotacao.numero} • Data: ${item.cotacao.dataCriacao}</span>
+                           ${item.fornecedores ? `<div style="margin-top:2px; color:#aaa; font-size:12px;">👤 Fornecedor(es): <strong>${item.fornecedores}</strong></div>` : ''}
+                        </div>
+
+                        <div style="flex:0 0 auto; margin: 0 20px; text-align:center;">
+                              <span style="background:#333; color:#0dcaf0; font-size:11px; padding:4px 8px; border-radius:4px; white-space:nowrap;">
+                                 📎 ${item.resumoTexto}
+                              </span>
+                        </div>
+                        
+                        <div style="flex:0 0 auto;">
+                            <button onclick="visualizarDocumentos('${item.cotacao.numero}')" 
+                                    style="
+                                    background:#661155; 
+                                    color:white; 
+                                    border:none; 
+                                    padding:6px 12px; 
+                                    border-radius:4px; 
+                                    cursor:pointer; 
+                                    font-size:12px;
+                                    font-weight:bold;
+                                    box-shadow:0 0 3px rgba(102,17,85,0.5);
+                                    ">
+                                📂 Abrir
+                            </button>
+                        </div>
+                    </div>
+                 `).join('')}
               </div>
-              <div id="${sectionId}" style="padding: 15px; display: flex; flex-direction: column; gap: 10px;">
-                ${grupo.map(item => {
-              const qtdNF = (item.docs || []).filter(d => d.tipo === 'Nota Fiscal').length;
-              const qtdBOL = (item.docs || []).filter(d => d.tipo === 'Boleto').length;
-              const resumo = [];
-              if (qtdNF > 0) resumo.push(`<span style="color:#3ab9b6; font-weight:800;">${qtdNF} NF(s)</span>`);
-              if (qtdBOL > 0) resumo.push(`<span style="color:#fbbf24; font-weight:800;">${qtdBOL} Boleto(s)</span>`);
-              const nomesUser = [...new Set((item.docs || []).map(d => d.usuario).filter(Boolean))].join(", ") || "Externo";
+           `;
 
-              return `
-                    <div style="display:flex; justify-content:space-between; align-items:center; background:#181818; border:1px solid #333; padding:12px 15px; border-radius:10px; transition:0.3s;" 
-                         onmouseover="this.style.borderColor='#661155'; this.style.background='#222';" 
-                         onmouseout="this.style.borderColor='#333'; this.style.background='#181818';">
-                      <div style="flex:1; cursor: pointer;" onclick="visualizarDocumentos('${item.cotacao.numero}')">
-                        <strong style="color:white; font-size:14px; display:block; margin-bottom:2px; text-transform: uppercase;">${item.cotacao.descricao}</strong>
-                        <span style="color:#777; font-size:11px; letter-spacing:0.5px;">COTAÇÃO #${item.cotacao.numero} • POR: <strong style="color:#999;">${nomesUser.toUpperCase()}</strong></span>
-                      </div>
-                      <div style="flex:0 0 auto; margin: 0 20px; text-align:right;">
-                        <div style="font-size:11px; font-weight:900; letter-spacing:0.5px;">${resumo.join(" + ") || "ARQUIVOS"}</div>
-                      </div>
-                      <div style="flex:0 0 auto;">
-                        <button onclick="visualizarDocumentos('${item.cotacao.numero}')" 
-                                style="background:transparent; color:#3ab9b6; border:1px solid #3ab9b6; padding:6px 15px; border-radius:6px; cursor:pointer; font-size:10px; font-weight:900; text-transform:uppercase; transition: 0.2s;"
-                                onmouseover="this.style.background='#3ab9b6'; this.style.color='#000';"
-                                onmouseout="this.style.background='transparent'; this.style.color='#3ab9b6';">
-                          <i class="fa-solid fa-eye"></i> EXIBIR
-                        </button>
-                      </div>
-                    </div>`;
-            }).join('')}
-              </div>`;
-            containerResultados.appendChild(section);
-          });
-        }
-      }
-    } catch (err) {
-      console.error("❌ Erro ao carregar financeiro:", err);
-      if (listaComprador) {
-        listaComprador.innerHTML = `<p style='color:#ff8080; text-align:center; padding:20px;'><i class='fa-solid fa-triangle-exclamation'></i> Erro ao carregar dados. Verifique sua conexão.</p>`;
+          listaComprador.appendChild(section);
+        });
       }
     }
   };
@@ -6543,42 +6343,21 @@
 
     input.onchange = function (e) {
       if (e.target.files.length > 0) {
-        if (!arquivoSelecionadoTemp || arquivoSelecionadoTemp.numeroCotacao !== numero) {
-          arquivoSelecionadoTemp = {
-            files: [],
-            numeroCotacao: numero
-          };
-        }
+        // Guarda arquivos na memória temporária
+        arquivoSelecionadoTemp = {
+          files: Array.from(e.target.files),
+          numeroCotacao: numero,
+          tipo: tipoDoc
+        };
 
-        Array.from(e.target.files).forEach(f => {
-          arquivoSelecionadoTemp.files.push({
-            file: f,
-            tipo: tipoDoc
-          });
-        });
-
+        // Exibe feedback
         const feedback = document.getElementById("feedbackUploadManual");
         const msg = document.getElementById("msgArquivoSelecionado");
 
         feedback.style.display = "block";
-        const listaNomes = arquivoSelecionadoTemp.files.map(item => `
-          <li style="margin-bottom:5px; display:flex; justify-content:space-between; align-items:center;">
-            <span>📎 [${item.tipo}] ${item.file.name}</span>
-            <small style="color:#888;">(${(item.file.size / 1024).toFixed(1)} KB)</small>
-          </li>
-        `).join('');
+        msg.innerHTML = `📌 <strong>${e.target.files.length} arquivo(s)</strong> selecionado(s) para <br> Cotação: <strong>${numero}</strong> <br> Tipo: <strong>${tipoDoc}</strong>`;
 
-        msg.innerHTML = `
-          <div style="margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:8px;">
-            📌 <strong>${arquivoSelecionadoTemp.files.length} arquivo(s)</strong> preparados para:<br>
-            Cotação: <strong style="color:white;">${numero}</strong>
-          </div>
-          <ul style="margin:0; padding-left:0; list-style:none; font-size:12px;">${listaNomes}</ul>
-          <div style="margin-top:10px; color:#ffc107; font-size:11px;">
-            <i class="fa-solid fa-circle-info"></i> Você pode selecionar mais arquivos antes de enviar.
-          </div>
-        `;
-
+        // Desabilita botões de seleção para forçar terminar
         document.getElementById("inputNumeroCotacaoManual").disabled = true;
       }
     };
@@ -6589,114 +6368,45 @@
   window.enviarArquivoManual = async function () {
     if (!arquivoSelecionadoTemp) return;
 
-    const btn = event?.target || document.querySelector("button[onclick='enviarArquivoManual()']");
-    const originalText = btn ? btn.innerHTML : "🚀 Enviar Arquivo";
-    if (btn) {
-      btn.disabled = true;
-      btn.innerHTML = "⌛ Enviando...";
-    }
+    const { files, numeroCotacao, tipo } = arquivoSelecionadoTemp;
+
+    // Processa todos os arquivos (CLOUD STORAGE)
+    const uploadPromises = files.map(async file => {
+      try {
+        const storageRef = storage.ref(`financeiro/${numeroCotacao}/${Date.now()}_${file.name}`);
+        const uploadTask = await storageRef.put(file);
+        const downloadURL = await uploadTask.ref.getDownloadURL();
+
+        return {
+          nome: file.name,
+          tipo: tipo,
+          data: new Date().toLocaleString(),
+          tamanho: (file.size / 1024).toFixed(2) + " KB",
+          url: downloadURL,
+          usuario: getUsuarioLogado()?.nome || "Desconhecido"
+        };
+      } catch (e) {
+        console.error("Erro upload ind:", e);
+        return null;
+      }
+    });
 
     try {
-      const { files, numeroCotacao } = arquivoSelecionadoTemp;
-      console.log(`🚀 Iniciando upload de ${files.length} arquivo(s) para COT ${numeroCotacao}...`);
-
-      const uploadPromises = files.map(async item => {
-        const { file, tipo } = item;
-        try {
-          const timestamp = Date.now();
-          const randomPart = Math.floor(Math.random() * 1000);
-          const nomeSeguro = file.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9.-]/g, "_");
-          const path = `financeiro/${numeroCotacao}/${timestamp}_random_${randomPart}_${nomeSeguro}`;
-
-          console.log(`📤 Carregando individual: ${file.name} ([${tipo}]) em ${path}...`);
-
-          let resultAnexo = {
-            nome: file.name,
-            tipo: tipo,
-            data: new Date().toLocaleString(),
-            tamanho: (file.size / 1024).toFixed(2) + " KB",
-            url: "",
-            base64: "",
-            usuario: getUsuarioLogado()?.nome || "Desconhecido"
-          };
-
-          if (typeof storage !== "undefined") {
-            try {
-              const storageRef = storage.ref(path);
-              const uploadTask = storageRef.put(file);
-
-              uploadTask.on('state_changed', (snap) => {
-                const prog = (snap.bytesTransferred / snap.totalBytes) * 100;
-                console.log(`📊 [${file.name}] Progresso: ${prog.toFixed(0)}%`);
-              });
-
-              const snapshot = await comTimeout(uploadTask, 40000, `Upload de ${file.name}`);
-              const downloadURL = await comTimeout(snapshot.ref.getDownloadURL(), 10000, `URL de ${file.name}`);
-
-              resultAnexo.url = downloadURL;
-              console.log(`✅ URL gerada: ${downloadURL}`);
-            } catch (storageErr) {
-              console.warn(`⚠️ Falha no Storage para ${file.name}:`, storageErr.message);
-
-              if (file.size < 800 * 1024) { // Limite 800KB para Base64 direto no Firestore
-                console.log(`🔄 Acionando Modo de Segurança (Base64) para ${file.name}...`);
-                const b64 = await fileToBase64(file);
-                resultAnexo.base64 = b64;
-              } else {
-                throw new Error(`Arquivo ${file.name} é muito grande (${(file.size / 1024).toFixed(0)}KB) e o upload em nuvem expirou.`);
-              }
-            }
-          }
-
-          return resultAnexo;
-        } catch (e) {
-          console.error(`❌ Erro no arquivo ${file.name}:`, e);
-          return null;
-        }
-      });
-
       let novosArquivos = await Promise.all(uploadPromises);
       novosArquivos = novosArquivos.filter(a => a !== null);
 
-      if (novosArquivos.length === 0) {
-        throw new Error("Nenhum arquivo pôde ser carregado para o servidor. Verifique sua conexão ou o tamanho dos arquivos.");
-      }
-
-      console.log(`✅ ${novosArquivos.length} arquivos prontos. Atualizando Firestore...`);
-
       const idDoc = `docs_${numeroCotacao}`;
       const docRef = db.collection("documentos_cotacao").doc(idDoc);
+      const snap = await docRef.get();
+      const atuais = snap.exists ? (snap.data().arquivos || []) : [];
 
-      try {
-        const snap = await docRef.get();
-        const atuais = snap.exists ? (snap.data().arquivos || []) : [];
-        const listaSincronizada = [...atuais, ...novosArquivos];
-        await docRef.set({ arquivos: listaSincronizada }, { merge: true });
+      await docRef.set({ arquivos: [...atuais, ...novosArquivos] });
 
-        // 🔥 Atualiza LocalStorage para visualização instantânea (Cache)
-        localStorage.setItem(idDoc, JSON.stringify(listaSincronizada));
-        console.log("✅ Firestore & LocalStorage sincronizados.");
-      } catch (saveErr) {
-        console.warn("⚠️ Documento consolidado muito grande ou erro no Firestore. Tentando gravação individual...", saveErr);
-
-        // Grava cada um individualmente em uma subcoleção como redundância
-        for (const arq of novosArquivos) {
-          const idIndividual = `${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-          await docRef.collection("anexos_individuais").doc(idIndividual).set(arq);
-        }
-        console.log("✅ Arquivos gravados individualmente na subcoleção.");
-      }
-
-      alert(`✅ ${novosArquivos.length} arquivo(s) enviados com sucesso!`);
+      alert(`✅ ${novosArquivos.length} arquivo(s) enviados com sucesso para a nuvem!`);
       cancelarUploadManual();
     } catch (err) {
-      console.error("❌ ERRO FATAL no upload manual:", err);
-      alert("⚠️ Falha ao concluir envio: " + err.message);
-    } finally {
-      if (btn) {
-        btn.disabled = false;
-        btn.innerHTML = originalText;
-      }
+      console.error(err);
+      alert("❌ Erro ao enviar arquivos para o Firebase.");
     }
   };
 
@@ -6710,7 +6420,7 @@
 
   function validarPermissaoUpload(numero) {
     const cotacoes = JSON.parse(localStorage.getItem('cotacoes')) || [];
-    const cotacao = cotacoes.find(c => String(c.numero) === String(numero));
+    const cotacao = cotacoes.find(c => c.numero === numero);
 
     if (!cotacao) {
       alert("❌ Cotação não encontrada! Verifique o número digitado.");
@@ -7211,7 +6921,7 @@
               <strong>Cotação #${c.numero}</strong>
             </div>
             <div style="margin-top:4px; font-size:13px; color:#ccc;">
-              ${usuario.tipo === 'fornecedor'
+              ${usuario.tipo === "fornecedor"
             ? "✅ Você respondeu"
             : `Respostas recebidas: <b>${qtdRespostas}</b>`}
               ${c.status === "reanalise"
@@ -8116,15 +7826,15 @@
         const tr = document.createElement("tr");
 
         tr.innerHTML = `
-        <td style="padding:10px; border-bottom:1px solid #333;">${f.nome || "-"}</td>
-        <td style="padding:10px; border-bottom:1px solid #333;">${f.endereco || f.logradouro || ""} ${f.numero || ""}</td>
-        <td style="padding:10px; border-bottom:1px solid #333;">${f.whats || f.whatsapp || "-"}</td>
-        <td style="padding:10px; border-bottom:1px solid #333;">${f.responsavel || "-"}</td>
-        <td style="padding:10px; border-bottom:1px solid #333; text-align:center;">
+        <td>${f.nome || "-"}</td>
+        <td>${f.endereco || f.logradouro || ""} ${f.numero || ""}</td>
+        <td>${f.whats || f.whatsapp || "-"}</td>
+        <td>${f.responsavel || "-"}</td>
+        <td style="text-align:center;">
           <div style="display:flex; justify-content:center; gap:8px;">
-            <button class="btn-acao-premium" onclick="verFichaFornecedor(${index})"><i class="fa-solid fa-eye"></i> Ver Ficha</button>
-            <button class="btn-acao-premium" onclick="editarFornecedor(${index})"><i class="fa-solid fa-pen"></i> Editar</button>
-            <button class="btn-acao-premium" onclick='window.excluirFornecedor(${index})' style="background:#500a40;"><i class="fa-solid fa-trash"></i> Excluir</button>
+            <button onclick="verFichaFornecedor(${index})" title="Ver ficha">👁️</button>
+            <button onclick="editarFornecedor(${index})" title="Editar">✏️</button>
+            <button onclick='window.excluirFornecedor(${index})' title="Excluir">🗑️</button>
           </div>
         </td>
       `;
@@ -8233,7 +7943,7 @@
     const div = document.getElementById("conteudoVerFornecedor");
 
     div.innerHTML = `
-        <div style="background:#111;border:1px solid #661155;border-radius:10px;padding:20px;color:white;">
+        < div style = "background:#111;border:1px solid #661155;border-radius:10px;padding:20px;color:white;" >
       <p><strong>Nome da Empresa:</strong> ${f.nome || "-"}</p>
       <p><strong>CNPJ:</strong> ${f.cnpj || "-"}</p>
       <p><strong>Endereço:</strong>
@@ -8245,7 +7955,7 @@
       <p><strong>E-mails:</strong> ${f.emails || "-"}</p>
       <p><strong>Responsável:</strong> ${f.responsavel || "-"}</p>
       <p><strong>Tipo:</strong> ${f.tipo || "-"}</p>
-    </div>
+    </div >
         `;
 
     document.getElementById("modalVerFornecedor").style.display = "flex";
@@ -8253,36 +7963,6 @@
 
   window.fecharModalVerFornecedor = function () {
     document.getElementById("modalVerFornecedor").style.display = "none";
-  };
-
-  /* ===============================
-     👁️ VER FICHA DO SERVIÇO
-  =============================== */
-
-  window.verFichaServico = function (index) {
-    const servicos = JSON.parse(localStorage.getItem("servicos")) || [];
-    const s = servicos[index];
-    if (!s) return;
-
-    const div = document.getElementById("conteudoVerServico");
-    if (!div) return;
-
-    div.innerHTML = `
-      <div style="background:#111; border:1px solid #661155; border-radius:10px; padding:20px; color:white;">
-        <p><strong>🛠️ Nome do Serviço:</strong> ${s.nome || "-"}</p>
-        <p><strong>🔢 Código:</strong> ${s.codigo || "-"}</p>
-        <p><strong>🏷️ Categoria:</strong> ${s.categoria || "-"}</p>
-        <p><strong>📝 Descrição:</strong> ${s.descricao || "-"}</p>
-        <p><strong>💰 Preço de Referência:</strong> ${s.preco ? "R$ " + s.preco : "-"}</p>
-      </div>
-    `;
-
-    document.getElementById("modalVerServico").style.display = "flex";
-  };
-
-  window.fecharModalVerServico = function () {
-    const modal = document.getElementById("modalVerServico");
-    if (modal) modal.style.display = "none";
   };
 
   /* ===============================
@@ -8306,42 +7986,40 @@
 
   // Monta a lista de materiais (NÃO controla visibilidade)
   function mostrarListaMateriais() {
+    const listaDiv = document.getElementById("listaMateriais");
     const tabela = document.getElementById("materiaisTabela");
-    const lista = document.getElementById("listaMateriais");
 
-    if (!tabela || !lista) return;
-
-    tabela.innerHTML = "";
+    if (!listaDiv || !tabela) return;
 
     const materiais = JSON.parse(localStorage.getItem("materiais")) || [];
+    tabela.innerHTML = "";
 
     if (materiais.length === 0) {
       tabela.innerHTML = `
-        <tr>
-          <td colspan="5" style="text-align:center; padding:10px;">
-            Nenhum Material Cadastrado ainda.
-          </td>
-        </tr>
-      `;
+        < tr >
+        <td colspan="5" style="text-align:center;padding:10px;">
+          Nenhum material cadastrado.
+        </td>
+      </tr >
+        `;
       return;
     }
 
-    materiais.sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
+    materiais.sort((a, b) => a.nome.localeCompare(b.nome));
 
     materiais.forEach((m, i) => {
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td style="padding:10px; border-bottom:1px solid #333;">${m.nome}</td>
-        <td style="padding:10px; border-bottom:1px solid #333;">${m.codigo || "-"}</td>
-        <td style="padding:10px; border-bottom:1px solid #333;">${m.embalagem || "-"}</td>
-        <td style="padding:10px; border-bottom:1px solid #333;">${m.qtdEmb || "-"}</td>
-        <td style="padding:10px; border-bottom:1px solid #333; text-align:center;">
-          <div style="display:flex; justify-content:center; gap:8px;">
-            <button class="btn-acao-premium" onclick="verFichaMaterial(${i})"><i class="fa-solid fa-eye"></i> Ver Ficha</button>
-            <button class="btn-acao-premium" onclick="editarMaterial(${i})"><i class="fa-solid fa-pen"></i> Editar</button>
-            <button class="btn-acao-premium" onclick="excluirMaterial(${i})" style="background:#500a40;"><i class="fa-solid fa-trash"></i> Excluir</button>
-          </div>
-        </td>
+        < td > ${m.nome}</td >
+      <td>${m.codigo || "-"}</td>
+      <td>${m.embalagem || "-"}</td>
+      <td>${m.qtdEmb || "-"}</td>
+      <td style="text-align:center;">
+        <div style="display:flex; justify-content:center; gap:8px;">
+          <button onclick="editarMaterial(${i})">✏️</button>
+          <button onclick="excluirMaterial(${i})">🗑️</button>
+        </div>
+      </td>
       `;
       tabela.appendChild(tr);
     });
@@ -8350,54 +8028,55 @@
 
   // Abre a lista SOMENTE quando clicar em "Lista de Materiais"
   function abrirListaMateriais() {
-    const lista = document.getElementById("listaMateriais");
-    if (!lista) return;
+    const listaDiv = document.getElementById("listaMateriais");
+    if (!listaDiv) return;
 
-    const visivel = window.getComputedStyle(lista).display !== "none";
-
-    if (visivel) {
-      lista.style.display = "none";
-    } else {
-      mostrarListaMateriais();
-      lista.style.display = "block";
+    // se estiver aberta, fecha
+    if (listaDiv.style.display === "block") {
+      listaDiv.style.display = "none";
+      return;
     }
+
+    // se estiver fechada, monta e abre
+    mostrarListaMateriais();
+    listaDiv.style.display = "block";
   }
 
-  async function salvarMaterial() {
+  function salvarMaterial() {
     const nome = document.getElementById("matNome")?.value.trim();
     const codigo = document.getElementById("matCodigo")?.value.trim();
     const embalagem = document.getElementById("matEmbalagem")?.value.trim();
     const qtdEmb = document.getElementById("matQtdEmb")?.value.trim();
 
+    // 🔴 SOMENTE O NOME É OBRIGATÓRIO
     if (!nome) {
       alert("⚠️ Informe o nome do material.");
       return;
     }
 
-    const novoMaterial = {
-      docId: "local-" + Date.now(),
+    const materiais = JSON.parse(localStorage.getItem("materiais")) || [];
+
+    materiais.push({
       nome,
-      codigo: codigo || "",
-      embalagem: embalagem || "",
-      qtdEmb: qtdEmb || ""
-    };
+      codigo: codigo || "",       // opcional
+      embalagem: embalagem || "", // opcional
+      qtdEmb: qtdEmb || ""        // opcional
+    });
 
-    let materiais = JSON.parse(localStorage.getItem("materiais")) || [];
-    materiais.push(novoMaterial);
-    materiais.sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
+    materiais.sort((a, b) => a.nome.localeCompare(b.nome));
     localStorage.setItem("materiais", JSON.stringify(materiais));
-
-    // Sincronização complexa removida para priorizar estabilidade local.
 
     alert("✅ Material salvo com sucesso!");
 
+    // 🔹 limpa formulário
     document.getElementById("matNome").value = "";
     document.getElementById("matCodigo").value = "";
     document.getElementById("matEmbalagem").value = "";
     document.getElementById("matQtdEmb").value = "";
 
+    // 🔁 atualiza lista SOMENTE se estiver aberta
     const lista = document.getElementById("listaMateriais");
-    if (lista && window.getComputedStyle(lista).display !== "none") {
+    if (lista && lista.style.display === "block") {
       mostrarListaMateriais();
     }
   }
@@ -8405,37 +8084,6 @@
   /* ===============================
      📦 MATERIAIS – EDITAR / EXCLUIR
   =============================== */
-
-  window.verFichaMaterial = function (index) {
-    const materiais = JSON.parse(localStorage.getItem("materiais")) || [];
-    const m = materiais[index];
-    if (!m) return;
-
-    const div = document.getElementById("conteudoVerMaterial");
-    if (!div) return;
-
-    div.innerHTML = `
-      <div style="background:#111; border:1px solid #661155; border-radius:10px; padding:20px; color:white;">
-        <p><strong>📦 Nome do Material:</strong> ${m.nome || "-"}</p>
-        <p><strong>🔢 Código do Produto:</strong> ${m.codigo || "-"}</p>
-        <p><strong>📦 Embalagem:</strong> ${m.embalagem || "-"}</p>
-        <p><strong>📊 Qtd / Embalagem:</strong> ${m.qtdEmb || "-"}</p>
-        ${m.foto ? `
-          <div style="margin-top:15px; text-align:center;">
-            <p><strong>🖼️ Foto:</strong></p>
-            <img src="${m.foto}" style="max-width:100%; border-radius:8px; border:1px solid #333;">
-          </div>
-        ` : ""}
-      </div>
-    `;
-
-    document.getElementById("modalVerMaterial").style.display = "flex";
-  };
-
-  window.fecharModalVerMaterial = function () {
-    const modal = document.getElementById("modalVerMaterial");
-    if (modal) modal.style.display = "none";
-  };
 
   function editarMaterial(index) {
     const materiais = JSON.parse(localStorage.getItem("materiais")) || [];
@@ -8461,24 +8109,16 @@
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  async function excluirMaterial(index) {
+  function excluirMaterial(index) {
     if (!confirm("vai excluir apenas os materiais ? não é para exclui mais nada .")) return;
 
     const materiais = JSON.parse(localStorage.getItem("materiais")) || [];
-    const material = materiais[index];
-    if (!material) return;
-
-    if (typeof db !== "undefined" && material.docId && !material.docId.startsWith("temp-")) {
-      try {
-        await db.collection("materiais").doc(material.docId).delete();
-      } catch (e) { console.warn("Erro delete Firestore Material:", e); }
-    }
-
     materiais.splice(index, 1);
     localStorage.setItem("materiais", JSON.stringify(materiais));
 
+    // Atualiza lista se aberta
     const lista = document.getElementById("listaMateriais");
-    if (lista && (lista.style.display === "block" || window.getComputedStyle(lista).display !== "none")) {
+    if (lista && lista.style.display === "block") {
       mostrarListaMateriais();
     }
   }
@@ -8545,18 +8185,17 @@
     servicos.forEach((s, i) => {
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td style="padding:10px; border-bottom:1px solid #333;">${s.nome}</td>
-        <td style="padding:10px; border-bottom:1px solid #333;">${s.codigo || "-"}</td>
-        <td style="padding:10px; border-bottom:1px solid #333;">${s.categoria}</td>
-        <td style="padding:10px; border-bottom:1px solid #333;">${s.preco || "-"}</td>
-        <td style="padding:10px; border-bottom:1px solid #333; text-align:center;">
-          <div style="display:flex; justify-content:center; gap:8px;">
-            <button class="btn-acao-premium" onclick="verFichaServico(${i})"><i class="fa-solid fa-eye"></i> Ver Ficha</button>
-            <button class="btn-acao-premium" onclick="editarServico(${i})"><i class="fa-solid fa-pen"></i> Editar</button>
-            <button class="btn-acao-premium" onclick="excluirServico(${i})" style="background:#500a40;"><i class="fa-solid fa-trash"></i> Excluir</button>
-          </div>
-        </td>
-      `;
+        < td > ${s.nome}</td >
+      <td>${s.codigo || "-"}</td>
+      <td>${s.categoria}</td>
+      <td>${s.preco || "-"}</td>
+      <td style="text-align:center;">
+        <div style="display:flex; justify-content:center; gap:8px;">
+          <button onclick="editarServico(${i})">✏️</button>
+          <button onclick="excluirServico(${i})">🗑️</button>
+        </div>
+      </td>
+    `;
       tabela.appendChild(tr);
     });
   }
@@ -8564,42 +8203,42 @@
   /* ===============================
      🛠️ SERVIÇOS – SALVAR
   =============================== */
-  async function salvarServico() {
+  function salvarServico() {
     const nome = document.getElementById("servNome")?.value.trim();
     const codigo = document.getElementById("servCodigo")?.value.trim();
     const categoria = document.getElementById("servCategoria")?.value;
     const descricao = document.getElementById("servDescricao")?.value.trim();
     const preco = document.getElementById("servPreco")?.value.trim();
 
+    // ✅ SOMENTE NOME E CATEGORIA SÃO OBRIGATÓRIOS
     if (!nome || !categoria) {
       alert("⚠️ Preencha ao menos o Nome do Serviço e a Categoria.");
       return;
     }
 
-    const novoServico = {
-      docId: "local-" + Date.now(),
-      nome,
-      codigo: codigo || "",
-      categoria,
-      descricao: descricao || "",
-      preco: preco || ""
-    };
+    const servicos = JSON.parse(localStorage.getItem("servicos")) || [];
 
-    let servicos = JSON.parse(localStorage.getItem("servicos")) || [];
-    servicos.push(novoServico);
-    servicos.sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
+    servicos.push({
+      nome,
+      codigo: codigo || "",        // opcional
+      categoria,
+      descricao: descricao || "",  // opcional
+      preco: preco || ""           // opcional
+    });
+
+    servicos.sort((a, b) => a.nome.localeCompare(b.nome));
     localStorage.setItem("servicos", JSON.stringify(servicos));
 
-    // Sincronização complexa removida para priorizar estabilidade local.
-
+    // 🔹 limpa formulário
     document.getElementById("servNome").value = "";
     document.getElementById("servCodigo").value = "";
     document.getElementById("servCategoria").value = "";
     document.getElementById("servDescricao").value = "";
     document.getElementById("servPreco").value = "";
 
+    // 🔁 atualiza lista SOMENTE se estiver aberta
     const lista = document.getElementById("listaServicos");
-    if (lista && (lista.style.display === "block" || window.getComputedStyle(lista).display !== "none")) {
+    if (lista && lista.style.display === "block") {
       mostrarListaServicos();
     }
 
@@ -8638,25 +8277,19 @@
     }
   }
 
-  async function excluirServico(index) {
-    if (!confirm("Deseja realmente excluir este serviço?")) return;
+  if (typeof excluirServico !== "function") {
+    function excluirServico(index) {
+      if (!confirm("❌ Deseja realmente excluir este serviço?")) return;
 
-    const servicos = JSON.parse(localStorage.getItem("servicos")) || [];
-    const servico = servicos[index];
-    if (!servico) return;
+      const servicos = JSON.parse(localStorage.getItem("servicos")) || [];
+      servicos.splice(index, 1);
+      localStorage.setItem("servicos", JSON.stringify(servicos));
 
-    if (typeof db !== "undefined" && servico.docId && !servico.docId.startsWith("temp-")) {
-      try {
-        await db.collection("servicos").doc(servico.docId).delete();
-      } catch (e) { console.warn("Erro delete Firestore Serviço:", e); }
-    }
-
-    servicos.splice(index, 1);
-    localStorage.setItem("servicos", JSON.stringify(servicos));
-
-    const lista = document.getElementById("listaServicos");
-    if (lista && (lista.style.display === "block" || window.getComputedStyle(lista).display !== "none")) {
-      mostrarListaServicos();
+      // Atualiza lista se estiver aberta
+      const lista = document.getElementById("listaServicos");
+      if (lista && lista.style.display === "block") {
+        mostrarListaServicos();
+      }
     }
   }
 
@@ -8672,20 +8305,6 @@
 </script>
 
 <script>
-  /* ===============================
-     TOGGLE SEÇÃO FINANCEIRA
-  =============================== */
-  window.toggleSecaoFinanceira = function (sectionId, iconId) {
-    const section = document.getElementById(sectionId);
-    const icon = document.getElementById(iconId);
-
-    if (section && icon) {
-      const isHidden = section.style.display === 'none';
-      section.style.display = isHidden ? 'flex' : 'none';
-      icon.classList.toggle('fa-chevron-down', isHidden);
-      icon.classList.toggle('fa-chevron-right', !isHidden);
-    }
-  };
 
   /* abrirAnaliseCotacao foi removida por redundância */
 
@@ -8944,8 +8563,12 @@
     if (listaAnalise) {
       // Recarrega do LOCALSTORAGE (que acabamos de atualizar)
       // Isso evita o round-trip com o Firebase que poderia trazer dados antigos
-      // Isso evita o round-trip com o Firebase que poderia trazer dados antigos
-      // MELHOR: Não chamar carregarCotacoes('analise'). O usuário vai mudar de tela.
+      if (typeof carregarCotacoes === 'function') {
+        // Hack: Força leitura local temporariamente se a função suportasse, 
+        // mas como não suporta, vamos confiar que o carregarCotacoes vai ler do Firestore 
+        // e talvez sobrescrever.
+        // MELHOR: Não chamar carregarCotacoes('analise'). O usuário vai mudar de tela.
+      }
     }
   }
 
@@ -10155,6 +9778,7 @@
       if (typeof db !== "undefined") {
         const snapshot = await db.collection("solicitacoes_compra").get();
         solicitacoes = snapshot.docs.map(doc => doc.data());
+        // Sincroniza local para compatibilidade síncrona se necessário
         localStorage.setItem("solicitacoes_compra", JSON.stringify(solicitacoes));
       }
     } catch (e) {
@@ -10162,122 +9786,45 @@
       solicitacoes = JSON.parse(localStorage.getItem("solicitacoes_compra")) || [];
     }
 
+    lista.innerHTML = "";
+
     if (solicitacoes.length === 0) {
-      lista.innerHTML = '<p style="text-align:center; opacity:0.7; padding:20px;">Nenhuma solicitação encontrada.</p>';
+      lista.innerHTML = `
+      <p style="text-align:center; opacity:0.7;">
+        Nenhuma solicitação encontrada.
+      </p>
+    `;
       return;
     }
 
-    // 🔥 Agrupar e Renderizar
-    renderizarListaAgrupada(lista, solicitacoes, (s) => {
+    solicitacoes.forEach(s => {
+      const bloco = document.createElement("div");
+      bloco.className = "linha-cotacao";
+
       const badge = typeof obterBadgeWorkflow === "function" ? obterBadgeWorkflow(s.status) : s.status;
-      return `
-        <div class="info">
-          <div style="display:flex; align-items:center; gap:10px; margin-bottom:5px;">
-            <strong>${s.solicitante}</strong>
-            ${badge}
-          </div>
-          <small>Setor: ${s.setor}</small><br>
-          <small>Tipo: ${s.tipo.toUpperCase()}</small><br>
-          <small>Data: ${s.data}</small>
-        </div>
-        <div class="acoes">
-          <button onclick="verDetalhesSolicitacao('${s.id}')">
-            👁️ Ver Detalhes
-          </button>
-        </div>
-      `;
+
+      bloco.innerHTML = `
+                <div class="info">
+                  <div style="display:flex; align-items:center; gap:10px; margin-bottom:5px;">
+                    <strong>${s.solicitante}</strong>
+                    ${badge}
+                  </div>
+                  <small>Setor: ${s.setor}</small><br>
+                  <small>Tipo: ${s.tipo.toUpperCase()}</small><br>
+                  <small>Data: ${s.data}</small>
+                </div>
+                <div class="acoes">
+                  <button onclick="verDetalhesSolicitacao('${s.id}')">
+                    👁️ Ver Detalhes
+                  </button>
+                </div>
+                `;
+
+      lista.appendChild(bloco);
     });
   }
 
-  function agruparSolicitacoesPorMes(lista) {
-    const grupos = {};
-    const mesesExtenso = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
-
-    lista.sort((a, b) => {
-      const parseDate = (dStr) => {
-        if (!dStr) return new Date(0);
-        const clean = dStr.replace(",", "").trim();
-        const [datePart, timePart] = clean.split(" ");
-        const [dd, mm, yyyy] = datePart.split("/");
-        const [hh, mi, ss] = (timePart || "00:00:00").split(":");
-        return new Date(yyyy, mm - 1, dd, hh, mi, ss);
-      };
-      return parseDate(b.data) - parseDate(a.data);
-    });
-
-    lista.forEach(s => {
-      if (!s.data) return;
-      // Garante pegar apenas o dia/mês/ano para a chave do grupo
-      const datePart = s.data.split(",")[0].trim().split(" ")[0];
-      const parts = datePart.split("/");
-      if (parts.length < 3) return;
-      const mesIdx = parseInt(parts[1]) - 1;
-      const ano = parts[2];
-      const chave = `${mesesExtenso[mesIdx]} ${ano}`;
-
-      if (!grupos[chave]) grupos[chave] = [];
-      grupos[chave].push(s);
-    });
-
-    return grupos;
-  }
-
-  function renderizarListaAgrupada(container, lista, itemRenderer) {
-    const grupos = agruparSolicitacoesPorMes(lista);
-    container.innerHTML = "";
-
-    Object.keys(grupos).forEach((mesAno, index) => {
-      const gId = `grupo_${mesAno.replace(/\s+/g, '_')}`;
-      const solicitacoes = grupos[mesAno];
-
-      const accordion = document.createElement("div");
-      accordion.style.marginBottom = "15px";
-
-      // Cabeçalho do Acordeão
-      const header = document.createElement("div");
-      header.style.cssText = `
-        background: #222;
-        border: 1px solid #661155;
-        border-radius: 8px;
-        padding: 12px 20px;
-        cursor: pointer;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        transition: 0.3s;
-      `;
-      header.innerHTML = `
-        <span style="font-weight:bold; color:white; font-size:16px;">📅 Solicitações de ${mesAno}</span>
-        <span style="background:#661155; color:white; padding:2px 10px; border-radius:12px; font-size:12px;">${solicitacoes.length}</span>
-      `;
-
-      // Conteúdo do Acordeão
-      const content = document.createElement("div");
-      content.id = gId;
-      content.style.display = index === 0 ? "block" : "none"; // Abre o primeiro mês por padrão
-      content.style.marginTop = "10px";
-      content.style.paddingLeft = "10px";
-
-      header.onclick = () => {
-        const isHidden = content.style.display === "none";
-        content.style.display = isHidden ? "block" : "none";
-        header.style.borderColor = isHidden ? "#661155" : "#333";
-      };
-
-      solicitacoes.forEach(s => {
-        const item = document.createElement("div");
-        item.className = "linha-cotacao";
-        item.innerHTML = itemRenderer(s);
-        content.appendChild(item);
-      });
-
-      accordion.appendChild(header);
-      accordion.appendChild(content);
-      container.appendChild(accordion);
-    });
-  }
-
-  function verDetalhesSolicitacao(id, isReadOnly = false) {
+  function verDetalhesSolicitacao(id) {
     const solicitacoes =
       JSON.parse(localStorage.getItem("solicitacoes_compra")) || [];
 
@@ -10307,8 +9854,13 @@
                         <p><strong>Setor:</strong> ${sol.setor}</p>
                         <p><strong>Tipo:</strong> ${sol.tipo.toUpperCase()}</p>
                         <p><strong>Data:</strong> ${sol.data}</p>
-                        <div id="containerAlterarStatus">
-                          <!-- Será preenchido apenas para compradores -->
+                        <div>
+                          <strong>Alterar Status:</strong>
+                          <select onchange="mudarStatusSolicitacao('${sol.id}', this.value)" style="margin-left:10px; background:#111; color:white; border:1px solid #661155; border-radius:4px; padding:4px;">
+                            <option value="pendente" ${sol.status === 'pendente' ? 'selected' : ''}>📝 Pendente</option>
+                            <option value="em_cotacao" ${sol.status === 'em_cotacao' ? 'selected' : ''}>🔍 Em Cotação</option>
+                            <option value="finalizada" ${sol.status === 'finalizada' ? 'selected' : ''}>✅ Finalizada</option>
+                          </select>
                         </div>
                       </div>
 
@@ -10340,111 +9892,21 @@
                             ${renderizarArquivosSolicitacao(sol)}
                             `;
 
-    // 🔥 Ajusta ações e status por perfil (Normalizado)
-    const usuario = JSON.parse(localStorage.getItem("usuarioLogado"));
-    const tipo = (usuario && usuario.tipo) ? usuario.tipo.toLowerCase() : "";
-    const ehComprador = tipo === "comprador" || tipo === "administrador";
-    const statusContainer = document.getElementById("containerAlterarStatus");
 
-    if (statusContainer) {
-      if (ehComprador && !isReadOnly) {
-        statusContainer.innerHTML = `
-          <strong>Alterar Status:</strong>
-          <select id="selectStatus_${sol.id}" style="margin-left:10px; background:#111; color:white; border:1px solid #661155; border-radius:4px; padding:4px;">
-            <option value="pendente" ${sol.status === 'pendente' ? 'selected' : ''}>📝 Pendente</option>
-            <option value="em_cotacao" ${sol.status === 'em_cotacao' ? 'selected' : ''}>🔍 Em Cotação</option>
-            <option value="finalizada" ${sol.status === 'finalizada' ? 'selected' : ''}>✅ Finalizada</option>
-          </select>
-        `;
-      } else {
-        statusContainer.innerHTML = ""; // Requisitante ou Somente Leitura não vê
-      }
-    }
-
-    ajustarAcoesSolicitacaoPorPerfil(isReadOnly);
+    // 🔥 AQUI ESTAVA O ERRO
+    ajustarAcoesSolicitacaoPorPerfil();
 
     document.getElementById("modalDetalhesSolicitacao").style.display = "flex";
     document.body.style.overflow = "hidden"; // 🔒 Lock background scroll
   }
 
-  async function salvarStatusConfirmado() {
-    const sol = window.solicitacaoSelecionada;
-    if (!sol) return;
-    const select = document.getElementById(`selectStatus_${sol.id}`);
-    if (!select) return;
-    const novoStatus = select.value;
-
-    if (confirm(`Deseja alterar o status para "${novoStatus.replace("_", " ").toUpperCase()}"?`)) {
-      await mudarStatusSolicitacao(sol.id, novoStatus);
-      alert("✅ Status atualizado com sucesso!");
-    }
-  }
-
-  async function cancelarSolicitacaoComMotivo() {
-    const sol = window.solicitacaoSelecionada;
-    if (!sol) return;
-    const id = sol.id;
-    const motivo = prompt("Informe o motivo do cancelamento:");
-    if (motivo === null) return; // cancelou o prompt
-    if (motivo.trim() === "") {
-      alert("⚠️ Você precisa informar um motivo para cancelar.");
-      return;
-    }
-
-    if (confirm("Confirma o cancelamento desta solicitação?")) {
-      const usuarioLogado = JSON.parse(localStorage.getItem("usuarioLogado"));
-      const autorCancelamento = usuarioLogado ? (usuarioLogado.nome || usuarioLogado.email) : "Sistema";
-
-      const solicitacoes = JSON.parse(localStorage.getItem("solicitacoes_compra")) || [];
-      const idx = solicitacoes.findIndex(s => s.id === id);
-
-      if (idx !== -1) {
-        solicitacoes[idx].status = "cancelada";
-        solicitacoes[idx].motivoCancelamento = motivo;
-        solicitacoes[idx].autorCancelamento = autorCancelamento;
-        solicitacoes[idx].dataCancelamento = new Date().toLocaleString();
-
-        localStorage.setItem("solicitacoes_compra", JSON.stringify(solicitacoes));
-
-        // ☁️ SYNC FIREBASE
-        if (typeof db !== "undefined") {
-          try {
-            await db.collection("solicitacoes_compra").doc(id).update({
-              status: "cancelada",
-              motivoCancelamento: motivo,
-              autorCancelamento: autorCancelamento,
-              dataCancelamento: solicitacoes[idx].dataCancelamento
-            });
-            console.log("✅ Cancelamento sincronizado com Firebase!");
-          } catch (e) {
-            console.error("Erro ao sincronizar cancelamento:", e);
-          }
-        }
-
-        alert("✅ Solicitação cancelada com sucesso!");
-        fecharModalDetalhesSolicitacao();
-        carregarSolicitacoesCompra();
-      }
-    }
-  }
-
-  async function mudarStatusSolicitacao(id, novoStatus) {
+  function mudarStatusSolicitacao(id, novoStatus) {
     const solicitacoes = JSON.parse(localStorage.getItem("solicitacoes_compra")) || [];
     const idx = solicitacoes.findIndex(s => s.id === id);
 
     if (idx !== -1) {
       solicitacoes[idx].status = novoStatus;
       localStorage.setItem("solicitacoes_compra", JSON.stringify(solicitacoes));
-
-      // ☁️ SYNC FIREBASE
-      if (typeof db !== "undefined") {
-        try {
-          await db.collection("solicitacoes_compra").doc(id).update({ status: novoStatus });
-          console.log("✅ Status sincronizado com Firebase!");
-        } catch (e) {
-          console.error("Erro ao sincronizar status:", e);
-        }
-      }
 
       console.log(`✅ Status da solicitação ${id} alterado para ${novoStatus}`);
 
@@ -10484,31 +9946,34 @@
       return;
     }
 
+    // Filtra solicitações do usuário atual
     const minhas = solicitacoes.filter(s =>
       s.solicitante.toLowerCase() === (usuarioLogado.nome || "").toLowerCase() ||
       s.solicitante.toLowerCase() === (usuarioLogado.email || "").toLowerCase()
     );
 
     if (minhas.length === 0) {
-      lista.innerHTML = "<p style='text-align:center; opacity:0.6; padding: 20px;'>Você ainda não enviou nenhuma solicitação.</p>";
+      lista.innerHTML = "<p style='text-align:center; opacity:0.6; padding: 10px;'>Você ainda não enviou nenhuma solicitação.</p>";
       return;
     }
 
-    // 🔥 Agrupar e Renderizar para o Requisitante
-    renderizarListaAgrupada(lista, minhas, (s) => {
+    lista.innerHTML = "";
+    minhas.reverse().forEach(s => {
+      const item = document.createElement("div");
+      item.style.cssText = "background:#1a1a1a; border:1px solid #333; border-radius:8px; padding:12px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;";
+
       const badge = typeof obterBadgeWorkflow === "function" ? obterBadgeWorkflow(s.status) : s.status;
-      return `
-        <div style="text-align:left; flex:1;">
+
+      item.innerHTML = `
+        <div style="text-align:left;">
           <strong>${s.data}</strong><br>
           <small>${s.tipo.toUpperCase()} - ${s.itens ? s.itens.length : 0} itens</small>
         </div>
         <div style="text-align:right;">
           ${badge}
         </div>
-        <div style="margin-left:15px;">
-           <button onclick="verDetalhesSolicitacao('${s.id}', true)" style="background:transparent; border:1px solid #661155; border-radius:4px; color:white; padding:5px 10px; cursor:pointer;">👁️</button>
-        </div>
       `;
+      lista.appendChild(item);
     });
   }
 
@@ -10625,74 +10090,17 @@
   }
 
 
-  function ajustarAcoesSolicitacaoPorPerfil(isReadOnly = false) {
-    const usuario = getUsuarioLogado();
+  function ajustarAcoesSolicitacaoPorPerfil() {
+    const usuario = JSON.parse(localStorage.getItem("usuarioLogado"));
     const divAcoes = document.getElementById("acoesSolicitacao");
 
     if (!divAcoes || !usuario) return;
 
-    const sol = window.solicitacaoSelecionada;
-    const btnCriar = document.getElementById("btnCriarCotacaoSolicitacao");
-    const btnSalvar = document.getElementById("btnSalvarStatusModal");
-    const btnCancelar = document.getElementById("btnCancelarSolicitacaoModal");
-    const btnVerMotivo = document.getElementById("btnVerMotivoCancelamentoSolicitacao");
-
-    // Reset de visibilidade de todos os botões antes de aplicar a lógica
-    [btnCriar, btnSalvar, btnCancelar, btnVerMotivo].forEach(btn => {
-      if (btn) btn.style.display = "none";
-    });
-
-    if (isReadOnly) {
-      if (sol && sol.status === "cancelada") {
-        divAcoes.style.display = "flex";
-        if (btnVerMotivo) btnVerMotivo.style.display = "flex";
-      } else {
-        divAcoes.style.display = "none";
-      }
-      return;
-    }
-
-    const tipo = (usuario && usuario.tipo) ? usuario.tipo.toLowerCase() : "";
-    const ehComprador = tipo === "comprador" || tipo === "administrador";
-
-    if (ehComprador) {
-      divAcoes.style.display = "flex";
-
-      if (sol && sol.status === "cancelada") {
-        if (btnVerMotivo) btnVerMotivo.style.display = "flex";
-      } else if (sol && sol.status === "finalizada") {
-        // Nada além de ver detalhes
-      } else {
-        // Para pendente ou em cotação, mostra as ações principais
-        if (btnCriar) btnCriar.style.display = "flex";
-        if (btnSalvar) btnSalvar.style.display = "flex";
-        if (btnCancelar) btnCancelar.style.display = "flex";
-      }
-    } else if (tipo === "requisitante") {
-      // Requisitante vê o motivo se cancelada
-      if (sol && sol.status === "cancelada") {
-        divAcoes.style.display = "flex";
-        if (btnVerMotivo) btnVerMotivo.style.display = "flex";
-      } else {
-        divAcoes.style.display = "none";
-      }
+    if (usuario.tipo === "comprador" || usuario.tipo === "administrador") {
+      divAcoes.style.display = "block";
     } else {
       divAcoes.style.display = "none";
     }
-  }
-
-  function mostrarMotivoCancelamentoSolicitacao() {
-    const sol = window.solicitacaoSelecionada;
-    if (!sol || !sol.motivoCancelamento) {
-      alert("Motivo do cancelamento não encontrado.");
-      return;
-    }
-
-    document.getElementById("cancelData").textContent = sol.dataCancelamento || "Não informada";
-    document.getElementById("cancelAutor").textContent = sol.autorCancelamento || "Não informado";
-    document.getElementById("cancelMotivo").textContent = sol.motivoCancelamento;
-
-    document.getElementById("modalMotivoCancelamentoSolicitacao").style.display = "flex";
   }
 
 
@@ -10703,6 +10111,15 @@
     }
 
     const sol = window.solicitacaoSelecionada;
+
+    // 🔍 ATUALIZA STATUS PARA "EM COTAÇÃO"
+    sol.status = "em_cotacao";
+    const solicitacoes = JSON.parse(localStorage.getItem("solicitacoes_compra")) || [];
+    const idx = solicitacoes.findIndex(s => s.id === sol.id);
+    if (idx !== -1) {
+      solicitacoes[idx].status = "em_cotacao";
+      localStorage.setItem("solicitacoes_compra", JSON.stringify(solicitacoes));
+    }
 
     // 🔔 NOTIFICAÇÃO: COTAÇÃO INICIADA
     notificarSolicitante(
@@ -10922,7 +10339,6 @@
     if (status === "pendente") return '<span class="status-pulsante status-pendente">📝 Pendente</span>';
     if (status === "em_cotacao") return '<span class="status-pulsante status-cotacao">🔍 Em Cotação</span>';
     if (status === "finalizada") return '<span class="status-pulsante status-finalizada">✅ Finalizada</span>';
-    if (status === "cancelada") return '<span class="status-pulsante" style="background:#ff4444; color:white; border:1px solid #cc0000; animation:none;">❌ Cancelada</span>';
     return status;
   };
 
@@ -11617,12 +11033,6 @@
           await rtdb.ref("cotacoes/" + novaCotacao.numero).set(novaCotacao);
           console.log("✅ V2: Sincronização RTDB CONFIRMADA.");
 
-          // 🔥 ATUALIZA STATUS DA SOLICITAÇÃO DE ORIGEM (SE HOUVER)
-          if (novaCotacao.idSolicitacao && typeof mudarStatusSolicitacao === "function") {
-            await mudarStatusSolicitacao(novaCotacao.idSolicitacao, "em_cotacao");
-            console.log(`✅ Solicitação ${novaCotacao.idSolicitacao} marcada como "em_cotacao" automaticamente.`);
-          }
-
           alert("✅ Cotação publicada com sucesso!\n\nOs fornecedores podem visualizar agora.");
         } catch (errSync) {
           console.error("❌ ERRO AO ENVIAR PARA RTDB:", errSync);
@@ -11841,8 +11251,8 @@
         return alert("⚠️ Informe pelo menos um preço válido.");
       }
 
-      // 6. Upload de Anexo (Múltiplos Arquivos)
-      let anexosArray = [];
+      // 6. Upload de Anexo (com Timeout e Fallback Inteligente)
+      let anexoDados = { nome: "", url: "", base64: "" };
 
       // 🔴 PERSISTÊNCIA: Se não selecionou arquivo novo, manter o que já existia
       // PRIORIDADE: Tenta pegar da chave individual (que preserva o Base64)
@@ -11855,58 +11265,66 @@
         respAntiga = respondidas.find(r => (r.email || "").toLowerCase().trim() === usuario.email.toLowerCase().trim());
       }
 
-      if (respAntiga) {
-        if (Array.isArray(respAntiga.anexos)) {
-          anexosArray = [...respAntiga.anexos];
-        } else if (respAntiga.anexo) {
-          anexosArray = [respAntiga.anexo];
-        }
-        console.log(`♻️ [DEBUG] Mantendo anexos anteriores: ${anexosArray.length}`);
+      if (respAntiga && respAntiga.anexo) {
+        anexoDados = { ...respAntiga.anexo };
+        console.log(`♻️ [DEBUG] Mantendo anexo anterior: ${anexoDados.nome} (URL: ${!!anexoDados.url}, B64: ${!!anexoDados.base64})`);
       }
 
       if (fileInput && fileInput.files.length > 0) {
-        const files = Array.from(fileInput.files);
+        const file = fileInput.files[0];
+        const nomeLimpo = file.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9.-]/g, "_");
+        anexoDados.nome = file.name;
 
-        for (const file of files) {
-          const nomeLimpo = file.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9.-]/g, "_");
-          let anexoIndividual = {
-            nome: file.name,
-            url: "",
-            base64: "",
-            tamanho: (file.size / 1024).toFixed(1) + " KB"
-          };
+        console.log(`📤 Perfilando upload: ${file.name} -> ${nomeLimpo} (${(file.size / 1024).toFixed(1)} KB)`);
 
-          console.log(`📤 Perfilando upload: ${file.name} -> ${nomeLimpo} (${(file.size / 1024).toFixed(1)} KB)`);
+        if (typeof storage !== "undefined") {
+          try {
+            // 🏗️ ESTRUTURA HIERÁRQUICA RIGOROSA (COTACAO > FORNECEDOR > ARQUIVO)
+            const path = `cotacoes/${numCotacao}/${usuario.email}/${Date.now()}_${nomeLimpo}`;
+            const metadata = { contentType: file.type || 'application/octet-stream' };
 
-          if (typeof storage !== "undefined") {
-            try {
-              const timestamp = Date.now();
-              const randomPart = Math.floor(Math.random() * 1000);
-              const path = `cotacoes/${numCotacao}/${usuario.email}/${timestamp}_${randomPart}_${nomeLimpo}`;
-              const metadata = { contentType: file.type || 'application/octet-stream' };
+            console.log("🔄 Bucket:", storage.ref().bucket);
+            console.log("🔄 Iniciando put() no Storage...");
+            const uploadTask = storage.ref(path).put(file, metadata);
 
-              console.log(`🔄 Iniciando upload de ${file.name}...`);
-              const uploadTask = storage.ref(path).put(file, metadata);
+            // Monitor de "travamento" (se não sair de 0% em 10s, avisa no log)
+            let progressTrigger = setTimeout(() => {
+              console.warn("⚠️ Upload parece travado em 0%.");
+            }, 10000);
 
-              const url = await comTimeout(
-                uploadTask.then(s => s.ref.getDownloadURL()),
-                25000,
-                "Upload de Arquivo"
-              );
-              anexoIndividual.url = url;
-              console.log(`✅ Upload concluído (${file.name}):`, url);
-              anexosArray.push(anexoIndividual);
-            } catch (e) {
-              console.warn(`⚠️ [DEBUG] Falha no Storage para ${file.name}:`, e.message);
+            uploadTask.on('state_changed',
+              (snap) => {
+                const progresso = (snap.bytesTransferred / snap.totalBytes) * 100;
+                console.log(`📊 Upload progress: ${progresso.toFixed(0)}%`);
+                if (progresso > 0) clearTimeout(progressTrigger);
+              },
+              (err) => console.error("❌ ERRO STORAGE:", err.code)
+            );
 
-              if (file.size < 1024 * 1024) {
-                if (confirm(`Falha no upload de ${file.name}. Deseja usar o 'Banco Seguro' (Base64) para este arquivo?`)) {
-                  const base64Data = await fileToBase64(file);
-                  anexoIndividual.base64 = base64Data;
-                  anexosArray.push(anexoIndividual);
-                }
-              } else {
-                alert(`Arquivo ${file.name} muito grande e falhou no upload.`);
+            // Timeout de 25 segundos p/ disparar fallback
+            const url = await comTimeout(
+              uploadTask.then(s => s.ref.getDownloadURL()),
+              25000,
+              "Upload de Arquivo"
+            );
+            anexoDados.url = url;
+            console.log("✅ Upload concluído via Storage:", url);
+          } catch (e) {
+            console.warn("⚠️ [DEBUG] Falha ou timeout no Storage:", e.message);
+            // GARANTE QUE O NOME NÃO SE PERCA NO CATCH
+            if (!anexoDados.nome && file) anexoDados.nome = file.name;
+
+            if (file.size > 1024 * 1024) { // 1MB limit for Firestore Base64
+              alert("O arquivo é muito grande para o modo alternativo (> 1MB).");
+              if (!confirm("Deseja enviar sem o anexo?")) throw new Error("Abortado pelo usuário.");
+            } else {
+              if (confirm("O envio em nuvem falhou ou está travado.\n\nDeseja usar o 'Envio de Banco Seguro' (Base64)?\n\nIsso garantirá que o comprador receba o documento.")) {
+                console.log("🔄 [DEBUG] Ativando Fallback Base64...");
+                const base64Data = await fileToBase64(file);
+                anexoDados.base64 = base64Data;
+                anexoDados.url = ""; // Limpa URL se falhou o storage
+              } else if (!confirm("Deseja enviar a resposta sem o arquivo?")) {
+                throw new Error("Upload cancelado pelo usuário.");
               }
             }
           }
@@ -11916,16 +11334,12 @@
       // 7. Montar Resposta Final (COM ID VINCULADO)
       const resposta = {
         cotacaoId: String(numCotacao),
-        fornecedor: (function () {
-          const flist = JSON.parse(localStorage.getItem("fornecedores")) || [];
-          const f = flist.find(item => (item.email || "").toLowerCase().trim() === usuario.email.toLowerCase().trim());
-          return f ? f.nome : usuario.nome;
-        })(),
+        fornecedor: usuario.nome,
         email: usuario.email.toLowerCase().trim(),
         itens: itensRespondidos,
         data: new Date().toISOString(),
-        anexo: anexosArray[0] || null,
-        anexos: anexosArray
+        anexo: anexoDados,
+        anexos: [anexoDados]
       };
 
       // 8. Sync Cloud (com Timeouts)
@@ -11984,42 +11398,33 @@
           await db.collection("cotacoes").doc(String(numCotacao)).collection("respostas_individuais").doc(usuario.email.toLowerCase().trim()).set(respostaSegura);
         }
 
-        if (anexosArray.length > 0) {
+        if (anexoDados.url || anexoDados.base64) {
           const docRef = db.collection("cotacoes").doc(String(numCotacao)).collection("respostas").doc(usuario.email.toLowerCase().trim());
           const respostaFirestore = JSON.parse(JSON.stringify(resposta));
-
-          // Remove Base64 grandes paraFirestore
-          if (respostaFirestore.anexos) {
-            respostaFirestore.anexos.forEach(a => {
-              if (a.base64 && a.base64.length > 800000) delete a.base64;
-            });
-          }
-          if (respostaFirestore.anexo && respostaFirestore.anexo.base64 && respostaFirestore.anexo.base64.length > 800000) {
+          if (anexoDados.base64 && anexoDados.base64.length > 800000 && respostaFirestore.anexo) {
             delete respostaFirestore.anexo.base64;
           }
-
           await docRef.set(respostaFirestore, { merge: true });
 
           const globalDocRef = db.collection("documentos_cotacao").doc(`docs_${numCotacao}`);
           const snap = await globalDocRef.get();
           let arquivos = snap.exists ? (snap.data().arquivos || []) : [];
 
-          anexosArray.forEach(anexo => {
-            const novoAnexoLimpo = {
-              nome: anexo.nome,
-              url: anexo.url || "",
-              base64: "",
-              data: new Date().toLocaleDateString(),
-              usuario: resposta.fornecedor,
-              tamanho: anexo.tamanho || "-",
-              tipo: "Resposta Fornecedor"
-            };
+          const novoAnexoLimpo = {
+            nome: anexoDados.nome,
+            url: anexoDados.url || "",
+            base64: "", // 🔥 NUNCA NO COLETIVO
+            data: new Date().toLocaleDateString(),
+            usuario: resposta.fornecedor,
+            tamanho: file ? (file.size / 1024).toFixed(1) + " KB" : "-",
+            tipo: "Resposta Fornecedor"
+          };
 
-            const existe = arquivos.some(a => (anexo.url && a.url === anexo.url) || (a.nome === novoAnexoLimpo.nome && a.usuario === novoAnexoLimpo.usuario));
-            if (!existe) arquivos.push(novoAnexoLimpo);
-          });
-
-          await globalDocRef.set({ arquivos: arquivos }, { merge: true });
+          const existe = arquivos.some(a => (anexoDados.url && a.url === anexoDados.url) || (a.nome === novoAnexoLimpo.nome && a.usuario === novoAnexoLimpo.usuario));
+          if (!existe) {
+            arquivos.push(novoAnexoLimpo);
+            await globalDocRef.set({ arquivos: arquivos }, { merge: true });
+          }
         }
       }
 
@@ -12174,7 +11579,6 @@
           if (input) input.value = window.formatarMoedaBRL(item.preco ?? item.valor ?? 0);
         }
       });
-
       if (resposta.anexo && resposta.anexo.nome) {
         const label = containerAnexo ? containerAnexo.querySelector('span[id^="labelLocal_"]') : null;
         if (label) {
@@ -12239,40 +11643,9 @@
     configurarModalResposta("editar");
   }
   /* ======================================================
-     🔗 HELPER: ABRIR ARQUIVO BASE64 DIRETAMENTE
-     ====================================================== */
-  window.abrirArquivoDireto = function (base64, nome = "Anexo") {
-    if (!base64) return alert("Erro: Dados do arquivo não encontrados.");
-    try {
-      const win = window.open('', '_blank');
-      if (!win) return alert("Por favor, habilite pop-ups para visualizar o documento.");
-
-      let mime = "application/pdf";
-      if (base64.includes("image/png")) mime = "image/png";
-      else if (base64.includes("image/jpeg")) mime = "image/jpeg";
-
-      win.document.write(`
-         <title>${nome}</title>
-         <body style="margin:0; background:#333; display:flex; align-items:center; justify-content:center;">
-           <iframe src="${base64}" frameborder="0" style="width:100%; height:100vh; border:none;"></iframe>
-         </body>
-       `);
-    } catch (e) {
-      console.error("Erro abrirArquivoDireto:", e);
-      alert("Erro ao abrir o arquivo.");
-    }
-  };
-
-  /* ======================================================
      👁️ VISUALIZAR DOCUMENTOS (STRICT MODE - ISOLADO)
      Garante que só abrimos documentos desta cotação específica.
   ====================================================== */
-  window.fecharModalDocs = function () {
-    const modal = document.getElementById("modalVisualizarDocumentos");
-    if (modal) modal.style.display = "none";
-    document.body.style.overflow = "auto"; // 🔓 Restaura scroll
-  };
-
   window.visualizarDocumentos = async function (idCotacao, emailFornecedor) {
     if (!idCotacao) return;
 
@@ -12292,16 +11665,10 @@
                       <i class="fa-solid fa-folder-open" style="color:#3ab9b6;"></i> 
                       Documentos da Cotação #${idLimpo}
                    </h2>
-                   <span class="close" onclick="fecharModalDocs()" style="color:#fff; font-size:32px; cursor:pointer; opacity:0.8; transition:0.2s; line-height:1;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.8">&times;</span>
+                   <span class="close" onclick="document.getElementById('modalVisualizarDocumentos').style.display='none'" style="color:#fff; font-size:32px; cursor:pointer; opacity:0.8; transition:0.2s; line-height:1;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.8">&times;</span>
                 </div>
                 <div id="listaDocumentosAnexados" style="padding:0; max-height:75vh; overflow-y:auto; background:#000;"></div>
             </div>`;
-
-      // Fecha ao clicar fora do conteúdo
-      modal.onclick = function (e) {
-        if (e.target === modal) fecharModalDocs();
-      };
-
       document.body.appendChild(modal);
     }
 
@@ -12315,7 +11682,8 @@
 
     const addResposta = (r) => {
       if (!r) return;
-      const email = (r.email || r.fornecedor || r.nome || "Outros").toLowerCase().trim();
+      const email = (r.email || r.fornecedor || r.nome || "").toLowerCase().trim();
+      if (!email || email === "undefined") return;
 
       const temAnexo = r.anexo || (Array.isArray(r.anexos) && r.anexos.length > 0) || r.base64 || r.url || r.link;
 
@@ -12326,20 +11694,9 @@
       }
     };
 
-    // --- COLETA DE DADOS ---
+    // A. Fonte Local (Filtro Global)
     const todasCotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
     const cot = todasCotacoes.find(c => String(c.numero) === String(idCotacao) || String(c.numero) === String(idLimpo) || String(c.id) === String(idCotacao) || String(c.id) === String(idLimpo));
-
-    // A. Anexos Originais da Cotação (Comprador)
-    if (cot && Array.isArray(cot.anexos) && cot.anexos.length > 0) {
-      addResposta({
-        fornecedor: "COMPRADOR (Origem)",
-        email: "comprador@origem.com.br",
-        anexos: cot.anexos.map(a => ({ ...a, tipo: "Edital/Original" }))
-      });
-    }
-
-    // B. Respostas Gravadas no Objeto Cotação
     if (cot && cot.respostasFornecedores) {
       cot.respostasFornecedores.forEach(addResposta);
     }
@@ -12365,46 +11722,6 @@
           qs2.forEach(doc => addResposta(doc.data()));
         }
       } catch (e) { console.warn("Erro ao buscar subcoleção:", e); }
-    }
-
-    // D. Documentos da Gestão Financeira (Centralizados + Individuais)
-    if (!emailFornecedor && typeof db !== "undefined") {
-      try {
-        const idsTentativa = [`docs_${idLimpo}`, `docs_${idCotacao}`];
-        let arquivosFin = [];
-
-        for (const idDoc of idsTentativa) {
-          const docRef = db.collection("documentos_cotacao").doc(idDoc);
-          const docFin = await docRef.get();
-
-          if (docFin.exists) {
-            const arqs = docFin.data().arquivos || [];
-            arqs.forEach(a => {
-              if (!arquivosFin.some(existente => (existente.url && existente.url === a.url) || (existente.base64 && existente.base64 === a.base64))) {
-                arquivosFin.push(a);
-              }
-            });
-          }
-
-          // Busca redundância em anexos individuais para cada ID de documento
-          const subSnap = await docRef.collection("anexos_individuais").get();
-          subSnap.forEach(d => {
-            const data = d.data();
-            const jaExiste = arquivosFin.some(a => (a.url && a.url === data.url) || (a.base64 && a.base64 === data.base64));
-            if (!jaExiste) arquivosFin.push(data);
-          });
-        }
-
-        if (arquivosFin.length > 0) {
-          addResposta({
-            fornecedor: "GESTÃO FINANCEIRA (Notas/Boletos)",
-            email: "financeiro@sistema-cotacao.com.br",
-            anexos: arquivosFin
-          });
-        }
-      } catch (e) {
-        console.warn("Erro ao processar documentos financeiros:", e);
-      }
     }
 
     let todasRespostas = Array.from(todasRespostasMap.values());
@@ -12479,16 +11796,6 @@
 
     tableHTML += "</tbody></table>";
     container.innerHTML = tableHTML;
-  };
-
-  /* ======================================================
-     🚀 NAVEGAÇÃO GLOBAL (RESTAURADO)
-     ====================================================== */
-  window.abrirTela = function (id) {
-    document.querySelectorAll("section").forEach(s => s.style.display = "none");
-    const target = document.getElementById(id);
-    if (target) target.style.display = "block";
-    window.scrollTo(0, 0);
   };
 
   /* ======================================================
@@ -12704,45 +12011,6 @@
   }
 </style>
 <script src="premium_render.js?v=10022"></script>
-
-<!-- 👁️ MODAL – DETALHES DO FORNECEDOR -->
-<div id="modalVerFornecedor" class="modal">
-  <div class="modal-content" style="max-width: 500px;">
-    <button class="close-btn" onclick="fecharModalVerFornecedor()">&times;</button>
-    <h2 style="color: #661155; text-align: center; margin-bottom: 20px;">🏢 Ficha do Fornecedor</h2>
-    <div id="conteudoVerFornecedor"></div>
-    <div style="margin-top: 20px; text-align: center;">
-      <button onclick="fecharModalVerFornecedor()"
-        style="width: 150px; background: #333; border: 1px solid #661155; color: white;">Fechar</button>
-    </div>
-  </div>
-</div>
-
-<!-- 👁️ MODAL – DETALHES DO SERVIÇO -->
-<div id="modalVerServico" class="modal">
-  <div class="modal-content" style="max-width: 500px;">
-    <button class="close-btn" onclick="fecharModalVerServico()">&times;</button>
-    <h2 style="color: #661155; text-align: center; margin-bottom: 20px;">🛠️ Detalhes do Serviço</h2>
-    <div id="conteudoVerServico"></div>
-    <div style="margin-top: 20px; text-align: center;">
-      <button onclick="fecharModalVerServico()"
-        style="width: 150px; background: #333; border: 1px solid #661155; color: white;">Fechar</button>
-    </div>
-  </div>
-</div>
-
-<!-- 👁️ MODAL – DETALHES DO MATERIAL -->
-<div id="modalVerMaterial" class="modal">
-  <div class="modal-content" style="max-width: 500px;">
-    <button class="close-btn" onclick="fecharModalVerMaterial()">&times;</button>
-    <h2 style="color: #661155; text-align: center; margin-bottom: 20px;">📦 Detalhes do Material</h2>
-    <div id="conteudoVerMaterial"></div>
-    <div style="margin-top: 20px; text-align: center;">
-      <button onclick="fecharModalVerMaterial()"
-        style="width: 150px; background: #333; border: 1px solid #661155; color: white;">Fechar</button>
-    </div>
-  </div>
-</div>
 
 </body>
 
