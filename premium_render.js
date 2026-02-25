@@ -1455,3 +1455,5 @@ window.enviarParaAprovacao = async function () {
    }
 };
 
+// Exportacao Global
+window.renderizarTabelaAnalise = renderizarTabelaAnalise;
