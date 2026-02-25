@@ -315,42 +315,6 @@ function renderizarTabelaAnalise(textoOuId, containerOverride = null) {
         html += `<div style="text-align:center; font-size:16px; font-weight:bold; margin:20px 0; color:#fbbf24;">${textoStatus}</div>`;
     }
 
-    // --- SEÇÃO: ENTREGA E FORMAS DE PAGAMENTO ---
-    html += `
-        <div style="margin-top:40px; border-top:1px solid #333; padding-top:20px;">
-            <h3 style="color:#3ab9b6; font-size:18px; margin-bottom:20px; text-transform:uppercase; letter-spacing:1px; display:flex; align-items:center; gap:10px;">
-                <i class="fa-solid fa-truck-fast"></i> Entrega e Formas de Pagamento
-            </h3>
-            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:20px;">
-    `;
-
-    respostas.forEach(r => {
-        const nome = getNomeExibicao(r.email, r.fornecedor);
-        const prazo = r.prazoEntrega || "— Não informado";
-        const condicao = r.condicaoPagamento || "— Não informado";
-
-        html += `
-            <div style="background:#111; border:1px solid #661155; border-radius:10px; padding:15px; position:relative; overflow:hidden;">
-                <div style="position:absolute; top:0; left:0; width:4px; height:100%; background:#661155;"></div>
-                <div style="font-weight:bold; color:#fff; font-size:14px; margin-bottom:12px; border-bottom:1px solid #222; padding-bottom:8px; display:flex; justify-content:space-between;">
-                    ${nome}
-                </div>
-                <div style="display:grid; gap:10px;">
-                    <div>
-                        <small style="color:#888; display:block; text-transform:uppercase; font-size:10px; letter-spacing:0.5px;">Prazo de Entrega</small>
-                        <span style="color:#00ff99; font-weight:600; font-size:13px;">${prazo}</span>
-                    </div>
-                    <div>
-                        <small style="color:#888; display:block; text-transform:uppercase; font-size:10px; letter-spacing:0.5px;">Condição de Pagamento</small>
-                        <span style="color:#fff; font-weight:600; font-size:13px;">${condicao}</span>
-                    </div>
-                </div>
-            </div>
-        `;
-    });
-
-    html += `</div></div>`;
-
     if (isAnalise) {
         html += `<div class="botoes-acao-container" style="margin-top:30px; display:flex; gap:10px; flex-direction: row; justify-content: center; align-items: center; flex-wrap: nowrap; width: 100%; padding: 10px 0;">`;
 
