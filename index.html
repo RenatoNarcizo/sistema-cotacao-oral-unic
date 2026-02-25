@@ -3265,35 +3265,10 @@
               <th style="text-align: center;">Marca</th>
               <th style="text-align: center;">Quantidade</th>
               <th style="text-align: center;">Preço Unitário (R$)</th>
-            </tr>
           </thead>
-
           <tbody id="tabelaResponderCorpo" style="background:#1a1a1a;"></tbody>
         </table>
       </div>
-      <!-- 🚚 Entrega e Pagamento -->
-      <div
-        style="margin-top:20px; padding:15px; background:rgba(102, 17, 85, 0.05); border:1px solid #661155; border-radius:8px;">
-        <h3
-          style="color:#3ab9b6; font-size:16px; margin-top:0; margin-bottom:15px; display:flex; align-items:center; gap:10px;">
-          <i class="fa-solid fa-truck-fast"></i> Entrega e Formas de Pagamento
-        </h3>
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
-          <div>
-            <label style="display:block; color:#aaa; font-size:12px; margin-bottom:5px;">Prazo de Entrega (Ex: 5 dias
-              úteis)</label>
-            <input type="text" id="respPrazoEntrega" placeholder="Informe o prazo..."
-              style="width:100%; background:#111; border:1px solid #333; color:white; padding:10px; border-radius:5px;">
-          </div>
-          <div>
-            <label style="display:block; color:#aaa; font-size:12px; margin-bottom:5px;">Condição de Pagamento (Ex: 30
-              dias no boleto)</label>
-            <input type="text" id="respCondicaoPagamento" placeholder="Informe a condição..."
-              style="width:100%; background:#111; border:1px solid #333; color:white; padding:10px; border-radius:5px;">
-          </div>
-        </div>
-      </div>
-
       <!-- 📎 Anexo -->
       <!-- 📎 Anexo (CONTAINER REINICIÁVEL) -->
       <div id="containerAnexoResponder" style="margin-top:15px;">
@@ -11770,8 +11745,6 @@
         })(),
         email: usuario.email.toLowerCase().trim(),
         itens: itensRespondidos,
-        prazoEntrega: document.getElementById("respPrazoEntrega")?.value || "",
-        condicaoPagamento: document.getElementById("respCondicaoPagamento")?.value || "",
         data: new Date().toISOString(),
         anexo: anexosArray[0] || null,
         anexos: anexosArray
@@ -12008,12 +11981,6 @@
       console.log(`🔍 [DEBUG] Buscando na lista da cotação:`, resposta ? "✅ Encontrada" : "❌ Não encontrada");
     }
 
-    // Resetar campos de entrega e pagamento antes de preencher
-    const inputPrazoReset = document.getElementById("respPrazoEntrega");
-    const inputCondicaoReset = document.getElementById("respCondicaoPagamento");
-    if (inputPrazoReset) inputPrazoReset.value = "";
-    if (inputCondicaoReset) inputCondicaoReset.value = "";
-
     if (resposta) {
       console.log(`📦 [DEBUG] Resposta carregada:`, {
         fornecedor: resposta.fornecedor,
@@ -12029,12 +11996,6 @@
           if (input) input.value = window.formatarMoedaBRL(item.preco ?? item.valor ?? 0);
         }
       });
-
-      // 🚚 Preencher campos de entrega e pagamento
-      const inputPrazo = document.getElementById("respPrazoEntrega");
-      const inputCondicao = document.getElementById("respCondicaoPagamento");
-      if (inputPrazo) inputPrazo.value = resposta.prazoEntrega || "";
-      if (inputCondicao) inputCondicao.value = resposta.condicaoPagamento || "";
 
       if (resposta.anexo && resposta.anexo.nome) {
         const label = containerAnexo ? containerAnexo.querySelector('span[id^="labelLocal_"]') : null;
@@ -12071,9 +12032,6 @@
     const btnSend = document.getElementById("btnEnviarResposta");
     const inputs = document.querySelectorAll("#tabelaResponderCorpo input");
     const btnFake = document.getElementById("btnFakeAnexo");
-    // Novos campos
-    const inputPrazo = document.getElementById("respPrazoEntrega");
-    const inputCondicao = document.getElementById("respCondicaoPagamento");
 
     if (!btnEdit || !btnSend) return;
     btnEdit.style.display = "none";
@@ -12081,28 +12039,20 @@
 
     if (modo === "novo") {
       inputs.forEach(i => i.disabled = false);
-      if (inputPrazo) inputPrazo.disabled = false;
-      if (inputCondicao) inputCondicao.disabled = false;
       btnSend.style.display = "inline-block";
       btnSend.innerText = "📤 Enviar Resposta";
       if (btnFake) { btnFake.disabled = false; btnFake.style.opacity = "1"; }
     } else if (modo === "respondida") {
       inputs.forEach(i => i.disabled = true);
-      if (inputPrazo) inputPrazo.disabled = true;
-      if (inputCondicao) inputCondicao.disabled = true;
       btnEdit.style.display = "inline-block";
       if (btnFake) { btnFake.disabled = true; btnFake.style.opacity = "0.5"; btnFake.style.cursor = "not-allowed"; }
     } else if (modo === "editar") {
       inputs.forEach(i => i.disabled = false);
-      if (inputPrazo) inputPrazo.disabled = false;
-      if (inputCondicao) inputCondicao.disabled = false;
       btnSend.style.display = "inline-block";
       btnSend.innerText = "📤 Enviar Resposta Editada";
       if (btnFake) { btnFake.disabled = false; btnFake.style.opacity = "1"; btnFake.style.cursor = "pointer"; }
     } else if (modo === "encerrada") {
       inputs.forEach(i => i.disabled = true);
-      if (inputPrazo) inputPrazo.disabled = true;
-      if (inputCondicao) inputCondicao.disabled = true;
       if (btnFake) { btnFake.disabled = true; btnFake.style.opacity = "0.5"; }
     }
   }
