@@ -3271,6 +3271,28 @@
           <tbody id="tabelaResponderCorpo" style="background:#1a1a1a;"></tbody>
         </table>
       </div>
+      <!-- 🚚 Entrega e Pagamento -->
+      <div
+        style="margin-top:20px; padding:15px; background:rgba(102, 17, 85, 0.05); border:1px solid #661155; border-radius:8px;">
+        <h3
+          style="color:#3ab9b6; font-size:16px; margin-top:0; margin-bottom:15px; display:flex; align-items:center; gap:10px;">
+          <i class="fa-solid fa-truck-fast"></i> Entrega e Formas de Pagamento
+        </h3>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
+          <div>
+            <label style="display:block; color:#aaa; font-size:12px; margin-bottom:5px;">Prazo de Entrega (Ex: 5 dias
+              úteis)</label>
+            <input type="text" id="respPrazoEntrega" placeholder="Informe o prazo..."
+              style="width:100%; background:#111; border:1px solid #333; color:white; padding:10px; border-radius:5px;">
+          </div>
+          <div>
+            <label style="display:block; color:#aaa; font-size:12px; margin-bottom:5px;">Condição de Pagamento (Ex: 30
+              dias no boleto)</label>
+            <input type="text" id="respCondicaoPagamento" placeholder="Informe a condição..."
+              style="width:100%; background:#111; border:1px solid #333; color:white; padding:10px; border-radius:5px;">
+          </div>
+        </div>
+      </div>
 
       <!-- 📎 Anexo -->
       <!-- 📎 Anexo (CONTAINER REINICIÁVEL) -->
@@ -6141,41 +6163,105 @@
           }
         }
 
-        // --- HISTÓRICO DE ENVIOS DO FORNECEDOR ---
+        // --- HISTÓRICO DE ENVIOS DO FORNECEDOR (REFORMULADO) ---
         if (listaComprador) {
-          listaComprador.innerHTML = `<h3 style="color:#661155; font-size:16px; margin-bottom:15px; border-bottom:1px solid #333; padding-bottom:8px;">
-            <i class="fa-solid fa-history"></i> Meu Histórico de Envios
-          </h3>`;
+          listaComprador.innerHTML = `
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; border-bottom: 2px solid #661155; padding-bottom: 10px;">
+              <h3 style="color: white; font-size: 18px; margin: 0; font-weight: 800; display: flex; align-items: center; gap: 10px;">
+                <i class="fa-solid fa-history" style="color: #3ab9b6;"></i> Histórico de Envios
+              </h3>
+            </div>`;
 
           let meusEnvios = [];
           if (typeof db !== "undefined") {
             const snap = await db.collection("documentos_cotacao").get();
+            const cotacoesLocal = JSON.parse(localStorage.getItem('cotacoes')) || [];
+
             snap.forEach(doc => {
               const data = doc.data();
               const arqs = data.arquivos || [];
               const filtrados = arqs.filter(a => (a.usuario === usuario.nome || a.email === usuario.email));
               if (filtrados.length > 0) {
-                meusEnvios.push({ idCotacao: doc.id.replace("docs_", ""), docs: filtrados });
+                const idCot = doc.id.replace("docs_", "");
+                const cot = cotacoesLocal.find(c => String(c.numero) === String(idCot)) || { numero: idCot, descricao: "Documento Enviado", dataCriacao: new Date().toLocaleString() };
+                meusEnvios.push({ idCotacao: idCot, cotacao: cot, docs: filtrados });
               }
             });
           }
 
           if (meusEnvios.length === 0) {
-            listaComprador.innerHTML += "<p style='color:#666; text-align:center; padding:20px;'>Você ainda não enviou documentos pelo sistema.</p>";
+            listaComprador.innerHTML += "<p style='color:#666; text-align:center; padding:40px; background: rgba(0,0,0,0.2); border-radius: 10px;'>Você ainda não enviou documentos pelo sistema.</p>";
           } else {
-            let htmlDocs = `<div style="display:flex; flex-direction:column; gap:10px;">`;
-            meusEnvios.forEach(item => {
-              htmlDocs += `
-                <div style="background:#111; border:1px solid #333; padding:12px 15px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
-                  <div>
-                    <strong style="color:#3ab9b6; font-size:14px;">Cotação #${item.idCotacao}</strong>
-                    <div style="font-size:11px; color:#888;">${item.docs.length} arquivo(s) enviados</div>
-                  </div>
-                  <button onclick="visualizarDocumentos('${item.idCotacao}', '${usuario.email}')" style="background:#661155; color:white; border:none; padding:5px 12px; border-radius:4px; cursor:pointer; font-size:11px; font-weight:bold;">VER ANEXOS</button>
-                </div>`;
+            // 2. Agrupamento por Mês
+            const gruposMes = {};
+            meusEnvios.sort((a, b) => {
+              const dA = window.parseDateBR(a.cotacao.dataCriacao) || new Date(0);
+              const dB = window.parseDateBR(b.cotacao.dataCriacao) || new Date(0);
+              return dB - dA;
             });
-            htmlDocs += `</div>`;
-            listaComprador.innerHTML += htmlDocs;
+
+            meusEnvios.forEach(item => {
+              let dataRef = window.parseDateBR(item.cotacao.dataCriacao) || new Date();
+              const mesAno = dataRef.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+              const mesFormatado = mesAno.charAt(0).toUpperCase() + mesAno.slice(1);
+              if (!gruposMes[mesFormatado]) gruposMes[mesFormatado] = [];
+              gruposMes[mesFormatado].push(item);
+            });
+
+            // 3. Renderização Final com Estilo Premium
+            Object.keys(gruposMes).forEach((mes, idx) => {
+              const grupo = gruposMes[mes];
+              const sectionId = `ship-grupo-${idx}`;
+              const iconId = `ship-icon-${idx}`;
+
+              const section = document.createElement("div");
+              section.style.marginBottom = "20px";
+              section.style.background = "rgba(40, 40, 40, 0.3)";
+              section.style.borderRadius = "12px";
+              section.style.overflow = "hidden";
+              section.style.border = "1px solid #222";
+
+              section.innerHTML = `
+                <div onclick="window.toggleSecaoFinanceira('${sectionId}', '${iconId}')" 
+                     style="background: rgba(30, 30, 30, 0.8); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #661155; cursor: pointer; transition: 0.3s;"
+                     onmouseover="this.style.background='rgba(50, 50, 50, 0.8)';"
+                     onmouseout="this.style.background='rgba(30, 30, 30, 0.8)';"
+                >
+                  <h3 style="color: white; margin: 0; font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 10px;">
+                    <i id="${iconId}" class="fa-solid fa-chevron-down" style="font-size: 12px; color: #661155; transition: 0.3s;"></i>
+                    <span style="font-size: 14px;">🗓️</span> Envios de ${mes}
+                  </h3>
+                  <span style="background: #661155; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 800; min-width: 25px; text-align: center;">
+                    ${grupo.length}
+                  </span>
+                </div>
+                <div id="${sectionId}" style="padding: 15px; display: flex; flex-direction: column; gap: 10px;">
+                  ${grupo.map(item => {
+                const nDocs = item.docs.length;
+                return `
+                      <div style="display:flex; justify-content:space-between; align-items:center; background:#181818; border:1px solid #333; padding:12px 15px; border-radius:10px; transition:0.3s;" 
+                           onmouseover="this.style.borderColor='#661155'; this.style.background='#222';" 
+                           onmouseout="this.style.borderColor='#333'; this.style.background='#181818';">
+                        <div style="flex:1; cursor: pointer;" onclick="visualizarDocumentos('${item.idCotacao}', '${usuario.email}')">
+                          <strong style="color:white; font-size:14px; display:block; margin-bottom:2px; text-transform: uppercase;">${item.cotacao.descricao}</strong>
+                          <span style="color:#777; font-size:11px; letter-spacing:0.5px;">COTAÇÃO #${item.idCotacao} • DATA: <strong style="color:#999;">${item.cotacao.dataCriacao}</strong></span>
+                        </div>
+                        <div style="flex:0 0 auto; margin: 0 20px; text-align:right;">
+                          <div style="font-size:11px; font-weight:900; color:#3ab9b6; letter-spacing:0.5px;">${nDocs} ARQUIVO(S)</div>
+                        </div>
+                        <div style="flex:0 0 auto;">
+                          <button onclick="visualizarDocumentos('${item.idCotacao}', '${usuario.email}')" 
+                                  style="background:transparent; color:#3ab9b6; border:1px solid #3ab9b6; padding:6px 15px; border-radius:6px; cursor:pointer; font-size:10px; font-weight:900; text-transform:uppercase; transition: 0.2s;"
+                                  onmouseover="this.style.background='#3ab9b6'; this.style.color='#000';"
+                                  onmouseout="this.style.background='transparent'; this.style.color='#3ab9b6';">
+                            <i class="fa-solid fa-eye"></i> EXIBIR
+                          </button>
+                        </div>
+                      </div>`;
+              }).join('')}
+                </div>`;
+              listaComprador.appendChild(section);
+            });
           }
         }
       }
@@ -11684,6 +11770,8 @@
         })(),
         email: usuario.email.toLowerCase().trim(),
         itens: itensRespondidos,
+        prazoEntrega: document.getElementById("respPrazoEntrega")?.value || "",
+        condicaoPagamento: document.getElementById("respCondicaoPagamento")?.value || "",
         data: new Date().toISOString(),
         anexo: anexosArray[0] || null,
         anexos: anexosArray
@@ -11920,6 +12008,12 @@
       console.log(`🔍 [DEBUG] Buscando na lista da cotação:`, resposta ? "✅ Encontrada" : "❌ Não encontrada");
     }
 
+    // Resetar campos de entrega e pagamento antes de preencher
+    const inputPrazoReset = document.getElementById("respPrazoEntrega");
+    const inputCondicaoReset = document.getElementById("respCondicaoPagamento");
+    if (inputPrazoReset) inputPrazoReset.value = "";
+    if (inputCondicaoReset) inputCondicaoReset.value = "";
+
     if (resposta) {
       console.log(`📦 [DEBUG] Resposta carregada:`, {
         fornecedor: resposta.fornecedor,
@@ -11935,6 +12029,13 @@
           if (input) input.value = window.formatarMoedaBRL(item.preco ?? item.valor ?? 0);
         }
       });
+
+      // 🚚 Preencher campos de entrega e pagamento
+      const inputPrazo = document.getElementById("respPrazoEntrega");
+      const inputCondicao = document.getElementById("respCondicaoPagamento");
+      if (inputPrazo) inputPrazo.value = resposta.prazoEntrega || "";
+      if (inputCondicao) inputCondicao.value = resposta.condicaoPagamento || "";
+
       if (resposta.anexo && resposta.anexo.nome) {
         const label = containerAnexo ? containerAnexo.querySelector('span[id^="labelLocal_"]') : null;
         if (label) {
@@ -11970,6 +12071,9 @@
     const btnSend = document.getElementById("btnEnviarResposta");
     const inputs = document.querySelectorAll("#tabelaResponderCorpo input");
     const btnFake = document.getElementById("btnFakeAnexo");
+    // Novos campos
+    const inputPrazo = document.getElementById("respPrazoEntrega");
+    const inputCondicao = document.getElementById("respCondicaoPagamento");
 
     if (!btnEdit || !btnSend) return;
     btnEdit.style.display = "none";
@@ -11977,20 +12081,28 @@
 
     if (modo === "novo") {
       inputs.forEach(i => i.disabled = false);
+      if (inputPrazo) inputPrazo.disabled = false;
+      if (inputCondicao) inputCondicao.disabled = false;
       btnSend.style.display = "inline-block";
       btnSend.innerText = "📤 Enviar Resposta";
       if (btnFake) { btnFake.disabled = false; btnFake.style.opacity = "1"; }
     } else if (modo === "respondida") {
       inputs.forEach(i => i.disabled = true);
+      if (inputPrazo) inputPrazo.disabled = true;
+      if (inputCondicao) inputCondicao.disabled = true;
       btnEdit.style.display = "inline-block";
       if (btnFake) { btnFake.disabled = true; btnFake.style.opacity = "0.5"; btnFake.style.cursor = "not-allowed"; }
     } else if (modo === "editar") {
       inputs.forEach(i => i.disabled = false);
+      if (inputPrazo) inputPrazo.disabled = false;
+      if (inputCondicao) inputCondicao.disabled = false;
       btnSend.style.display = "inline-block";
       btnSend.innerText = "📤 Enviar Resposta Editada";
       if (btnFake) { btnFake.disabled = false; btnFake.style.opacity = "1"; btnFake.style.cursor = "pointer"; }
     } else if (modo === "encerrada") {
       inputs.forEach(i => i.disabled = true);
+      if (inputPrazo) inputPrazo.disabled = true;
+      if (inputCondicao) inputCondicao.disabled = true;
       if (btnFake) { btnFake.disabled = true; btnFake.style.opacity = "0.5"; }
     }
   }
