@@ -4560,31 +4560,7 @@
     console.log("✅ Sincronização Unificada Completa!");
   };
 
-  /* 🔄 SINCRONIZAÇÃO DE MATERIAIS E SERVIÇOS */
-  window.sincronizarMateriaisEServicos = async function () {
-    console.log("🔄 Sincronizando Materiais e Serviços com a Nuvem...");
-    if (typeof db === "undefined") return;
 
-    try {
-      // Materiais
-      const snapMat = await db.collection("materiais").get();
-      const materiaisCloud = snapMat.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
-      if (materiaisCloud.length > 0) {
-        localStorage.setItem("materiais", JSON.stringify(materiaisCloud));
-        console.log(`📦 ${materiaisCloud.length} materiais sincronizados.`);
-      }
-
-      // Serviços
-      const snapServ = await db.collection("servicos").get();
-      const servicosCloud = snapServ.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
-      if (servicosCloud.length > 0) {
-        localStorage.setItem("servicos", JSON.stringify(servicosCloud));
-        console.log(`🛠️ ${servicosCloud.length} serviços sincronizados.`);
-      }
-    } catch (e) {
-      console.warn("Erro ao sincronizar Materiais/Serviços:", e);
-    }
-  };
 
   /* ======================================================
       🔐 FUNÇÃO: CONFIRMAR TROCA DE SENHA (FIREBASE)
@@ -8114,9 +8090,9 @@
         <td style="padding:10px; border-bottom:1px solid #333;">${f.responsavel || "-"}</td>
         <td style="padding:10px; border-bottom:1px solid #333; text-align:center;">
           <div style="display:flex; justify-content:center; gap:8px;">
-            <button class="btn-acao-premium" onclick="verFichaFornecedor(${index})" title="Ver Ficha"><i class="fa-solid fa-eye"></i></button>
-            <button class="btn-acao-premium" onclick="editarFornecedor(${index})" title="Editar"><i class="fa-solid fa-pen"></i></button>
-            <button class="btn-acao-premium" onclick='window.excluirFornecedor(${index})' style="background:#500a40;" title="Excluir"><i class="fa-solid fa-trash"></i></button>
+            <button class="btn-acao-premium" onclick="verFichaFornecedor(${index})"><i class="fa-solid fa-eye"></i> Ver Ficha</button>
+            <button class="btn-acao-premium" onclick="editarFornecedor(${index})"><i class="fa-solid fa-pen"></i> Editar</button>
+            <button class="btn-acao-premium" onclick='window.excluirFornecedor(${index})' style="background:#500a40;"><i class="fa-solid fa-trash"></i> Excluir</button>
           </div>
         </td>
       `;
@@ -8329,9 +8305,9 @@
         <td style="padding:10px; border-bottom:1px solid #333;">${m.qtdEmb || "-"}</td>
         <td style="padding:10px; border-bottom:1px solid #333; text-align:center;">
           <div style="display:flex; justify-content:center; gap:8px;">
-            <button class="btn-acao-premium" onclick="verFichaMaterial(${i})" title="Ver Ficha"><i class="fa-solid fa-eye"></i></button>
-            <button class="btn-acao-premium" onclick="editarMaterial(${i})" title="Editar"><i class="fa-solid fa-pen"></i></button>
-            <button class="btn-acao-premium" onclick="excluirMaterial(${i})" style="background:#500a40;" title="Excluir"><i class="fa-solid fa-trash"></i></button>
+            <button class="btn-acao-premium" onclick="verFichaMaterial(${i})"><i class="fa-solid fa-eye"></i> Ver Ficha</button>
+            <button class="btn-acao-premium" onclick="editarMaterial(${i})"><i class="fa-solid fa-pen"></i> Editar</button>
+            <button class="btn-acao-premium" onclick="excluirMaterial(${i})" style="background:#500a40;"><i class="fa-solid fa-trash"></i> Excluir</button>
           </div>
         </td>
       `;
@@ -8367,7 +8343,7 @@
     }
 
     const novoMaterial = {
-      docId: "temp-" + Date.now(),
+      docId: "local-" + Date.now(),
       nome,
       codigo: codigo || "",
       embalagem: embalagem || "",
@@ -8379,16 +8355,7 @@
     materiais.sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
     localStorage.setItem("materiais", JSON.stringify(materiais));
 
-    if (typeof db !== "undefined") {
-      try {
-        const docRef = await db.collection("materiais").add(novoMaterial);
-        const idx = materiais.findIndex(m => m.docId === novoMaterial.docId);
-        if (idx !== -1) {
-          materiais[idx].docId = docRef.id;
-          localStorage.setItem("materiais", JSON.stringify(materiais));
-        }
-      } catch (e) { console.warn("Erro Firestore Material:", e); }
-    }
+    // Sincronização complexa removida para priorizar estabilidade local.
 
     alert("✅ Material salvo com sucesso!");
 
@@ -8552,9 +8519,9 @@
         <td style="padding:10px; border-bottom:1px solid #333;">${s.preco || "-"}</td>
         <td style="padding:10px; border-bottom:1px solid #333; text-align:center;">
           <div style="display:flex; justify-content:center; gap:8px;">
-            <button class="btn-acao-premium" onclick="verFichaServico(${i})" title="Ver Ficha"><i class="fa-solid fa-eye"></i></button>
-            <button class="btn-acao-premium" onclick="editarServico(${i})" title="Editar"><i class="fa-solid fa-pen"></i></button>
-            <button class="btn-acao-premium" onclick="excluirServico(${i})" style="background:#500a40;" title="Excluir"><i class="fa-solid fa-trash"></i></button>
+            <button class="btn-acao-premium" onclick="verFichaServico(${i})"><i class="fa-solid fa-eye"></i> Ver Ficha</button>
+            <button class="btn-acao-premium" onclick="editarServico(${i})"><i class="fa-solid fa-pen"></i> Editar</button>
+            <button class="btn-acao-premium" onclick="excluirServico(${i})" style="background:#500a40;"><i class="fa-solid fa-trash"></i> Excluir</button>
           </div>
         </td>
       `;
@@ -8578,7 +8545,7 @@
     }
 
     const novoServico = {
-      docId: "temp-" + Date.now(),
+      docId: "local-" + Date.now(),
       nome,
       codigo: codigo || "",
       categoria,
@@ -8591,16 +8558,7 @@
     servicos.sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
     localStorage.setItem("servicos", JSON.stringify(servicos));
 
-    if (typeof db !== "undefined") {
-      try {
-        const docRef = await db.collection("servicos").add(novoServico);
-        const idx = servicos.findIndex(s => s.docId === novoServico.docId);
-        if (idx !== -1) {
-          servicos[idx].docId = docRef.id;
-          localStorage.setItem("servicos", JSON.stringify(servicos));
-        }
-      } catch (e) { console.warn("Erro Firestore Serviço:", e); }
-    }
+    // Sincronização complexa removida para priorizar estabilidade local.
 
     document.getElementById("servNome").value = "";
     document.getElementById("servCodigo").value = "";
