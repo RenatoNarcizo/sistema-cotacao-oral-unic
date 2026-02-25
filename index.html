@@ -148,6 +148,38 @@
       background: #882277;
     }
 
+    /* 🎨 BOTÕES PREMIUM (ÍCONE + TEXTO) */
+    .btn-acao-premium {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 6px 12px;
+      min-width: 100px;
+      width: auto !important;
+      /* Sobrescreve width 100% global */
+      height: 38px;
+      background: #661155;
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .btn-acao-premium:hover {
+      background: #882277;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .btn-acao-premium i {
+      font-size: 14px;
+    }
+
     /* 📝 FORM GRID - PADRONIZAÇÃO DE LAYOUT */
     .form-grid {
       display: grid;
@@ -8144,7 +8176,7 @@
 
       const docIdForn = fornecedor.docId;
       const emailForn = (fornecedor.email || fornecedor.emails || "").toLowerCase().trim();
-      if (!confirm(`Deseja realmente excluir o fornecedor ${fornecedor.nome}?`)) return;
+      if (!confirm("vai excluir apenas o fornecedor ? não é para exclui mais nada .")) return;
 
       // 🔥 1. REMOVE NO FIRESTORE (ID DIRETO + QUERY P/ DUPLICADOS)
       try {
@@ -8430,7 +8462,7 @@
   }
 
   async function excluirMaterial(index) {
-    if (!confirm("❌ Deseja realmente excluir este material?")) return;
+    if (!confirm("vai excluir apenas os materiais ? não é para exclui mais nada .")) return;
 
     const materiais = JSON.parse(localStorage.getItem("materiais")) || [];
     const material = materiais[index];
@@ -8607,7 +8639,7 @@
   }
 
   async function excluirServico(index) {
-    if (!confirm("❌ Deseja realmente excluir este serviço?")) return;
+    if (!confirm("Deseja realmente excluir este serviço?")) return;
 
     const servicos = JSON.parse(localStorage.getItem("servicos")) || [];
     const servico = servicos[index];
