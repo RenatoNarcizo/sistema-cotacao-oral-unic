@@ -148,6 +148,32 @@
       background: #882277;
     }
 
+    /* 💎 BOTÕES DE AÇÃO PREMIUM */
+    .btn-acao-premium {
+      background: #661155;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      width: 38px;
+      height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: transform 0.2s, background 0.2s;
+      font-size: 16px;
+      margin: 0;
+    }
+
+    .btn-acao-premium:hover {
+      background: #882277;
+      transform: scale(1.1);
+    }
+
+    .btn-acao-premium i {
+      pointer-events: none;
+    }
+
     .btn-outline {
       background: transparent;
       border: 1px solid var(--primaria);
@@ -2946,19 +2972,19 @@
         </div>
 
         <div>
-          <label>Código do Produto</label>
+          <label>Código do Produto (opcional)</label>
           <input type="text" id="matCodigo" placeholder="Ex: PRF-001" style="width:100%; background:#1a1a1a; border:1px solid #661155;
                  border-radius:5px; color:white; padding:8px;">
         </div>
 
         <div>
-          <label>Embalagem</label>
+          <label>Embalagem (opcional)</label>
           <input type="text" id="matEmbalagem" placeholder="Ex: Caixa" style="width:100%; background:#1a1a1a; border:1px solid #661155;
                  border-radius:5px; color:white; padding:8px;">
         </div>
 
         <div>
-          <label>Qtd / Embalagem</label>
+          <label>Qtd / Embalagem (opcional)</label>
           <input type="number" id="matQtdEmb" placeholder="Ex: 100" style="width:100%; background:#1a1a1a; border:1px solid #661155;
                  border-radius:5px; color:white; padding:8px;">
         </div>
@@ -8216,8 +8242,9 @@
         <td style="padding:10px; border-bottom:1px solid #333;">${m.qtdEmb || "-"}</td>
         <td style="padding:10px; border-bottom:1px solid #333; text-align:center;">
           <div style="display:flex; justify-content:center; gap:8px;">
-            <button onclick="editarMaterial(${i})" style="background:transparent; border:none; color:#3ab9b6; cursor:pointer;" title="Editar"><i class="fa-solid fa-pen"></i></button>
-            <button onclick="excluirMaterial(${i})" style="background:transparent; border:none; color:#ff4444; cursor:pointer;" title="Excluir"><i class="fa-solid fa-trash"></i></button>
+            <button class="btn-acao-premium" onclick="verFichaMaterial(${i})" title="Ver Ficha"><i class="fa-solid fa-eye"></i></button>
+            <button class="btn-acao-premium" onclick="editarMaterial(${i})" title="Editar"><i class="fa-solid fa-pen"></i></button>
+            <button class="btn-acao-premium" onclick="excluirMaterial(${i})" style="background:#500a40;" title="Excluir"><i class="fa-solid fa-trash"></i></button>
           </div>
         </td>
       `;
@@ -8283,6 +8310,37 @@
   /* ===============================
      📦 MATERIAIS – EDITAR / EXCLUIR
   =============================== */
+
+  window.verFichaMaterial = function (index) {
+    const materiais = JSON.parse(localStorage.getItem("materiais")) || [];
+    const m = materiais[index];
+    if (!m) return;
+
+    const div = document.getElementById("conteudoVerMaterial");
+    if (!div) return;
+
+    div.innerHTML = `
+      <div style="background:#111; border:1px solid #661155; border-radius:10px; padding:20px; color:white;">
+        <p><strong>📦 Nome do Material:</strong> ${m.nome || "-"}</p>
+        <p><strong>🔢 Código do Produto:</strong> ${m.codigo || "-"}</p>
+        <p><strong>📦 Embalagem:</strong> ${m.embalagem || "-"}</p>
+        <p><strong>📊 Qtd / Embalagem:</strong> ${m.qtdEmb || "-"}</p>
+        ${m.foto ? `
+          <div style="margin-top:15px; text-align:center;">
+            <p><strong>🖼️ Foto:</strong></p>
+            <img src="${m.foto}" style="max-width:100%; border-radius:8px; border:1px solid #333;">
+          </div>
+        ` : ""}
+      </div>
+    `;
+
+    document.getElementById("modalVerMaterial").style.display = "flex";
+  };
+
+  window.fecharModalVerMaterial = function () {
+    const modal = document.getElementById("modalVerMaterial");
+    if (modal) modal.style.display = "none";
+  };
 
   function editarMaterial(index) {
     const materiais = JSON.parse(localStorage.getItem("materiais")) || [];
@@ -12536,6 +12594,19 @@
   }
 </style>
 <script src="premium_render.js?v=10022"></script>
+
+<!-- 👁️ MODAL – DETALHES DO MATERIAL -->
+<div id="modalVerMaterial" class="modal">
+  <div class="modal-content" style="max-width: 500px;">
+    <button class="close-btn" onclick="fecharModalVerMaterial()">&times;</button>
+    <h2 style="color: #661155; text-align: center; margin-bottom: 20px;">📦 Detalhes do Material</h2>
+    <div id="conteudoVerMaterial"></div>
+    <div style="margin-top: 20px; text-align: center;">
+      <button onclick="fecharModalVerMaterial()"
+        style="width: 150px; background: #333; border: 1px solid #661155; color: white;">Fechar</button>
+    </div>
+  </div>
+</div>
 
 </body>
 
