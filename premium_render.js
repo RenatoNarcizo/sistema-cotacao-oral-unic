@@ -337,54 +337,6 @@ function renderizarTabelaAnalise(textoOuId, containerOverride = null) {
     container.innerHTML = html;
 
     // 💰 Verifica documentos financeiros no final da renderização
-    verificarDocumentosFinanceiros(cotacao);
-}
-
-/**
- * 💰 Verifica se existem documentos financeiros para a cotação e injeta ícone se sim
- */
-async function verificarDocumentosFinanceiros(cotacao) {
-    try {
-        if (!cotacao || typeof db === "undefined") return;
-
-        const numOriginal = String(cotacao.numero || cotacao.id);
-        const idLimpo = numOriginal.replace(/#/g, "").replace(/COT-/gi, "").trim();
-        const ids = ["docs_" + idLimpo, "docs_" + numOriginal];
-
-        let temFin = false;
-        for (const id of ids) {
-            const snap = await db.collection("documentos_cotacao").doc(id).get();
-            if (snap.exists) { temFin = true; break; }
-            const sub = await db.collection("documentos_cotacao").doc(id).collection("anexos_individuais").limit(1).get();
-            if (!sub.empty) { temFin = true; break; }
-        }
-
-        if (temFin) {
-            const el = document.getElementById("iconExpandirGlobal");
-            if (el && el.parentElement) {
-                // Evita duplicidade
-                if (el.parentElement.querySelector(".fa-file-invoice-dollar")) return;
-
-                const icon = document.createElement("i");
-                icon.className = "fa-solid fa-file-invoice-dollar";
-                icon.style.color = "#fbbf24";
-                icon.style.cursor = "pointer";
-                icon.style.marginLeft = "8px";
-                icon.style.fontSize = "14px";
-                icon.title = "Ver Notas/Boletos da Gestão Financeira";
-                icon.onclick = (e) => {
-                    e.stopPropagation();
-                    if (typeof visualizarDocumentos === "function") {
-                        visualizarDocumentos(numOriginal);
-                    }
-                };
-                el.parentElement.appendChild(icon);
-                console.log("💰 [INFO] Documentos financeiros detectados e ícone injetado.");
-            }
-        }
-    } catch (e) {
-        console.warn("⚠️ Erro ao verificar documentos financeiros:", e);
-    }
 }
 
 // Exportação Global
