@@ -148,6 +148,50 @@
       background: #882277;
     }
 
+    /* 📝 FORM GRID - PADRONIZAÇÃO DE LAYOUT */
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      column-gap: 15px;
+      row-gap: 18px;
+      margin-top: 15px;
+    }
+
+    .form-grid>div {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .form-grid .full-width {
+      grid-column: 1 / span 2;
+    }
+
+    .form-grid label {
+      font-size: 13px;
+      color: #ccc;
+      margin-bottom: 5px;
+      font-weight: 600;
+    }
+
+    .form-grid input,
+    .form-grid select,
+    .form-grid textarea {
+      width: 100%;
+      background: #1a1a1a;
+      border: 1px solid #661155;
+      border-radius: 5px;
+      color: white;
+      padding: 10px;
+      box-sizing: border-box;
+      outline: none;
+    }
+
+    .form-grid input:focus,
+    .form-grid select:focus {
+      border-color: #3ab9b6;
+      box-shadow: 0 0 5px rgba(58, 185, 182, 0.3);
+    }
+
     /* 💎 BOTÕES DE AÇÃO PREMIUM */
     .btn-acao-premium {
       background: #661155;
@@ -2760,92 +2804,74 @@
       <div id="conteudoFornManual">
         <h3 style="color:#ccc; margin-bottom:15px;">Novo Fornecedor Interno</h3>
 
-        <!-- FORMULÁRIO -->
-        <div style="
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      column-gap:15px;
-      row-gap:22px;
-      margin-top:15px;
-    ">
+        <!-- FORMULÁRIO PADRONIZADO -->
+        <div class="form-grid">
 
           <!-- Nome / CNPJ -->
-          <div style="margin-right:8px;">
+          <div>
             <label>Nome da Empresa</label>
-            <input id="fornNome" type="text"
-              style="width:100%;background:#1a1a1a;border:1px solid #661155;border-radius:5px;color:white;padding:8px;">
+            <input id="fornNome" type="text" placeholder="Ex: Oral Unic">
           </div>
 
-          <div style="margin-left:8px;">
+          <div>
             <label>CNPJ</label>
-            <input id="fornCnpj" type="text"
-              style="width:100%;background:#1a1a1a;border:1px solid #661155;border-radius:5px;color:white;padding:8px;">
+            <input id="fornCnpj" type="text" placeholder="00.000.000/0000-00">
           </div>
 
           <!-- Logradouro -->
-          <div style="grid-column:1 / span 2;">
-            <label>Logradouro</label>
-            <input id="fornLogradouro" type="text"
-              style="width:100%;background:#1a1a1a;border:1px solid #661155;border-radius:5px;color:white;padding:8px;">
+          <div class="full-width">
+            <label>Logradouro / Endereço Completo</label>
+            <input id="fornLogradouro" type="text" placeholder="Rua, Avenida...">
           </div>
 
           <!-- Número / Bairro -->
-          <div style="margin-right:8px;">
+          <div>
             <label>Número</label>
-            <input id="fornNumero" type="text"
-              style="width:100%;background:#1a1a1a;border:1px solid #661155;border-radius:5px;color:white;padding:8px;">
+            <input id="fornNumero" type="text" placeholder="Ex: 123">
           </div>
 
-          <div style="margin-left:8px;">
+          <div>
             <label>Bairro</label>
-            <input id="fornBairro" type="text"
-              style="width:100%;background:#1a1a1a;border:1px solid #661155;border-radius:5px;color:white;padding:8px;">
+            <input id="fornBairro" type="text" placeholder="Ex: Centro">
           </div>
 
           <!-- Cidade / CEP -->
-          <div style="margin-right:8px;">
+          <div>
             <label>Cidade</label>
-            <input id="fornCidade" type="text"
-              style="width:100%;background:#1a1a1a;border:1px solid #661155;border-radius:5px;color:white;padding:8px;">
+            <input id="fornCidade" type="text" placeholder="Ex: São Paulo">
           </div>
 
-          <div style="margin-left:8px;">
+          <div>
             <label>CEP</label>
-            <input id="fornCep" type="text"
-              style="width:100%;background:#1a1a1a;border:1px solid #661155;border-radius:5px;color:white;padding:8px;">
+            <input id="fornCep" type="text" placeholder="00000-000">
           </div>
 
           <!-- Telefone / WhatsApp -->
-          <div style="margin-right:8px;">
+          <div>
             <label>Telefone</label>
-            <input id="fornTelefone" type="text"
-              style="width:100%;background:#1a1a1a;border:1px solid #661155;border-radius:5px;color:white;padding:8px;">
+            <input id="fornTelefone" type="text" placeholder="(00) 0000-0000">
           </div>
 
-          <div style="margin-left:8px;">
+          <div>
             <label>WhatsApp</label>
-            <input id="fornWhats" type="text"
-              style="width:100%;background:#1a1a1a;border:1px solid #661155;border-radius:5px;color:white;padding:8px;">
+            <input id="fornWhats" type="text" placeholder="(00) 90000-0000">
           </div>
 
           <!-- Emails -->
-          <div style="grid-column:1 / span 2;">
-            <label>E-mails</label>
-            <input id="fornEmails" type="text"
-              style="width:100%;background:#1a1a1a;border:1px solid #661155;border-radius:5px;color:white;padding:8px;">
+          <div class="full-width">
+            <label>E-mails (Separe por vírgula se houver mais de um)</label>
+            <input id="fornEmails" type="text" placeholder="vendas@fornecedor.com.br">
           </div>
 
           <!-- Responsável / Tipo -->
-          <div style="margin-right:8px;">
+          <div>
             <label>Responsável pela Cotação</label>
-            <input id="fornResponsavel" type="text"
-              style="width:100%;background:#1a1a1a;border:1px solid #661155;border-radius:5px;color:white;padding:8px;">
+            <input id="fornResponsavel" type="text" placeholder="Ex: João Silva">
           </div>
 
-          <div style="margin-left:8px;">
+          <div>
             <label>Tipo de Produto / Serviço</label>
-            <select id="fornTipo"
-              style="width:100%;background:#1a1a1a;border:1px solid #661155;border-radius:5px;color:white;padding:8px;">
+            <select id="fornTipo">
               <option value="">Selecione...</option>
               <option>Materiais Elétricos</option>
               <option>Construção Civil</option>
@@ -4455,6 +4481,10 @@
       console.warn("Função sync manual não encontrada");
     }
 
+    if (typeof sincronizarMateriaisEServicos === "function") {
+      sincronizarMateriaisEServicos();
+    }
+
     console.log("✅ Login realizado com sucesso para:", usuario.email);
   }
 
@@ -4506,11 +4536,16 @@
       try {
         localStorage.setItem("cotacoes", JSON.stringify(listaFinal));
       } catch (e) {
-        console.warn("⚠️ LocalStorage cheio ao salvar lista de cotações. Operando sem cache persistente.", e);
+        console.warn("⚠️ LocalStorage cheio ao salvar lista de cotações.", e);
       }
       console.log(`✅ Sync Completo: ${listaFinal.length} cotações recuperadas.`);
 
-      // Atualiza UI
+      // Atualiza Dashboard Comprador
+      if (typeof carregarCotacoes === "function") {
+        setTimeout(() => carregarCotacoes(), 500);
+      }
+
+      // Atualiza UI Fornecedor
       if (typeof renderizarListaFornecedor === "function") {
         try {
           const u = JSON.parse(sessionStorage.getItem("usuario_logado"));
@@ -4521,13 +4556,35 @@
           }
         } catch (e) { }
       }
-
-      // Atualiza Dashboard Comprador
-      if (typeof carregarCotacoes === "function") {
-        setTimeout(() => carregarCotacoes(), 500);
-      }
     }
-  }
+    console.log("✅ Sincronização Unificada Completa!");
+  };
+
+  /* 🔄 SINCRONIZAÇÃO DE MATERIAIS E SERVIÇOS */
+  window.sincronizarMateriaisEServicos = async function () {
+    console.log("🔄 Sincronizando Materiais e Serviços com a Nuvem...");
+    if (typeof db === "undefined") return;
+
+    try {
+      // Materiais
+      const snapMat = await db.collection("materiais").get();
+      const materiaisCloud = snapMat.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
+      if (materiaisCloud.length > 0) {
+        localStorage.setItem("materiais", JSON.stringify(materiaisCloud));
+        console.log(`📦 ${materiaisCloud.length} materiais sincronizados.`);
+      }
+
+      // Serviços
+      const snapServ = await db.collection("servicos").get();
+      const servicosCloud = snapServ.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
+      if (servicosCloud.length > 0) {
+        localStorage.setItem("servicos", JSON.stringify(servicosCloud));
+        console.log(`🛠️ ${servicosCloud.length} serviços sincronizados.`);
+      }
+    } catch (e) {
+      console.warn("Erro ao sincronizar Materiais/Serviços:", e);
+    }
+  };
 
   /* ======================================================
       🔐 FUNÇÃO: CONFIRMAR TROCA DE SENHA (FIREBASE)
@@ -8298,39 +8355,48 @@
     }
   }
 
-  function salvarMaterial() {
+  async function salvarMaterial() {
     const nome = document.getElementById("matNome")?.value.trim();
     const codigo = document.getElementById("matCodigo")?.value.trim();
     const embalagem = document.getElementById("matEmbalagem")?.value.trim();
     const qtdEmb = document.getElementById("matQtdEmb")?.value.trim();
 
-    // 🔴 SOMENTE O NOME É OBRIGATÓRIO
     if (!nome) {
       alert("⚠️ Informe o nome do material.");
       return;
     }
 
-    const materiais = JSON.parse(localStorage.getItem("materiais")) || [];
-
-    materiais.push({
+    const novoMaterial = {
+      docId: "temp-" + Date.now(),
       nome,
-      codigo: codigo || "",       // opcional
-      embalagem: embalagem || "", // opcional
-      qtdEmb: qtdEmb || ""        // opcional
-    });
+      codigo: codigo || "",
+      embalagem: embalagem || "",
+      qtdEmb: qtdEmb || ""
+    };
 
-    materiais.sort((a, b) => a.nome.localeCompare(b.nome));
+    let materiais = JSON.parse(localStorage.getItem("materiais")) || [];
+    materiais.push(novoMaterial);
+    materiais.sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
     localStorage.setItem("materiais", JSON.stringify(materiais));
+
+    if (typeof db !== "undefined") {
+      try {
+        const docRef = await db.collection("materiais").add(novoMaterial);
+        const idx = materiais.findIndex(m => m.docId === novoMaterial.docId);
+        if (idx !== -1) {
+          materiais[idx].docId = docRef.id;
+          localStorage.setItem("materiais", JSON.stringify(materiais));
+        }
+      } catch (e) { console.warn("Erro Firestore Material:", e); }
+    }
 
     alert("✅ Material salvo com sucesso!");
 
-    // 🔹 limpa formulário
     document.getElementById("matNome").value = "";
     document.getElementById("matCodigo").value = "";
     document.getElementById("matEmbalagem").value = "";
     document.getElementById("matQtdEmb").value = "";
 
-    // 🔁 atualiza lista SOMENTE se estiver aberta
     const lista = document.getElementById("listaMateriais");
     if (lista && window.getComputedStyle(lista).display !== "none") {
       mostrarListaMateriais();
@@ -8396,16 +8462,24 @@
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  function excluirMaterial(index) {
+  async function excluirMaterial(index) {
     if (!confirm("❌ Deseja realmente excluir este material?")) return;
 
     const materiais = JSON.parse(localStorage.getItem("materiais")) || [];
+    const material = materiais[index];
+    if (!material) return;
+
+    if (typeof db !== "undefined" && material.docId && !material.docId.startsWith("temp-")) {
+      try {
+        await db.collection("materiais").doc(material.docId).delete();
+      } catch (e) { console.warn("Erro delete Firestore Material:", e); }
+    }
+
     materiais.splice(index, 1);
     localStorage.setItem("materiais", JSON.stringify(materiais));
 
-    // Atualiza lista se aberta
     const lista = document.getElementById("listaMateriais");
-    if (lista && lista.style.display === "block") {
+    if (lista && (lista.style.display === "block" || window.getComputedStyle(lista).display !== "none")) {
       mostrarListaMateriais();
     }
   }
@@ -8491,42 +8565,51 @@
   /* ===============================
      🛠️ SERVIÇOS – SALVAR
   =============================== */
-  function salvarServico() {
+  async function salvarServico() {
     const nome = document.getElementById("servNome")?.value.trim();
     const codigo = document.getElementById("servCodigo")?.value.trim();
     const categoria = document.getElementById("servCategoria")?.value;
     const descricao = document.getElementById("servDescricao")?.value.trim();
     const preco = document.getElementById("servPreco")?.value.trim();
 
-    // ✅ SOMENTE NOME E CATEGORIA SÃO OBRIGATÓRIOS
     if (!nome || !categoria) {
       alert("⚠️ Preencha ao menos o Nome do Serviço e a Categoria.");
       return;
     }
 
-    const servicos = JSON.parse(localStorage.getItem("servicos")) || [];
-
-    servicos.push({
+    const novoServico = {
+      docId: "temp-" + Date.now(),
       nome,
-      codigo: codigo || "",        // opcional
+      codigo: codigo || "",
       categoria,
-      descricao: descricao || "",  // opcional
-      preco: preco || ""           // opcional
-    });
+      descricao: descricao || "",
+      preco: preco || ""
+    };
 
-    servicos.sort((a, b) => a.nome.localeCompare(b.nome));
+    let servicos = JSON.parse(localStorage.getItem("servicos")) || [];
+    servicos.push(novoServico);
+    servicos.sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
     localStorage.setItem("servicos", JSON.stringify(servicos));
 
-    // 🔹 limpa formulário
+    if (typeof db !== "undefined") {
+      try {
+        const docRef = await db.collection("servicos").add(novoServico);
+        const idx = servicos.findIndex(s => s.docId === novoServico.docId);
+        if (idx !== -1) {
+          servicos[idx].docId = docRef.id;
+          localStorage.setItem("servicos", JSON.stringify(servicos));
+        }
+      } catch (e) { console.warn("Erro Firestore Serviço:", e); }
+    }
+
     document.getElementById("servNome").value = "";
     document.getElementById("servCodigo").value = "";
     document.getElementById("servCategoria").value = "";
     document.getElementById("servDescricao").value = "";
     document.getElementById("servPreco").value = "";
 
-    // 🔁 atualiza lista SOMENTE se estiver aberta
     const lista = document.getElementById("listaServicos");
-    if (lista && lista.style.display === "block") {
+    if (lista && (lista.style.display === "block" || window.getComputedStyle(lista).display !== "none")) {
       mostrarListaServicos();
     }
 
@@ -8565,19 +8648,25 @@
     }
   }
 
-  if (typeof excluirServico !== "function") {
-    function excluirServico(index) {
-      if (!confirm("❌ Deseja realmente excluir este serviço?")) return;
+  async function excluirServico(index) {
+    if (!confirm("❌ Deseja realmente excluir este serviço?")) return;
 
-      const servicos = JSON.parse(localStorage.getItem("servicos")) || [];
-      servicos.splice(index, 1);
-      localStorage.setItem("servicos", JSON.stringify(servicos));
+    const servicos = JSON.parse(localStorage.getItem("servicos")) || [];
+    const servico = servicos[index];
+    if (!servico) return;
 
-      // Atualiza lista se estiver aberta
-      const lista = document.getElementById("listaServicos");
-      if (lista && lista.style.display === "block") {
-        mostrarListaServicos();
-      }
+    if (typeof db !== "undefined" && servico.docId && !servico.docId.startsWith("temp-")) {
+      try {
+        await db.collection("servicos").doc(servico.docId).delete();
+      } catch (e) { console.warn("Erro delete Firestore Serviço:", e); }
+    }
+
+    servicos.splice(index, 1);
+    localStorage.setItem("servicos", JSON.stringify(servicos));
+
+    const lista = document.getElementById("listaServicos");
+    if (lista && (lista.style.display === "block" || window.getComputedStyle(lista).display !== "none")) {
+      mostrarListaServicos();
     }
   }
 
