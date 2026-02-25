@@ -315,24 +315,25 @@ function renderizarTabelaAnalise(textoOuId, containerOverride = null) {
         html += `<div style="text-align:center; font-size:16px; font-weight:bold; margin:20px 0; color:#fbbf24;">${textoStatus}</div>`;
     }
 
-    // BOTÕES DE AÇÃO (Exibição Premium)
-    if (isAnalise || cotacao.status === "fechada" || cotacao.status === "finalizada") {
+    // BOTÕES DE AÇÃO
+    const usuarioLogado = JSON.parse(localStorage.getItem("usuarioLogado")) || {};
+    const isAprovador = (usuarioLogado.tipo === "aprovador" || usuarioLogado.tipo === "administrador");
+
+    if (isAnalise) {
         html += `<div class="botoes-acao-container" style="margin-top:30px; display:flex; gap:10px; flex-direction: row; justify-content: center; align-items: center; flex-wrap: nowrap; width: 100%; padding: 10px 0;">`;
 
         if (cotacao.status === "aprovacao") {
-            // Em aprovação, mostramos apenas botões de consulta
-            html += `<button onclick="visualizarDocumentos('${cotacao.numero || cotacao.id}')" style="flex:1; width:auto; min-width:150px; background:#3ab9b6; color:#fff; border:none; padding:12px 8px; border-radius:8px; cursor:pointer; font-weight:800; font-size:10px; display:flex; align-items:center; justify-content:center; gap:5px; box-shadow:0 3px 0 #2a8f8c; text-transform:uppercase;"><i class="fa-solid fa-folder-open"></i> Ver Todos os Anexos</button>`;
-        } else {
-            // --- BOTÕES DE AÇÃO GERAIS ---
+            // No status de aprovação, não mostramos botões de ação na matriz de análise.
+            // O usuário apenas acompanha o status.
+            html += `<!-- Acompanhamento: Sem botões de ação neste status -->`;
+        } else if (cotacao.status !== "aprovacao") {
+            // --- BOTÕES DE ANÁLISE (Comprador) ---
             if (cotacao.motivoRejeicao) {
                 html += `<button onclick="toggleMotivoRejeicao()" style="flex:1; width:auto; min-width:150px; background:#661155; color:#fff; border:none; padding:12px 8px; border-radius:8px; cursor:pointer; font-weight:800; font-size:10px; display:flex; align-items:center; justify-content:center; gap:5px; box-shadow:0 3px 0 #4a0c3e; text-transform:uppercase;"><i class="fa-solid fa-file-invoice"></i> Ver motivo da rejeição</button>`;
             }
             html += `<button onclick="visualizarDocumentos('${cotacao.numero || cotacao.id}')" style="flex:1; width:auto; min-width:150px; background:#3ab9b6; color:#fff; border:none; padding:12px 8px; border-radius:8px; cursor:pointer; font-weight:800; font-size:10px; display:flex; align-items:center; justify-content:center; gap:5px; box-shadow:0 3px 0 #2a8f8c; text-transform:uppercase;"><i class="fa-solid fa-folder-open"></i> Ver Todos os Anexos</button>`;
             html += `<button onclick="excluirCotacao('${cotacao.numero || cotacao.id}')" style="flex:1; width:auto; min-width:140px; background:#ef4444; color:white; border:none; padding:12px 8px; border-radius:8px; cursor:pointer; font-weight:800; font-size:10px; display:flex; align-items:center; justify-content:center; gap:5px; box-shadow:0 3px 0 #b91c1c; text-transform:uppercase;"><i class="fa-solid fa-trash"></i> Excluir Cotação</button>`;
-
-            if (cotacao.status !== "fechada" && cotacao.status !== "finalizada") {
-                html += `<button onclick="enviarParaAprovacao()" style="flex:1.2; width:auto; min-width:160px; background:#661155; color:white; border:none; padding:12px 8px; border-radius:8px; cursor:pointer; font-weight:800; font-size:10px; display:flex; align-items:center; justify-content:center; gap:5px; box-shadow:0 3px 0 #4a0c3e; text-transform:uppercase;"><i class="fa-solid fa-paper-plane"></i> Enviar para aprovação</button>`;
-            }
+            html += `<button onclick="enviarParaAprovacao()" style="flex:1.2; width:auto; min-width:160px; background:#661155; color:white; border:none; padding:12px 8px; border-radius:8px; cursor:pointer; font-weight:800; font-size:10px; display:flex; align-items:center; justify-content:center; gap:5px; box-shadow:0 3px 0 #4a0c3e; text-transform:uppercase;"><i class="fa-solid fa-paper-plane"></i> Enviar para aprovação</button>`;
         }
         html += `</div>`;
     }
