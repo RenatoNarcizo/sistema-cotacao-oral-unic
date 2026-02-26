@@ -4349,26 +4349,48 @@
     msg.innerText = "⌛ Verificando...";
 
     try {
-      // 1. TENTA BUSCAR NO FIRESTORE PRIMEIRO
+      // 1. TENTA BUSCAR NO FIRESTORE COM TIMEOUT DE 4s
       const userRef = db.collection("usuarios").doc(email);
-      const doc = await userRef.get();
+      let doc = null;
+      try {
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("timeout")), 4000)
+        );
+        doc = await Promise.race([userRef.get(), timeoutPromise]);
+      } catch (fsErr) {
+        if (fsErr.message === "timeout") {
+          console.warn("⚠️ Firestore lento no login — usando fallback localStorage.");
+          doc = null; // força fallback abaixo
+        } else {
+          throw fsErr;
+        }
+      }
 
       let usuario = null;
 
-      if (doc.exists) {
+      if (doc && doc.exists) {
         usuario = doc.data();
         if (usuario.senha !== senha) {
           msg.innerText = "❌ Senha incorreta";
           return;
         }
       } else {
-        // 2. FALLBACK: BUSCA NO LOCALSTORAGE (MIGRAÇÃO)
+        // 2. FALLBACK: BUSCA NO LOCALSTORAGE
         const usuariosLS = JSON.parse(localStorage.getItem("usuarios_teste")) || [];
         usuario = usuariosLS.find(u => u.email.toLowerCase().trim() === email && u.senha === senha);
 
         if (usuario) {
           console.log("🚀 Migrando usuário para Firestore:", email);
-          await userRef.set(usuario);
+          // Migra em background sem bloquear login
+          userRef.set(usuario).catch(e => console.warn("Falha ao migrar usuário:", e));
+        }
+      }
+
+      if (!usuario) {
+        // 3. Último recurso: busca no localStorage de usuários logados
+        const usuLogado = JSON.parse(localStorage.getItem("usuarioLogado"));
+        if (usuLogado && usuLogado.email === email && usuLogado.senha === senha) {
+          usuario = usuLogado;
         }
       }
 
