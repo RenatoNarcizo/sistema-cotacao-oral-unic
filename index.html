@@ -6837,9 +6837,21 @@
     }
   };
 
-  window.carregarFornecedoresPendentes = function () {
+  window.carregarFornecedoresPendentes = async function () {
     const listaDiv = document.getElementById("listaFornPendentes");
-    const pendentes = JSON.parse(localStorage.getItem("pre_cadastros_fornecedores")) || [];
+    if (!listaDiv) return;
+
+    listaDiv.innerHTML = "<p style='text-align:center;'>⌛ Buscando solicitações na nuvem...</p>";
+
+    let pendentes = [];
+    try {
+      const snapshot = await db.collection("pre_cadastros_fornecedores").get();
+      pendentes = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+      localStorage.setItem("pre_cadastros_fornecedores", JSON.stringify(pendentes));
+    } catch (e) {
+      console.warn("⚠️ Usando cache local para pendentes:", e);
+      pendentes = JSON.parse(localStorage.getItem("pre_cadastros_fornecedores")) || [];
+    }
 
     // Atualiza badge
     const badge = document.getElementById("badgeFornPendentes");
@@ -6853,7 +6865,7 @@
       return;
     }
 
-    listaDiv.innerHTML = pendentes.map((f, i) => `
+    listaDiv.innerHTML = pendentes.map(f => `
      <div style="background:#1a1a1a; border:1px solid #661155; border-radius:8px; padding:15px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
        <div>
          <strong style="font-size:16px; color:white;">${f.nome}</strong> <span style="font-size:12px; color:#aaa;">(${f.data})</span><br>
@@ -6862,19 +6874,24 @@
          <span style="color:#ccc; font-size:12px;">Banco: ${f.banco || "-"}</span>
        </div>
        <div style="display:flex; gap:10px;">
-         <button onclick="aprovarPreCadastro(${i})" style="background:#198754; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer;">✔ Aprovar</button>
-         <button onclick="rejeitarPreCadastro(${i})" style="background:#842029; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer;">❌ Rejeitar</button>
+         <button onclick="window.aprovarPreCadastro('${f.id}')" style="background:#198754; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer;">✔ Aprovar</button>
+         <button onclick="window.rejeitarPreCadastro('${f.id}')" style="background:#842029; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer;">❌ Rejeitar</button>
        </div>
      </div>
    `).join("");
   };
 
-  window.aprovarPreCadastro = async function (index) {
+  window.aprovarPreCadastro = async function (idPre) {
     const pendentes = JSON.parse(localStorage.getItem("pre_cadastros_fornecedores")) || [];
     const fornecedores = JSON.parse(localStorage.getItem("fornecedores")) || [];
 
-    const aprovado = pendentes[index];
-    if (!aprovado) return;
+    const aprovado = pendentes.find(p => String(p.id) === String(idPre));
+    if (!aprovado) {
+      alert("⚠️ Solicitação não encontrada.");
+      return;
+    }
+
+    if (!confirm(`Deseja realmente aprovar o fornecedor ${aprovado.nome}?`)) return;
 
     // Converte para formato oficial
     const novoOficial = {
@@ -6887,39 +6904,66 @@
       banco: aprovado.banco,
       endereco: "Auto-Cadastro",
       responsavel: "Auto-Cadastro",
-      status: "ativo"
+      status: "ativo",
+      origem: "autocadastro"
     };
 
-    fornecedores.push(novoOficial);
-    localStorage.setItem("fornecedores", JSON.stringify(fornecedores));
-
-    // 🔥 SINCRONIZA COM FIRESTORE
+    // 1. SINCRONIZA COM FIRESTORE (FORNECEDORES)
     try {
       await db.collection("fornecedores").doc(novoOficial.email.toLowerCase().trim()).set(novoOficial);
-      // Remove da coleção de pré-cadastros também
-      await db.collection("pre_cadastros_fornecedores").doc(String(aprovado.id)).delete();
+      // Remove da coleção de pré-cadastros
+      await db.collection("pre_cadastros_fornecedores").doc(String(idPre)).delete();
       console.log("✅ Fornecedor aprovado e sincronizado com Firestore");
     } catch (e) {
       console.warn("⚠️ Falha ao sincronizar aprovação com Firestore (Salvou Localmente):", e);
+      alert("⚠️ Erro ao salvar na nuvem. Verifique sua conexão.");
+      return;
     }
 
-    // Remove da lista pendente local
-    pendentes.splice(index, 1);
-    localStorage.setItem("pre_cadastros_fornecedores", JSON.stringify(pendentes));
-
-    alert(`✅ Fornecedor ${aprovado.nome} cadastrado com sucesso!`);
-    carregarFornecedoresPendentes();
-
-    // Notifica (Simulação)
-    console.log(`📧 Enviando e-mail de boas-vindas para ${novoOficial.email}...`);
+    alert(`✅ Fornecedor ${aprovado.nome} aprovado com sucesso!`);
+    if (typeof carregarFornecedoresPendentes === "function") carregarFornecedoresPendentes();
   };
 
-  window.rejeitarPreCadastro = function (index) {
+  window.rejeitarPreCadastro = async function (idPre) {
+    if (!confirm("Deseja realmente rejeitar este pré-cadastro?")) return;
+    const motivo = prompt("Informe o motivo da rejeição (opcional):");
+
+    try {
+      await db.collection("pre_cadastros_fornecedores").doc(String(idPre)).delete();
+      console.log("✅ Pré-cadastro rejeitado e removido do Firestore");
+      alert("✅ Pré-cadastro rejeitado com sucesso.");
+      if (typeof carregarFornecedoresPendentes === "function") carregarFornecedoresPendentes();
+    } catch (e) {
+      console.error("❌ Erro ao rejeitar pré-cadastro:", e);
+      alert("❌ Erro ao processar rejeição na nuvem.");
+    }
+  };
+
+  // 2. Atualização Local
+  const novaListaForn = [...fornecedores, novoOficial];
+  novaListaForn.sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
+  localStorage.setItem("fornecedores", JSON.stringify(novaListaForn));
+
+  const novaListaPendentes = pendentes.filter(p => String(p.id) !== String(idPre));
+  localStorage.setItem("pre_cadastros_fornecedores", JSON.stringify(novaListaPendentes));
+
+  alert(`✅ Fornecedor ${aprovado.nome} cadastrado com sucesso!`);
+  carregarFornecedoresPendentes();
+  };
+
+  window.rejeitarPreCadastro = async function (idPre) {
     if (!confirm("Tem certeza que deseja rejeitar este cadastro?")) return;
 
+    try {
+      await db.collection("pre_cadastros_fornecedores").doc(String(idPre)).delete();
+      console.log("✅ Pré-cadastro rejeitado e removido do Firestore");
+    } catch (e) {
+      console.warn("⚠️ Falha ao remover do Firestore:", e);
+    }
+
     const pendentes = JSON.parse(localStorage.getItem("pre_cadastros_fornecedores")) || [];
-    pendentes.splice(index, 1);
-    localStorage.setItem("pre_cadastros_fornecedores", JSON.stringify(pendentes));
+    const novaLista = pendentes.filter(p => String(p.id) !== String(idPre));
+    localStorage.setItem("pre_cadastros_fornecedores", JSON.stringify(novaLista));
 
     carregarFornecedoresPendentes();
   };
@@ -10997,188 +11041,11 @@
         btnAprovacao.style.background = "#661155";
         btnAprovacao.style.color = "white";
       }
-      if (typeof carregarPreCadastros === "function") carregarPreCadastros();
+      if (typeof carregarFornecedoresPendentes === "function") carregarFornecedoresPendentes();
     }
   };
 
-  window.salvarFornecedor = function () {
-    const nome = document.getElementById("fornNome").value.trim();
-    const cnpj = document.getElementById("fornCnpj").value.trim();
-    const emails = document.getElementById("fornEmails").value.trim();
-
-    if (!nome) return alert("⚠️ Informe o nome da empresa.");
-    if (!emails) return alert("⚠️ Informe ao menos um e-mail de contato.");
-
-    let lista = JSON.parse(localStorage.getItem("fornecedores")) || [];
-
-    const novosDados = {
-      nome,
-      cnpj: cnpj || "",
-      logradouro: document.getElementById("fornLogradouro").value.trim(),
-      numero: document.getElementById("fornNumero").value.trim(),
-      bairro: document.getElementById("fornBairro").value.trim(),
-      cidade: document.getElementById("fornCidade").value.trim(),
-      cep: document.getElementById("fornCep").value.trim(),
-      telefone: document.getElementById("fornTelefone").value.trim(),
-      whats: document.getElementById("fornWhats").value.trim(),
-      emails: emails,
-      responsavel: document.getElementById("fornResponsavel").value.trim(),
-      tipo: document.getElementById("fornTipo").value
-    };
-
-    if (fornecedorEditando !== null) {
-      lista[fornecedorEditando] = novosDados;
-      fornecedorEditando = null;
-      alert("✅ Fornecedor atualizado com sucesso!");
-    } else {
-      lista.push(novosDados);
-      alert("✅ Fornecedor cadastrado com sucesso!");
-    }
-
-    localStorage.setItem("fornecedores", JSON.stringify(lista));
-    limparFormFornecedor();
-
-    if (typeof mostrarListaFornecedores === "function") {
-      const listaDiv = document.getElementById("listaFornecedoresCadastrados");
-      if (listaDiv && listaDiv.style.display === "block") {
-        mostrarListaFornecedores(); // Re-renderiza para atualizar
-        mostrarListaFornecedores(); // Abre novamente (já que mostrarLista é um toggle)
-      }
-    }
-  };
-
-  window.limparFormFornecedor = function () {
-    const campos = [
-      "fornNome", "fornCnpj", "fornLogradouro", "fornNumero", "fornBairro",
-      "fornCidade", "fornCep", "fornTelefone", "fornWhats", "fornEmails",
-      "fornResponsavel", "fornTipo"
-    ];
-    campos.forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.value = "";
-    });
-    fornecedorEditando = null;
-  };
-
-  /* ======================================================
-     🔗 APROVAÇÃO DE AUTOCADASTRO (TRABALHE CONOSCO)
-  ====================================================== */
-  window.carregarPreCadastros = function () {
-    const listaDiv = document.getElementById("listaFornPendentes");
-    const badge = document.getElementById("badgeFornPendentes");
-    if (!listaDiv) return;
-
-    const preCadastros = JSON.parse(localStorage.getItem("pre_cadastros_fornecedores")) || [];
-    const pendentes = preCadastros.filter(p => p.status === "pendente");
-
-    // Badge
-    if (badge) {
-      badge.innerText = pendentes.length;
-      badge.style.display = pendentes.length > 0 ? "inline-block" : "none";
-    }
-
-    listaDiv.innerHTML = "";
-
-    if (pendentes.length === 0) {
-      listaDiv.innerHTML = "<p style='text-align:center; opacity:0.6; padding:20px;'>Nenhuma solicitação pendente.</p>";
-      return;
-    }
-
-    pendentes.forEach(p => {
-      const div = document.createElement("div");
-      div.className = "linha-cotacao";
-      div.style.marginBottom = "15px";
-      div.style.border = "1px solid #333";
-      div.style.padding = "15px";
-      div.style.borderRadius = "8px";
-
-      div.innerHTML = `
-                           <div class="info">
-                             <strong style="color:#661155; font-size:16px;">${p.nome}</strong><br>
-                               <small>CNPJ: ${p.cnpj}</small><br>
-                                 <small>E-mail: ${p.email} | WhatsApp: ${p.whats}</small><br>
-                                   <small>Categoria: ${p.tipo}</small><br>
-                                     <small>Data: ${p.data}</small>
-                                   </div>
-                                   <div class="acoes" style="margin-top:10px;">
-                                     <button onclick="aprovarPreCadastro(${p.id})" style="background:#198754; color:white; border:none; padding:8px 15px; border-radius:4px; cursor:pointer;">✅ Aprovar</button>
-                                     <button onclick="rejeitarPreCadastro(${p.id})" style="background:#dc3545; color:white; border:none; padding:8px 15px; border-radius:4px; cursor:pointer; margin-left:5px;">❌ Rejeitar</button>
-                                   </div>
-     `;
-      listaDiv.appendChild(div);
-    });
-  };
-
-  window.aprovarPreCadastro = async function (id) {
-    if (!confirm("Confirmar aprovação deste fornecedor?")) return;
-
-    let preCadastros = JSON.parse(localStorage.getItem("pre_cadastros_fornecedores")) || [];
-    const index = preCadastros.findIndex(p => p.id === id);
-    if (index === -1) return;
-
-    const p = preCadastros[index];
-
-    // 1. Move para a lista oficial de fornecedores
-    let fornecedores = JSON.parse(localStorage.getItem("fornecedores")) || [];
-    const novoForn = {
-      id: Date.now(),
-      nome: p.nome,
-      cnpj: p.cnpj,
-      emails: p.email,
-      whats: p.whats,
-      tipo: p.tipo,
-      banco: p.banco,
-      origem: "autocadastro",
-      dataAprovacao: new Date().toLocaleString()
-    };
-    fornecedores.push(novoForn);
-    localStorage.setItem("fornecedores", JSON.stringify(fornecedores));
-
-    // 2. Cria usuário de login para o fornecedor
-    const novoUsuario = {
-      nome: p.nome,
-      email: p.email,
-      senha: "123", // Senha padrão inicial
-      tipo: "fornecedor"
-    };
-    let usuarios = JSON.parse(localStorage.getItem("usuarios_teste")) || [];
-    usuarios.push(novoUsuario);
-    localStorage.setItem("usuarios_teste", JSON.stringify(usuarios));
-
-    // --- FIREBASE SYNC ---
-    try {
-      await db.collection("fornecedores").doc(String(novoForn.id)).set(novoForn);
-      await db.collection("usuarios").doc(p.email.toLowerCase().trim()).set(novoUsuario);
-
-      // Atualiza status no Firebase também
-      await db.collection("pre_cadastros_fornecedores").doc(String(id)).update({ status: "aprovado" });
-    } catch (e) {
-      console.warn("Erro ao sincronizar aprovação no Firebase:", e);
-    }
-
-    // 3. Atualiza status do pré-cadastro
-    preCadastros[index].status = "aprovado";
-    localStorage.setItem("pre_cadastros_fornecedores", JSON.stringify(preCadastros));
-
-    alert("✅ Fornecedor aprovado! Usuário criado com sucesso na nuvem (E-mail: " + p.email + " / Senha: 123)");
-    carregarPreCadastros();
-  };
-
-  window.rejeitarPreCadastro = function (id) {
-    const motivo = prompt("Informe o motivo da rejeição:");
-    if (motivo === null) return;
-
-    let preCadastros = JSON.parse(localStorage.getItem("pre_cadastros_fornecedores")) || [];
-    const index = preCadastros.findIndex(p => p.id === id);
-    if (index === -1) return;
-
-    preCadastros[index].status = "rejeitado";
-    preCadastros[index].motivoRejeicao = motivo;
-    localStorage.setItem("pre_cadastros_fornecedores", JSON.stringify(preCadastros));
-
-    alert("❌ Solicitação rejeitada.");
-    carregarPreCadastros();
-  };
+  /* Redundâncias removidas para evitar conflitos com versões sincronizadas */
 
 
   /* ======================================================
