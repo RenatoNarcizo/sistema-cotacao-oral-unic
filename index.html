@@ -4473,25 +4473,11 @@
       } catch (e) { console.warn("Erro RTDB Sync:", e); }
     }
 
-    // 2. Busca Firestore (Histórico/Antigo) com timeout de 5s para evitar travamento
-    if (typeof db !== "undefined") {
-      try {
-        const timeoutFirestore = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Firestore timeout")), 5000)
-        );
-        const snapshot = await Promise.race([
-          db.collection("cotacoes").get(),
-          timeoutFirestore
-        ]);
-        cotacoesFirestore = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-      } catch (e) {
-        if (e.message === "Firestore timeout") {
-          console.warn("⚠️ Firestore lento (timeout 5s) — usando dados do RTDB e localStorage.");
-        } else {
-          console.warn("Erro Firestore Sync:", e);
-        }
-      }
-    }
+    // 2. Firestore: usa cache local (persistência offline já ativada)
+    // ⚡ REMOVIDO: await de 5s ao Firestore no login — causa lentidão.
+    // O RTDB é a fonte primária e rápida. Firestore sincroniza em background.
+    const localCache = JSON.parse(localStorage.getItem("cotacoes")) || [];
+    cotacoesFirestore = localCache; // usa cache local sem esperar rede
 
     // 3. Merge e Deduplicação (Prioridade: RTDB > Firestore)
     const mapaUnificado = new Map();
@@ -11569,24 +11555,29 @@
    * 🔄 carregarCotacoes (Ponte de Sincronização)
    * Recarrega a lista de cotações baseada na seção ativa do dashboard.
    */
+  // ⚡ DEBOUNCE: evita chamadas triplas em sequência rápida (RTDB + sync + login)
+  let _carregarCotacoesTimer = null;
   window.carregarCotacoes = function (statusForcado) {
-    console.log("🔄 Chamando carregarCotacoes...");
+    clearTimeout(_carregarCotacoesTimer);
+    _carregarCotacoesTimer = setTimeout(() => {
+      console.log("🔄 Chamando carregarCotacoes...");
 
-    // 1. Verifica se a tela de Análise/Respondidas está visível
-    const sectionRespondidas = document.getElementById("cotacoesRespondidas");
-    if (sectionRespondidas && sectionRespondidas.style.display !== "none") {
-      // Tenta identificar qual aba está ativa para atualizar
-      const activeTab = window.ultimaAbaRespondidas || "analise";
-      if (typeof toggleListaRespondidas === "function") {
-        toggleListaRespondidas(statusForcado || activeTab, true);
+      // 1. Verifica se a tela de Análise/Respondidas está visível
+      const sectionRespondidas = document.getElementById("cotacoesRespondidas");
+      if (sectionRespondidas && sectionRespondidas.style.display !== "none") {
+        // Tenta identificar qual aba está ativa para atualizar
+        const activeTab = window.ultimaAbaRespondidas || "analise";
+        if (typeof toggleListaRespondidas === "function") {
+          toggleListaRespondidas(statusForcado || activeTab, true);
+        }
       }
-    }
 
-    // 2. Verifica se a tela de Aprovação está visível
-    const sectionAprovar = document.getElementById("aprovarCompras");
-    if (sectionAprovar && sectionAprovar.style.display !== "none") {
-      if (typeof carregarListaAprovacao === "function") carregarListaAprovacao();
-    }
+      // 2. Verifica se a tela de Aprovação está visível
+      const sectionAprovar = document.getElementById("aprovarCompras");
+      if (sectionAprovar && sectionAprovar.style.display !== "none") {
+        if (typeof carregarListaAprovacao === "function") carregarListaAprovacao();
+      }
+    }, 150);
   };
 
   console.log("🚀 PATCH V2 APLICADO: Funcionalidade de publicação otimizada.");
@@ -12401,6 +12392,13 @@
 
           const listaFinal = Array.from(mapaUnificado.values());
 
+          // ⚡ OTIMIZAÇÃO: só atualiza UI se os dados realmente mudaram
+          const hashAtual = JSON.stringify(listaFinal);
+          if (window._rtdbUltimoHash === hashAtual) {
+            return; // sem mudança real, ignora re-render
+          }
+          window._rtdbUltimoHash = hashAtual;
+
           // Salva Local
           localStorage.setItem("cotacoes", JSON.stringify(listaFinal));
           console.log(`☁️ Sync Merge (RTDB+Local): ${listaFinal.length} cotações.`);
@@ -12420,8 +12418,7 @@
 
           // 2. COMPRADOR (Dashboard)
           if (typeof carregarCotacoes === "function") {
-            // Pequeno delay para garantir que o LS salvou
-            setTimeout(() => carregarCotacoes(), 100);
+            carregarCotacoes(); // debounce interno já previne chamadas extras
           }
         }
       });
