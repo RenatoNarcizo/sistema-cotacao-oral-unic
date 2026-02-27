@@ -13274,19 +13274,38 @@
     const decisoes = JSON.parse(localStorage.getItem("decisoesAnalise")) || {};
     const decisoesCotacao = decisoes[numeroCotacao] || {};
 
-    // 2. Carrega respostas (Varredura no LocalStorage)
+    // 2. Carrega respostas — merge de LocalStorage + cotacao.respostasFornecedores (RTDB)
     let respostas = [];
+    const emailsJaAdicionados = new Set();
+
+    // A. Varredura no LocalStorage (chaves individuais)
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      // Match flexível para chaves de resposta
       if (key.includes(`res_${cotacao.id}_`) || key.includes(`resposta_${cotacao.numero}_`) || key.includes(`res_${cotacao.numero}_`)) {
-        respostas.push(JSON.parse(localStorage.getItem(key)));
+        try {
+          const r = JSON.parse(localStorage.getItem(key));
+          if (r && (r.email || r.emailFornecedor)) {
+            const em = norm(r.email || r.emailFornecedor);
+            if (!emailsJaAdicionados.has(em)) { respostas.push(r); emailsJaAdicionados.add(em); }
+          }
+        } catch (e) { }
       }
+    }
+
+    // B. Merge com cotacao.respostasFornecedores (fonte principal do RTDB)
+    if (Array.isArray(cotacao.respostasFornecedores)) {
+      cotacao.respostasFornecedores.forEach(r => {
+        if (r && (r.email || r.emailFornecedor)) {
+          const em = norm(r.email || r.emailFornecedor);
+          if (!emailsJaAdicionados.has(em)) { respostas.push(r); emailsJaAdicionados.add(em); }
+        }
+      });
     }
 
     // 3. Monta a lista de ADJUDICAÇÃO (Vencedores)
     const adjudicacao = [];
     const norm = (s) => (s || "").toLowerCase().trim();
+    const listaFornecedoresLocal = JSON.parse(localStorage.getItem("fornecedores")) || [];
 
     cotacao.produtos.forEach((prod, idx) => {
       let vencedorEmail = null;
@@ -13294,46 +13313,51 @@
       let menorPreco = Infinity;
       let precoFinal = 0;
 
-      // CHAVE POR INDEX (Mais Robusto)
       const keyItem = `item_${idx}`;
 
-      // A. Verifica decisão manual primeiro (Index ou Nome - retrocompatibilidade)
+      // A. Decisão manual (por index ou por nome — retrocompatibilidade)
       if (decisoesCotacao[keyItem]) {
         vencedorEmail = norm(decisoesCotacao[keyItem]);
       } else if (decisoesCotacao[prod.nome]) {
-        vencedorEmail = norm(decisoesCotacao[prod.nome]); // Fallback legado
+        vencedorEmail = norm(decisoesCotacao[prod.nome]);
       }
 
-      // Se achou manual...
+      // Se há decisão manual, valida se o fornecedor tem preço para este item
       if (vencedorEmail) {
-        // Busca dados do vencedor manual
         const resp = respostas.find(r => norm(r.email || r.emailFornecedor) === vencedorEmail);
 
         if (resp) {
-          vencedorNome = resp.fornecedor || resp.fornecedorNome;
-          // Busca o item específico na resposta
           const itemResp = (resp.itens || []).find(i =>
             norm(i.produto || i.descricao) === norm(prod.nome)
           );
+          const preco = itemResp ? parseFloat(itemResp.preco || itemResp.precoUnitario || itemResp.valor || 0) : 0;
 
-          if (itemResp) {
-            precoFinal = parseFloat(itemResp.preco || itemResp.precoUnitario || itemResp.valor || 0);
+          if (preco > 0) {
+            // ✅ Fornecedor manual tem preço para este item
+            const fornLocal = listaFornecedoresLocal.find(f => norm(f.email) === vencedorEmail);
+            vencedorNome = fornLocal ? fornLocal.nome : (resp.fornecedor || resp.fornecedorNome || vencedorEmail);
+            precoFinal = preco;
+          } else {
+            // ⚠️ Fornecedor manual sem preço para este item — usa automático
+            vencedorEmail = null;
           }
         } else {
-          vencedorNome = "Manual (Não encontrado)";
+          // ⚠️ Fornecedor manual não encontrado — usa automático
+          vencedorEmail = null;
         }
       }
-      // B. Se não tiver manual, calcula o menor preço (Automático)
-      else {
+
+      // B. Automático: menor preço disponível (quando não há decisão manual válida)
+      if (!vencedorEmail) {
         respostas.forEach(r => {
           const item = (r.itens || []).find(i => norm(i.produto || i.descricao) === norm(prod.nome));
-
           if (item) {
             const val = parseFloat(item.preco || item.precoUnitario || item.valor || 0);
             if (val > 0 && val < menorPreco) {
               menorPreco = val;
               vencedorEmail = norm(r.email || r.emailFornecedor);
-              vencedorNome = r.fornecedor || r.fornecedorNome;
+              const fornLocal = listaFornecedoresLocal.find(f => norm(f.email) === vencedorEmail);
+              vencedorNome = fornLocal ? fornLocal.nome : (r.fornecedor || r.fornecedorNome || vencedorEmail);
               precoFinal = val;
             }
           }
