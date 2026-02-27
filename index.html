@@ -6927,54 +6927,68 @@
   async function salvarFornecedor() {
     const nome = document.getElementById("fornNome")?.value.trim();
     const cnpj = document.getElementById("fornCnpj")?.value.trim();
-    const endereco = `${document.getElementById("fornLogradouro")?.value || ""} ${document.getElementById("fornNumero")?.value || ""}`.trim();
+    const logradouro = document.getElementById("fornLogradouro")?.value || "";
+    const numero = document.getElementById("fornNumero")?.value || "";
+    const endereco = `${logradouro} ${numero}`.trim();
     const telefone = document.getElementById("fornTelefone")?.value.trim();
     const whats = document.getElementById("fornWhats")?.value.trim();
-    const email = document.getElementById("fornEmails")?.value.trim();
+    const emailsInput = document.getElementById("fornEmails")?.value.trim();
     const responsavel = document.getElementById("fornResponsavel")?.value.trim();
     const tipo = document.getElementById("fornTipo")?.value;
 
-    // ✅ validação correta
-    if (!nome || !email) {
+    if (!nome || !emailsInput) {
       alert("⚠️ Preencha ao menos Nome e E-mail");
       return;
     }
 
-    const normalizedEmail = email.toLowerCase().trim();
+    // Padronização: email é o principal (string), emails mantido por legado
+    const normalizedEmail = emailsInput.toLowerCase().trim();
     const novoFornecedor = {
       nome,
       cnpj,
       endereco,
+      logradouro,
+      numero,
+      bairro: document.getElementById("fornBairro")?.value || "",
+      cidade: document.getElementById("fornCidade")?.value || "",
+      cep: document.getElementById("fornCep")?.value || "",
       telefone,
       whats,
       email: normalizedEmail,
+      emails: normalizedEmail, // Padroniza ambos como string para evitar erros de tipo
       responsavel,
       tipo,
       status: "ativo",
       dataCriacao: new Date().toLocaleString()
     };
 
-    const fornecedores = JSON.parse(localStorage.getItem("fornecedores")) || [];
+    let fornecedores = JSON.parse(localStorage.getItem("fornecedores")) || [];
 
-    // Se estiver editando, remove o antigo antes de inserir o novo (ou atualiza se for o mesmo email)
-    if (fornecedorEditando !== null) {
-      fornecedores.splice(fornecedorEditando, 1);
-      fornecedorEditando = null;
+    // Lógica de Upsert baseada no e-mail (mais segura que index)
+    const indexExistente = fornecedores.findIndex(f =>
+      (typeof f.email === 'string' && f.email.toLowerCase().trim() === normalizedEmail) ||
+      (typeof f.emails === 'string' && f.emails.toLowerCase().trim() === normalizedEmail)
+    );
+
+    if (indexExistente !== -1) {
+      fornecedores[indexExistente] = novoFornecedor;
+    } else {
+      fornecedores.push(novoFornecedor);
     }
 
-    fornecedores.push(novoFornecedor);
-    fornecedores.sort((a, b) => a.nome.localeCompare(b.nome));
+    fornecedores.sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
     localStorage.setItem("fornecedores", JSON.stringify(fornecedores));
 
     // 🔥 SINCRONIZA COM FIRESTORE
     try {
-      await db.collection("fornecedores").doc(email.toLowerCase().trim()).set(novoFornecedor);
+      await db.collection("fornecedores").doc(normalizedEmail).set(novoFornecedor);
       console.log("✅ Fornecedor sincronizado com Firestore");
     } catch (e) {
       console.warn("⚠️ Falha ao sincronizar com Firestore (Salvou Localmente):", e);
     }
 
     alert("✅ Fornecedor salvo com sucesso!");
+    fornecedorEditando = null;
 
     // limpa formulário
     [
@@ -6987,11 +7001,10 @@
       if (el) el.value = "";
     });
 
-    // atualiza lista se estiver aberta
-    if (document.getElementById("listaFornecedoresCadastrados")?.style.display === "block") {
-      mostrarListaFornecedores();
-      // Oculta e mostra novamente para forçar atualização completa se necessário
-      mostrarListaFornecedores();
+    // Força atualização da lista se estiver aberta (sem fechar se já estiver aberta)
+    const listaDiv = document.getElementById("listaFornecedoresCadastrados");
+    if (listaDiv && listaDiv.style.display === "block") {
+      carregarDadosFornecedores(true); // true para não fechar
     }
   }
   /* ======================================================
@@ -8129,88 +8142,86 @@
   =============================== */
 
   if (typeof window.mostrarListaFornecedores !== "function") {
-    window.mostrarListaFornecedores = async function () {
+    window.mostrarListaFornecedores = function () {
       const listaDiv = document.getElementById("listaFornecedoresCadastrados");
-      const tbody = document.getElementById("tabelaFornecedores");
-      if (!listaDiv || !tbody) return;
+      if (!listaDiv) return;
 
-      // 🔁 toggle
-      if (listaDiv.style.display === "block") {
+      // Inverte visibilidade
+      const isAberto = listaDiv.style.display === "block";
+      if (isAberto) {
         listaDiv.style.display = "none";
-        return;
+      } else {
+        listaDiv.style.display = "block";
+        carregarDadosFornecedores();
       }
-
-      listaDiv.style.display = "block";
-      tbody.innerHTML = "<tr><td colspan='5' style='text-align:center;'>⌛ Carregando fornecedores da nuvem...</td></tr>";
-
-      // 🔥 BUSCA NO FIRESTORE (TEMPO REAL)
-      let fornecedores = [];
-      try {
-        const snapshot = await db.collection("fornecedores").get();
-        // 🔥 MAPEIA COM O ID DO DOCUMENTO (DOCID)
-        const listaCrua = snapshot.docs.map(doc => ({
-          docId: doc.id,
-          ...doc.data()
-        }));
-
-        // 🔥 DEDUPLICAÇÃO AGRESSIVA (Sincronizada com Modal)
-        const mapaDeduplicado = new Map();
-        listaCrua.forEach(f => {
-          const emailKey = (f.email || f.emails || "").toLowerCase().trim();
-          const nomeKey = (f.nome || "").toLowerCase().trim();
-
-          if (emailKey && !mapaDeduplicado.has(emailKey)) {
-            mapaDeduplicado.set(emailKey, f);
-          } else if (nomeKey && !mapaDeduplicado.has(nomeKey)) {
-            const jaExistePorNome = Array.from(mapaDeduplicado.values()).some(existing =>
-              (existing.nome || "").toLowerCase().trim() === nomeKey
-            );
-            if (!jaExistePorNome) mapaDeduplicado.set(nomeKey, f);
-          }
-        });
-        fornecedores = Array.from(mapaDeduplicado.values());
-
-        localStorage.setItem("fornecedores", JSON.stringify(fornecedores));
-        console.log("✅ Fornecedores sincronizados para listagem (Deduplicados)");
-      } catch (e) {
-        console.warn("Erro ao buscar fornecedores do Firebase, usando local:", e);
-        fornecedores = JSON.parse(localStorage.getItem("fornecedores")) || [];
-      }
-
-      tbody.innerHTML = "";
-      fornecedores.sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
-
-      if (fornecedores.length === 0) {
-        tbody.innerHTML = `
-       <tr>
-       <td colspan="5" style="text-align:center;padding:10px;">
-         Nenhum fornecedor cadastrado.
-       </td>
-       </tr>
-       `;
-        return;
-      }
-
-      fornecedores.forEach((f, index) => {
-        const tr = document.createElement("tr");
-
-        tr.innerHTML = `
-       <td>${f.nome || "-"}</td>
-       <td>${f.endereco || f.logradouro || ""} ${f.numero || ""}</td>
-       <td>${f.whats || f.whatsapp || "-"}</td>
-       <td>${f.responsavel || "-"}</td>
-       <td style="text-align:center;">
-         <div style="display:flex; justify-content:center; gap:8px;">
-           <button onclick="verFichaFornecedor(${index})" title="Ver ficha">👁️</button>
-           <button onclick="editarFornecedor(${index})" title="Editar">✏️</button>
-           <button onclick='window.excluirFornecedor(${index})' title="Excluir">🗑️</button>
-         </div>
-       </td>
-     `;
-
-        tbody.appendChild(tr);
-      });
     };
+  }
+
+  async function carregarDadosFornecedores(manterAberto = false) {
+    const tbody = document.getElementById("tabelaFornecedores");
+    if (!tbody) return;
+
+    if (!manterAberto) {
+      tbody.innerHTML = "<tr><td colspan='5' style='text-align:center;'>⌛ Carregando fornecedores da nuvem...</td></tr>";
+    }
+
+    let fornecedores = [];
+    try {
+      const snapshot = await db.collection("fornecedores").get();
+      const listaCrua = snapshot.docs.map(doc => ({ docId: doc.id, ...doc.data() }));
+
+      // Deduplicação robusta
+      const mapaDeduplicado = new Map();
+      listaCrua.forEach(f => {
+        // Resolve e-mail tratando array ou string com segurança
+        let rawEmail = f.email || f.emails || "";
+        if (Array.isArray(rawEmail)) rawEmail = rawEmail[0] || "";
+        const emailKey = String(rawEmail).toLowerCase().trim();
+        const nomeKey = String(f.nome || "").toLowerCase().trim();
+
+        if (emailKey && !mapaDeduplicado.has(emailKey)) {
+          mapaDeduplicado.set(emailKey, f);
+        } else if (nomeKey && !mapaDeduplicado.has(nomeKey)) {
+          const jaExistePorNome = Array.from(mapaDeduplicado.values()).some(existing =>
+            String(existing.nome || "").toLowerCase().trim() === nomeKey
+          );
+          if (!jaExistePorNome) mapaDeduplicado.set(nomeKey, f);
+        }
+      });
+      fornecedores = Array.from(mapaDeduplicado.values());
+      fornecedores.sort((a, b) => String(a.nome || "").localeCompare(String(b.nome || "")));
+      localStorage.setItem("fornecedores", JSON.stringify(fornecedores));
+      console.log("✅ Fornecedores sincronizados:", fornecedores.length);
+    } catch (e) {
+      console.warn("⚠️ Usando cache local:", e);
+      fornecedores = JSON.parse(localStorage.getItem("fornecedores")) || [];
+      fornecedores.sort((a, b) => String(a.nome || "").localeCompare(String(b.nome || "")));
+    }
+
+    tbody.innerHTML = "";
+
+    if (fornecedores.length === 0) {
+      tbody.innerHTML = "<tr><td colspan='5' style='text-align:center;padding:10px;'>Nenhum fornecedor cadastrado.</td></tr>";
+      return;
+    }
+
+    fornecedores.forEach((f, index) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${f.nome || "-"}</td>
+        <td>${f.endereco || f.logradouro || "-"}</td>
+        <td>${f.whats || f.whatsapp || f.telefone || "-"}</td>
+        <td>${f.responsavel || "-"}</td>
+        <td style="text-align:center;">
+          <div style="display:flex; justify-content:center; gap:8px;">
+            <button onclick="verFichaFornecedor(${index})" title="Ver ficha">👁️</button>
+            <button onclick="editarFornecedor(${index})" title="Editar">✏️</button>
+            <button onclick='window.excluirFornecedor(${index})' title="Excluir">🗑️</button>
+          </div>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
   }
 
   /* ===============================
