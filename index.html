@@ -13275,6 +13275,8 @@
     const decisoesCotacao = decisoes[numeroCotacao] || {};
 
     // 2. Carrega respostas — merge de LocalStorage + cotacao.respostasFornecedores (RTDB)
+    const norm = (s) => (s || "").toLowerCase().trim();
+    const listaFornecedoresLocal = JSON.parse(localStorage.getItem("fornecedores")) || [];
     let respostas = [];
     const emailsJaAdicionados = new Set();
 
@@ -13304,8 +13306,6 @@
 
     // 3. Monta a lista de ADJUDICAÇÃO (Vencedores)
     const adjudicacao = [];
-    const norm = (s) => (s || "").toLowerCase().trim();
-    const listaFornecedoresLocal = JSON.parse(localStorage.getItem("fornecedores")) || [];
 
     cotacao.produtos.forEach((prod, idx) => {
       let vencedorEmail = null;
