@@ -6920,6 +6920,14 @@
       return;
     }
 
+    // 2. Atualização Local
+    const novaListaForn = [...fornecedores, novoOficial];
+    novaListaForn.sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
+    localStorage.setItem("fornecedores", JSON.stringify(novaListaForn));
+
+    const novaListaPendentes = pendentes.filter(p => String(p.id) !== String(idPre));
+    localStorage.setItem("pre_cadastros_fornecedores", JSON.stringify(novaListaPendentes));
+
     alert(`✅ Fornecedor ${aprovado.nome} aprovado com sucesso!`);
     if (typeof carregarFornecedoresPendentes === "function") carregarFornecedoresPendentes();
   };
@@ -6931,6 +6939,11 @@
     try {
       await db.collection("pre_cadastros_fornecedores").doc(String(idPre)).delete();
       console.log("✅ Pré-cadastro rejeitado e removido do Firestore");
+
+      const pendentes = JSON.parse(localStorage.getItem("pre_cadastros_fornecedores")) || [];
+      const novaLista = pendentes.filter(p => String(p.id) !== String(idPre));
+      localStorage.setItem("pre_cadastros_fornecedores", JSON.stringify(novaLista));
+
       alert("✅ Pré-cadastro rejeitado com sucesso.");
       if (typeof carregarFornecedoresPendentes === "function") carregarFornecedoresPendentes();
     } catch (e) {
@@ -6939,34 +6952,6 @@
     }
   };
 
-  // 2. Atualização Local
-  const novaListaForn = [...fornecedores, novoOficial];
-  novaListaForn.sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
-  localStorage.setItem("fornecedores", JSON.stringify(novaListaForn));
-
-  const novaListaPendentes = pendentes.filter(p => String(p.id) !== String(idPre));
-  localStorage.setItem("pre_cadastros_fornecedores", JSON.stringify(novaListaPendentes));
-
-  alert(`✅ Fornecedor ${aprovado.nome} cadastrado com sucesso!`);
-  carregarFornecedoresPendentes();
-  };
-
-  window.rejeitarPreCadastro = async function (idPre) {
-    if (!confirm("Tem certeza que deseja rejeitar este cadastro?")) return;
-
-    try {
-      await db.collection("pre_cadastros_fornecedores").doc(String(idPre)).delete();
-      console.log("✅ Pré-cadastro rejeitado e removido do Firestore");
-    } catch (e) {
-      console.warn("⚠️ Falha ao remover do Firestore:", e);
-    }
-
-    const pendentes = JSON.parse(localStorage.getItem("pre_cadastros_fornecedores")) || [];
-    const novaLista = pendentes.filter(p => String(p.id) !== String(idPre));
-    localStorage.setItem("pre_cadastros_fornecedores", JSON.stringify(novaLista));
-
-    carregarFornecedoresPendentes();
-  };
 
   async function salvarFornecedor() {
     const nome = document.getElementById("fornNome")?.value.trim();
