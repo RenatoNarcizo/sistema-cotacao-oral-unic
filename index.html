@@ -5859,7 +5859,8 @@
        type="checkbox"
        class="checkFornecedor"
        data-nome="${f.nome}"
-       data-email="${emailFinal}" 
+       data-email="${emailFinal}"
+       data-whats="${f.whats || f.telefone || ''}"
        style="margin-right:6px;"
      >
      <strong>${f.nome}</strong> — ${f.tipo || "Sem tipo"}<br>
@@ -5922,7 +5923,8 @@
 
     const fornecedoresSelecionados = selecionados.map(el => ({
       nome: el.dataset.nome || "",
-      email: (el.dataset.email || "").trim().toLowerCase()
+      email: (el.dataset.email || "").trim().toLowerCase(),
+      whats: el.dataset.whats || ""
     }));
 
     // salva temporariamente no botão/origem
@@ -11387,7 +11389,7 @@
       const fornecedores = (cotacao.fornecedores || []).map(f => ({
         nome: f.nome || f.fornecedor || "Fornecedor",
         email: f.email || "",
-        whatsapp: f.whatsapp || f.telefone || ""
+        whatsapp: (f.whats || f.whatsapp || f.telefone || "").replace(/\D/g, "")
       }));
 
       const fornecedoresValidos = fornecedores.filter(f => f.email && f.email.includes('@'));
