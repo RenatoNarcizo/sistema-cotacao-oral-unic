@@ -5754,20 +5754,31 @@
     const lista = document.getElementById("listaServicosCotacao");
     if (!lista) return;
 
-    // ✅ Fonte primária: localStorage (imediato, sem esperar rede)
+    // ✅ 1. Fonte primária: localStorage (imediato)
     let servicos = JSON.parse(localStorage.getItem("servicos")) || [];
 
-    // 🔄 Tenta sincronizar com Firestore em segundo plano
+    // ☁️ 2. Se localStorage vazio, tenta carregar do RTDB
+    if (servicos.length === 0 && typeof rtdb !== "undefined") {
+      try {
+        const snap = await rtdb.ref("servicos").once("value");
+        const data = snap.val();
+        if (data) {
+          servicos = Object.values(data).filter(s => s && s.nome);
+          localStorage.setItem("servicos", JSON.stringify(servicos));
+          console.log(`✅ ${servicos.length} serviços carregados do RTDB.`);
+        }
+      } catch (e) { console.warn("RTDB serviços:", e); }
+    }
+
+    // 🔄 3. Tenta Firestore em segundo plano (sem bloquear UI)
     if (typeof db !== "undefined") {
       db.collection("servicos").get().then(snapshot => {
         if (!snapshot.empty) {
           const doFirestore = snapshot.docs.map(doc => doc.data());
           localStorage.setItem("servicos", JSON.stringify(doFirestore));
-          if (doFirestore.length !== servicos.length) {
-            carregarServicosParaCotacao();
-          }
+          if (doFirestore.length !== servicos.length) carregarServicosParaCotacao();
         }
-      }).catch(() => { /* Firestore indisponível — usando localStorage */ });
+      }).catch(() => { });
     }
 
     lista.innerHTML = "";
@@ -8489,20 +8500,28 @@
       return;
     }
 
-    const servicos = JSON.parse(localStorage.getItem("servicos")) || [];
-
-    servicos.push({
+    const novoServico = {
+      id: "SRV-" + Date.now(),
       nome,
-      codigo: codigo || "",        // opcional
+      codigo: codigo || "",
       categoria,
-      descricao: descricao || "",  // opcional
-      preco: preco || ""           // opcional
-    });
+      descricao: descricao || "",
+      preco: preco || ""
+    };
 
+    const servicos = JSON.parse(localStorage.getItem("servicos")) || [];
+    servicos.push(novoServico);
     servicos.sort((a, b) => a.nome.localeCompare(b.nome));
     localStorage.setItem("servicos", JSON.stringify(servicos));
 
-    // 🔹 limpa formulário
+    // ☁️ Sincroniza com RTDB (persistência na nuvem)
+    if (typeof rtdb !== "undefined") {
+      rtdb.ref("servicos/" + novoServico.id).set(novoServico)
+        .then(() => console.log("✅ Serviço salvo no RTDB:", novoServico.nome))
+        .catch(e => console.warn("⚠️ Falha ao salvar serviço no RTDB:", e));
+    }
+
+    // limpa formulário
     document.getElementById("servNome").value = "";
     document.getElementById("servCodigo").value = "";
     document.getElementById("servCategoria").value = "";
