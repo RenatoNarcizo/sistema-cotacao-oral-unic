@@ -11820,23 +11820,30 @@
 
               const url = await comTimeout(
                 uploadTask.then(s => s.ref.getDownloadURL()),
-                25000,
+                8000,
                 "Upload de Arquivo"
               );
               anexoIndividual.url = url;
               console.log(`✅ Upload concluído (${file.name}):`, url);
               anexosArray.push(anexoIndividual);
             } catch (e) {
-              console.warn(`⚠️ [DEBUG] Falha no Storage para ${file.name}:`, e.message);
+              console.warn(`⚠️ Falha no Storage, usando fallback base64 para ${file.name}:`, e.message);
 
+              // Fallback automático e silencioso — sem perguntar ao fornecedor
               if (file.size < 1024 * 1024) {
-                if (confirm(`Falha no upload de ${file.name}. Deseja usar o 'Banco Seguro' (Base64) para este arquivo?`)) {
+                try {
                   const base64Data = await fileToBase64(file);
                   anexoIndividual.base64 = base64Data;
                   anexosArray.push(anexoIndividual);
+                  console.log(`✅ Fallback base64 aplicado: ${file.name}`);
+                } catch (e2) {
+                  console.warn(`⚠️ Falha no fallback base64: ${file.name}`, e2);
                 }
               } else {
-                alert(`Arquivo ${file.name} muito grande e falhou no upload.`);
+                // Arquivo grande: registra só nome sem bloquear
+                console.warn(`⚠️ Arquivo grande (${file.name}) não enviado — tamanho excede 1MB.`);
+                anexoIndividual.nome = file.name + " (não enviado — arquivo muito grande)";
+                anexosArray.push(anexoIndividual);
               }
             }
           }
