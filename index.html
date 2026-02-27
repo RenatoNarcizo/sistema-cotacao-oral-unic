@@ -5662,21 +5662,33 @@
     const lista = document.getElementById("listaMateriaisCotacao");
     if (!lista) return;
 
-    // ✅ Fonte primária: localStorage (imediato, sem esperar rede)
+    // ✅ 1. Fonte primária: localStorage (imediato)
     let materiais = JSON.parse(localStorage.getItem("materiais")) || [];
 
-    // 🔄 Tenta sincronizar com Firestore em segundo plano (sem bloquear UI)
+    // ☁️ 2. Se localStorage vazio, tenta carregar do RTDB
+    if (materiais.length === 0 && typeof rtdb !== "undefined") {
+      try {
+        const snap = await rtdb.ref("materiais").once("value");
+        const data = snap.val();
+        if (data) {
+          materiais = Object.values(data).filter(m => m && m.nome);
+          localStorage.setItem("materiais", JSON.stringify(materiais));
+          console.log(`✅ ${materiais.length} materiais carregados do RTDB.`);
+        }
+      } catch (e) { console.warn("RTDB materiais:", e); }
+    }
+
+    // 🔄 3. Tenta Firestore em segundo plano (sem bloquear UI)
     if (typeof db !== "undefined") {
       db.collection("materiais").get().then(snapshot => {
         if (!snapshot.empty) {
           const doFirestore = snapshot.docs.map(doc => doc.data());
           localStorage.setItem("materiais", JSON.stringify(doFirestore));
-          // Re-renderiza apenas se os dados mudaram
           if (doFirestore.length !== materiais.length) {
             carregarMateriaisParaCotacao();
           }
         }
-      }).catch(() => { /* Firestore indisponível — usando localStorage */ });
+      }).catch(() => { });
     }
 
     lista.innerHTML = "";
@@ -8307,21 +8319,29 @@
       return;
     }
 
-    const materiais = JSON.parse(localStorage.getItem("materiais")) || [];
-
-    materiais.push({
+    const novoMaterial = {
+      id: "MAT-" + Date.now(),
       nome,
-      codigo: codigo || "",       // opcional
-      embalagem: embalagem || "", // opcional
-      qtdEmb: qtdEmb || ""        // opcional
-    });
+      codigo: codigo || "",
+      embalagem: embalagem || "",
+      qtdEmb: qtdEmb || ""
+    };
 
+    const materiais = JSON.parse(localStorage.getItem("materiais")) || [];
+    materiais.push(novoMaterial);
     materiais.sort((a, b) => a.nome.localeCompare(b.nome));
     localStorage.setItem("materiais", JSON.stringify(materiais));
 
+    // ☁️ Sincroniza com RTDB (persistência na nuvem)
+    if (typeof rtdb !== "undefined") {
+      rtdb.ref("materiais/" + novoMaterial.id).set(novoMaterial)
+        .then(() => console.log("✅ Material salvo no RTDB:", novoMaterial.nome))
+        .catch(e => console.warn("⚠️ Falha ao salvar material no RTDB:", e));
+    }
+
     alert("✅ Material salvo com sucesso!");
 
-    // 🔹 limpa formulário
+    // limpa formulário
     document.getElementById("matNome").value = "";
     document.getElementById("matCodigo").value = "";
     document.getElementById("matEmbalagem").value = "";
