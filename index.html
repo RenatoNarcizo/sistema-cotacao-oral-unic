@@ -478,6 +478,34 @@
       background: #661155;
     }
 
+    /* BRANDING FIXO NO CANTO INFERIOR DIREITO */
+    .branding-footer {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      text-align: right;
+      color: rgba(255, 255, 255, 0.95);
+      z-index: 100000;
+      pointer-events: none;
+      font-family: "Segoe UI", Roboto, sans-serif;
+      text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.9);
+      line-height: 1.2;
+    }
+
+    .branding-footer b {
+      display: block;
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+    }
+
+    .branding-footer span {
+      display: block;
+      font-size: 12px;
+      font-weight: 400;
+      opacity: 0.9;
+    }
+
     /* ======================================================
   📊 MATRIZ DE ANÁLISE — LAYOUT PREMIUM
 ====================================================== */
@@ -3994,6 +4022,12 @@
      margin-bottom:15px;
    "></div>
       <span id="loadingText">Processando...</span>
+    </div>
+
+    <!-- BRANDING DA EMPRESA -->
+    <div class="branding-footer">
+      <b>AtendeTudo</b>
+      <span>Suprimentos & Serviços</span>
     </div>
 
     <style>
