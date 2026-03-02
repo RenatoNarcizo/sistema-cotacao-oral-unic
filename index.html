@@ -11971,6 +11971,8 @@
 
     document.getElementById("respNumero").innerText = String(numero);
     document.getElementById("respDescricao").innerText = cotacao.descricao || "-";
+    document.getElementById("respDataCriacao").innerText = cotacao.dataCriacao || "-";
+    document.getElementById("respDataFechamento").innerText = cotacao.dataFechamento || "-";
 
     // ⏳ TIMER
     const timerDisplay = document.getElementById("timerDisplay");
