@@ -4042,6 +4042,35 @@
     </div>
   </div>
 
+  <!-- 🔄 MODAL – REABRIR COTAÇÃO (NOVO) -->
+  <div id="modalReabrirCotacao" class="modal"
+    style="display:none; align-items:center; justify-content:center; z-index:10000001;">
+    <div class="modal-content"
+      style="max-width:400px; background:#111; border:1px solid #661155; box-shadow:0 0 25px rgba(102, 17, 85, 0.6); position:relative; padding:25px; border-radius:15px;">
+      <div style="text-align:center; margin-bottom:20px;">
+        <span style="font-size:40px;">🔄</span>
+        <h2 style="color:#661155; margin:10px 0 5px 0;">Reabrir Cotação</h2>
+        <p style="color:#aaa; font-size:14px;">Defina a nova data e hora de encerramento para que os fornecedores possam
+          responder ou editar.</p>
+      </div>
+
+      <div style="margin-bottom:20px;">
+        <label
+          style="color:#661155; font-size:12px; font-weight:bold; text-transform:uppercase; display:block; margin-bottom:8px;">📅
+          Nova Data de Fechamento</label>
+        <input type="datetime-local" id="novaDataFechamentoReabrir"
+          style="width:100%; background:#1a1a1a; color:white; border:1px solid #661155; padding:10px; border-radius:8px; font-size:15px;">
+      </div>
+
+      <div style="display:flex; gap:10px;">
+        <button onclick="fecharModalReabertura()"
+          style="flex:1; background:#333; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold;">Cancelar</button>
+        <button onclick="confirmarReabertura()"
+          style="flex:1; background:#661155; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; box-shadow:0 3px 0 #4a0c3e;">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
   <div id="modalMapaPrecos" class="modal" style="display:none;">
     <div class="modal-content"
       style="position: fixed; top:0; left:0; width:100vw; height:100vh; max-width:none; background:#000; border:none; display:flex; flex-direction:column; margin:0; padding:0;">
@@ -12936,16 +12965,26 @@
 
       if (cotacao.status === "aprovacao") {
         // No status de aprovação, não mostramos botões de ação na matriz de análise.
-        // O usuário apenas acompanha o status.
         html += `<!-- Acompanhamento: Sem botões de ação neste status -->`;
-      } else if (cotacao.status !== "aprovacao") {
-        // --- BOTÕES DE ANÁLISE (Comprador) ---
+      } else {
+        // --- SEQUÊNCIA DE BOTÕES SOLICITADA ---
+
+        // 1. Ver motivo da rejeição
         if (cotacao.motivoRejeicao) {
           html += `<button onclick="toggleMotivoRejeicao()" style="flex:1; width:auto; min-width:150px; background:#661155; color:#fff; border:none; padding:12px 8px; border-radius:8px; cursor:pointer; font-weight:800; font-size:10px; display:flex; align-items:center; justify-content:center; gap:5px; box-shadow:0 3px 0 #4a0c3e; text-transform:uppercase;"><i class="fa-solid fa-file-invoice"></i> Ver motivo da rejeição</button>`;
         }
+
+        // 2. Ver todos os anexos
         html += `<button onclick="visualizarDocumentos('${cotacao.numero || cotacao.id}')" style="flex:1; width:auto; min-width:150px; background:#3ab9b6; color:#fff; border:none; padding:12px 8px; border-radius:8px; cursor:pointer; font-weight:800; font-size:10px; display:flex; align-items:center; justify-content:center; gap:5px; box-shadow:0 3px 0 #2a8f8c; text-transform:uppercase;"><i class="fa-solid fa-folder-open"></i> Ver Todos os Anexos</button>`;
-        html += `<button onclick="excluirCotacao('${cotacao.numero || cotacao.id}')" style="flex:1; width:auto; min-width:140px; background:#ef4444; color:white; border:none; padding:12px 8px; border-radius:8px; cursor:pointer; font-weight:800; font-size:10px; display:flex; align-items:center; justify-content:center; gap:5px; box-shadow:0 3px 0 #b91c1c; text-transform:uppercase;"><i class="fa-solid fa-trash"></i> Excluir Cotação</button>`;
+
+        // 3. Reabrir Cotação (NOVO)
+        html += `<button onclick="abrirModalReabertura('${cotacao.numero || cotacao.id}')" style="flex:1; width:auto; min-width:150px; background:#f39c12; color:white; border:none; padding:12px 8px; border-radius:8px; cursor:pointer; font-weight:800; font-size:10px; display:flex; align-items:center; justify-content:center; gap:5px; box-shadow:0 3px 0 #d68910; text-transform:uppercase;"><i class="fa-solid fa-clock-rotate-left"></i> Reabrir Cotação</button>`;
+
+        // 4. Enviar para aprovação
         html += `<button onclick="enviarParaAprovacao()" style="flex:1.2; width:auto; min-width:160px; background:#661155; color:white; border:none; padding:12px 8px; border-radius:8px; cursor:pointer; font-weight:800; font-size:10px; display:flex; align-items:center; justify-content:center; gap:5px; box-shadow:0 3px 0 #4a0c3e; text-transform:uppercase;"><i class="fa-solid fa-paper-plane"></i> Enviar para aprovação</button>`;
+
+        // 5. Excluir Cotação
+        html += `<button onclick="excluirCotacao('${cotacao.numero || cotacao.id}')" style="flex:1; width:auto; min-width:140px; background:#ef4444; color:white; border:none; padding:12px 8px; border-radius:8px; cursor:pointer; font-weight:800; font-size:10px; display:flex; align-items:center; justify-content:center; gap:5px; box-shadow:0 3px 0 #b91c1c; text-transform:uppercase;"><i class="fa-solid fa-trash"></i> Excluir Cotação</button>`;
       }
       html += `</div>`;
     }
@@ -13095,9 +13134,9 @@
     }
   };
 
-  // 🔄 Lógica para Reabrir Cotação
-  window.reabrirCotacao = async function (id) {
-    if (!confirm("⚠️ Deseja REABRIR esta cotação?\n\nIsso estenderá o prazo de fechamento em 3 dias para tentar atrair novos fornecedores.")) {
+  // 🔄 Lógica para Reabrir Cotação (ACEITA DATA CUSTOMIZADA)
+  window.reabrirCotacao = async function (id, novaDataFornecida = null) {
+    if (!novaDataFornecida && !confirm("⚠️ Deseja REABRIR esta cotação?\n\nIsso estenderá o prazo de fechamento em 3 dias para tentar atrair novos fornecedores.")) {
       return;
     }
 
@@ -13110,17 +13149,23 @@
         return;
       }
 
-      const agora = new Date();
-      agora.setDate(agora.getDate() + 3);
+      let dataFechamentoFormatada;
+      if (novaDataFornecida) {
+        dataFechamentoFormatada = novaDataFornecida;
+      } else {
+        const agora = new Date();
+        agora.setDate(agora.getDate() + 3);
+        dataFechamentoFormatada = agora.toLocaleString();
+      }
 
       const cot = cotacoes[index];
       cot.status = 'aberta';
       cot.prazoEncerrado = false;
-      cot.dataFechamento = agora.toLocaleString();
+      cot.dataFechamento = dataFechamentoFormatada;
 
       localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
 
-      // 🔥 SINCRONIZAÇÃO CLOUD: Atualiza no Firestore se possível
+      // 🔥 SYNC FIRESTORE: Atualiza no Firestore se possível
       if (typeof db !== "undefined") {
         try {
           const docId = String(cot.numero || cot.id);
@@ -13145,7 +13190,7 @@
           .catch(e => console.error("❌ Erro sync reabertura:", e));
       }
 
-      alert("✅ Cotação reaberta com sucesso! O prazo foi estendido em 3 dias.");
+      alert("✅ Cotação reaberta com sucesso!");
 
       if (typeof toggleListaRespondidas === 'function') {
         toggleListaRespondidas('publicadas', true); // Force refresh
@@ -13405,6 +13450,68 @@
     }
   };
 
+  /* ======================================================
+    🔄 FUNÇÕES DO MODAL DE REABERTURA (NOVO)
+  ====================================================== */
+  window.abrirModalReabertura = function (id) {
+    window.idCotacaoReabrir = id;
+    const modal = document.getElementById("modalReabrirCotacao");
+    const inputData = document.getElementById("novaDataFechamentoReabrir");
+
+    if (!modal || !inputData) {
+      console.error("❌ Modal de reabertura ou input de data não encontrado.");
+      return;
+    }
+
+    // Define data padrão: agora + 3 dias
+    const agora = new Date();
+    agora.setDate(agora.getDate() + 3);
+
+    // Ajuste para formato do input datetime-local (YYYY-MM-DDTHH:MM)
+    const ano = agora.getFullYear();
+    const mes = String(agora.getMonth() + 1).padStart(2, '0');
+    const dia = String(agora.getDate()).padStart(2, '0');
+    const hora = String(agora.getHours()).padStart(2, '0');
+    const min = String(agora.getMinutes()).padStart(2, '0');
+
+    inputData.value = `${ano}-${mes}-${dia}T${hora}:${min}`;
+
+    modal.style.display = "flex";
+    document.body.style.overflow = "hidden";
+  };
+
+  window.fecharModalReabertura = function () {
+    const modal = document.getElementById("modalReabrirCotacao");
+    if (modal) modal.style.display = "none";
+    document.body.style.overflow = "auto";
+  };
+
+  window.confirmarReabertura = async function () {
+    const id = window.idCotacaoReabrir;
+    const inputData = document.getElementById("novaDataFechamentoReabrir").value;
+
+    if (!inputData) {
+      alert("⚠️ Por favor, selecione uma data e hora de fechamento.");
+      return;
+    }
+
+    const dataObj = new Date(inputData);
+    if (dataObj <= new Date()) {
+      alert("⚠️ A data de fechamento deve ser posterior ao momento atual.");
+      return;
+    }
+
+    // Formata para o padrão BR: DD/MM/AAAA, HH:MM:SS
+    const dataBR = dataObj.toLocaleString('pt-BR');
+
+    console.log(`🔄 Reabrindo cotação ${id} para: ${dataBR}`);
+    await window.reabrirCotacao(id, dataBR);
+    fecharModalReabertura();
+
+    // Fecha o modal de análise se estiver aberto
+    const modalAnalise = document.getElementById("modalAnaliseCotacao");
+    if (modalAnalise) modalAnalise.style.display = "none";
+  };
 
 </script>
 
