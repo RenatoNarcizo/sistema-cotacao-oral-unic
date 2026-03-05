@@ -4572,17 +4572,18 @@
 
     // 3. Merge e Deduplicação (Prioridade: RTDB > Firestore)
     const mapaUnificado = new Map();
+    const blacklist = JSON.parse(localStorage.getItem("cotacoes_deletadas_local")) || [];
 
     // Adiciona Firestore primeiro
     cotacoesFirestore.forEach(c => {
       const id = String(c.numero || c.id || "");
-      if (id) mapaUnificado.set(id, c);
+      if (id && !blacklist.includes(id)) mapaUnificado.set(id, c);
     });
 
     // Sobrescreve com RTDB (mais recente)
     cotacoesRTDB.forEach(c => {
       const id = String(c.numero || c.id || "");
-      if (id) mapaUnificado.set(id, c);
+      if (id && !blacklist.includes(id)) mapaUnificado.set(id, c);
     });
 
     const listaFinal = Array.from(mapaUnificado.values());
@@ -13072,13 +13073,20 @@
 
       alert("✅ Cotação removida localmente com sucesso!");
 
-      // ☁️ 4. EXCLUSÃO EM SEGUNDO PLANO (FIRESTORE)
+      // ☁️ 4. EXCLUSÃO EM SEGUNDO PLANO (FIRESTORE + RTDB)
       if (typeof db !== "undefined") {
         const docId = idStr;
         console.log(`☁️ Tentando remover ${docId} do Firestore em background...`);
         db.collection("cotacoes").doc(docId).delete()
           .then(() => console.log(`✅ Firestore: Cotação ${docId} removida.`))
           .catch(fsError => console.warn("⚠️ Firestore: Falha na exclusão (Quota?), mas o item permanecerá oculto localmente.", fsError));
+      }
+
+      if (typeof rtdb !== "undefined") {
+        console.log(`☁️ Tentando remover ${idStr} do RTDB em background...`);
+        rtdb.ref("cotacoes/" + idStr).remove()
+          .then(() => console.log(`✅ RTDB: Cotação ${idStr} removida.`))
+          .catch(rtError => console.warn("⚠️ RTDB: Falha na exclusão.", rtError));
       }
 
     } catch (e) {
