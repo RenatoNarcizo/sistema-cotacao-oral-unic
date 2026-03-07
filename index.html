@@ -7536,58 +7536,75 @@
         try {
           const doc = new jsPDF("p", "mm", "a4");
           const pageWidth = doc.internal.pageSize.getWidth();
+          const pageHeight = doc.internal.pageSize.getHeight();
           let y = 15;
 
-          /* ================= LOGO OFICIAL ================= */
-          if (logoImg) {
-            doc.addImage(logoImg, "PNG", pageWidth - 35, 12, 22, 22);
-          }
+          const desenharCabecalhoSistema = () => {
+            /* ================= LOGO OFICIAL ================= */
+            if (logoImg) {
+              doc.addImage(logoImg, "PNG", pageWidth - 35, 12, 22, 22);
+            }
 
-          /* ================= CABEÇALHO ================= */
-          doc.setFontSize(12);
-          doc.setFont("helvetica", "bold");
-          doc.text("O.U. CAMPO GRANDE CLÍNICA ODONTOLÓGICA LTDA", pageWidth / 2, y, { align: "center" });
-          y += 6;
-          doc.setFontSize(11);
-          doc.text("Nome Fantasia: ORAL UNIC", pageWidth / 2, y, { align: "center" });
-          y += 6;
-          doc.setFontSize(10);
-          doc.setFont("helvetica", "normal");
-          doc.text("CNPJ: 30.882.538/0001-38", pageWidth / 2, y, { align: "center" });
-          y += 5;
-          doc.text("Telefone: (67) 3304-9400", pageWidth / 2, y, { align: "center" });
-          y += 5;
-          doc.text("Av. Afonso Pena, 2728 - Centro", pageWidth / 2, y, { align: "center" });
-          y += 5;
-          doc.text("CEP 79.002-075 - Campo Grande - MS", pageWidth / 2, y, { align: "center" });
-          y += 8;
-          doc.line(10, y, pageWidth - 10, y);
-          y += 10;
+            /* ================= CABEÇALHO ================= */
+            doc.setFontSize(12);
+            doc.setFont("helvetica", "bold");
+            doc.text("O.U. CAMPO GRANDE CLÍNICA ODONTOLÓGICA LTDA", pageWidth / 2, y, { align: "center" });
+            y += 6;
+            doc.setFontSize(11);
+            doc.text("Nome Fantasia: ORAL UNIC", pageWidth / 2, y, { align: "center" });
+            y += 6;
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "normal");
+            doc.text("CNPJ: 30.882.538/0001-38", pageWidth / 2, y, { align: "center" });
+            y += 5;
+            doc.text("Telefone: (67) 3304-9400", pageWidth / 2, y, { align: "center" });
+            y += 5;
+            doc.text("Av. Afonso Pena, 2728 - Centro", pageWidth / 2, y, { align: "center" });
+            y += 5;
+            doc.text("CEP 79.002-075 - Campo Grande - MS", pageWidth / 2, y, { align: "center" });
+            y += 8;
+            doc.line(10, y, pageWidth - 10, y);
+            y += 10;
 
-          /* ================= DADOS DO PEDIDO ================= */
-          doc.setFont("helvetica", "bold");
-          doc.text(`Pedido de Compra - ${c.numero}`, 10, y);
-          y += 6;
-          doc.setFontSize(10);
-          doc.setFont("helvetica", "normal");
-          doc.text(`Data: ${new Date().toLocaleDateString()}`, 10, y);
-          y += 8;
-          doc.setFont("helvetica", "bold");
-          doc.text(`Fornecedor: ${fornecedorNome}`, 10, y);
-          y += 8;
+            /* ================= DADOS DO PEDIDO ================= */
+            doc.setFont("helvetica", "bold");
+            doc.text(`Pedido de Compra - ${c.numero}`, 10, y);
+            y += 6;
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "normal");
+            doc.text(`Data: ${new Date().toLocaleDateString()}`, 10, y);
+            y += 8;
+            doc.setFont("helvetica", "bold");
+            doc.text(`Fornecedor: ${fornecedorNome}`, 10, y);
+            y += 8;
+          };
 
-          /* ================= TABELA ================= */
           const colX = { item: 10, qtd: 110, preco: 135, total: 165 };
-          doc.rect(10, y, pageWidth - 20, 8);
-          doc.text("Descrição", colX.item, y + 5);
-          doc.text("Qtd", colX.qtd, y + 5);
-          doc.text("Preço Unit.", colX.preco, y + 5);
-          doc.text("Total", colX.total, y + 5);
-          y += 8;
+          const desenharCabecalhoTabela = (posY) => {
+            doc.setFont("helvetica", "bold");
+            doc.rect(10, posY, pageWidth - 20, 8);
+            doc.text("Descrição", colX.item, posY + 5);
+            doc.text("Qtd", colX.qtd, posY + 5);
+            doc.text("Preço Unit.", colX.preco, posY + 5);
+            doc.text("Total", colX.total, posY + 5);
+            return posY + 8;
+          };
+
+          desenharCabecalhoSistema();
+          y = desenharCabecalhoTabela(y);
 
           doc.setFont("helvetica", "normal");
           let totalPedido = 0;
           itens.forEach(item => {
+            // Verifica se precisa de nova página (270mm é o limite de segurança para A4)
+            if (y > 270) {
+              doc.addPage();
+              y = 15;
+              desenharCabecalhoSistema();
+              y = desenharCabecalhoTabela(y);
+              doc.setFont("helvetica", "normal");
+            }
+
             const totalItem = Number(item.preco) * Number(item.quantidade);
             totalPedido += totalItem;
             doc.rect(10, y, pageWidth - 20, 8);
@@ -7598,13 +7615,19 @@
             y += 8;
           });
 
+          // Verifica se o total cabe na página
+          if (y > 280) {
+            doc.addPage();
+            y = 15;
+          }
+
           /* ================= TOTAL ================= */
           y += 6;
           doc.setFont("helvetica", "bold");
           doc.text(`Total do Pedido: R$ ${totalPedido.toFixed(2)}`, pageWidth - 10, y, { align: "right" });
 
           /* ================= SALVAR ================= */
-          doc.save(`Pedido_Compra_${c.numero}_${fornecedorNome.replace(/\\s+/g, '_')}.pdf`);
+          doc.save(`Pedido_Compra_${c.numero}_${fornecedorNome.replace(/\s+/g, '_')}.pdf`);
         } catch (e) {
           console.error("Erro PDF:", e);
         }
