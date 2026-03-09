@@ -9797,7 +9797,13 @@
                `;
 
     respostas.forEach(r => {
-      html += `<th>${r.fornecedor}</th>`;
+      const temAnexo = r.anexo || (Array.isArray(r.anexos) && r.anexos.length > 0) || r.base64;
+      html += `<th style="text-align:center;">
+                <div style="display:flex; align-items:center; justify-content:center; gap:5px;">
+                  ${temAnexo ? `<i class="fa-solid fa-paperclip" style="color:#10b981; cursor:pointer; font-size:12px;" title="Ver Anexos" onclick="visualizarDocumentos('${cotacao.numero}', '${r.email}')"></i>` : ''}
+                  ${r.fornecedor}
+                </div>
+              </th>`;
     });
 
     if (temVencedor) {
@@ -9865,12 +9871,6 @@
              <div style="color:#00ff99; font-weight:bold; margin:0; display:flex; align-items:center; justify-content:center; gap:6px;">
                <i class="fa-solid fa-trophy" style="color:#ffcc00;"></i> 
                ${v.fornecedor}
-               ${respostas.find(r => normalizarEmail(r.email) === normalizarEmail(v.emailFornecedor))?.anexo || respostas.find(r => normalizarEmail(r.email) === normalizarEmail(v.emailFornecedor))?.anexos?.length > 0 ? `
-                 <i class="fa-solid fa-paperclip" 
-                    style="color:#3ab9b6; cursor:pointer; font-size:12px;" 
-                    title="Ver anexos deste fornecedor" 
-                    onclick="visualizarDocumentos('${cotacao.numero}', '${v.emailFornecedor}')"></i>
-               ` : ''}
              </div>
            </td>
          `;
