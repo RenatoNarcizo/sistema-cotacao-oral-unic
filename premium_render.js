@@ -177,7 +177,7 @@ function renderizarTabelaAnalise(textoOuId, containerOverride = null) {
             container.innerHTML += `
               <div style="margin-top:20px;">
                  <button onclick="excluirCotacao('${cotacao.numero}')" 
-                      style="background:#b93a3a; color:white; border:none; padding:10px 20px; border-radius:6px; cursor:pointer;">
+                       style="background:#b93a3a; color:white; border:none; padding:10px 20px; border-radius:6px; cursor:pointer;">
                     <i class="fa-solid fa-trash"></i> Excluir Cotação
                  </button>
               </div>`;
@@ -225,17 +225,24 @@ function renderizarTabelaAnalise(textoOuId, containerOverride = null) {
 
     const produtos = cotacao.produtos || cotacao.itens || [];
 
+    // --- CÁLCULO DOS TOTAIS PARA O RODAPÉ ---
+    const totaisFornecedores = new Array(respostas.length).fill(0);
+    let totalVencedores = 0;
+
     produtos.forEach((prod, idx) => {
         const nomeItem = prod.nome || prod.descricao || ("Item " + (idx + 1));
         const nomeProd = prod.produto || nomeItem;
-        const qtd = prod.quantidade || 0;
+        const qtd = Number(prod.quantidade || 0);
 
         let precosRow = [];
-        respostas.forEach(r => {
+        respostas.forEach((r, rIdx) => {
             const pItem = (r.itens || []).find(it => (it.produto === nomeProd) || (it.nome === nomeProd) || (it.produto === nomeItem));
             if (pItem) {
                 let valor = Number(pItem.preco || pItem.valor || pItem.precoUnitario || 0);
-                if (valor > 0) precosRow.push({ fornecedor: r.fornecedor, email: r.email, val: valor });
+                if (valor > 0) {
+                    precosRow.push({ fornecedor: r.fornecedor, email: r.email, val: valor });
+                    totaisFornecedores[rIdx] += (valor * qtd);
+                }
             }
         });
         precosRow.sort((a, b) => a.val - b.val);
@@ -285,6 +292,18 @@ function renderizarTabelaAnalise(textoOuId, containerOverride = null) {
             window.decisoesAnalise[cotacao.numero || cotacao.id][keyItem] = emailEscolhido;
         }
 
+        // --- SOMA DO VENCEDOR PARA O TOTAL GERAL ---
+        if (emailEscolhido) {
+            const respVenc = respostas.find(r => (r.email || "").toLowerCase().trim() === emailEscolhido.toLowerCase().trim());
+            if (respVenc) {
+                const pItemVenc = (respVenc.itens || []).find(it => (it.produto === nomeProd) || (it.nome === nomeProd) || (it.produto === nomeItem));
+                if (pItemVenc) {
+                    const valorVenc = Number(pItemVenc.preco || pItemVenc.valor || pItemVenc.precoUnitario || 0);
+                    totalVencedores += (valorVenc * qtd);
+                }
+            }
+        }
+
         let fornEscolhidoObj = respostas.find(r => normalizarEmail(r.email) === normalizarEmail(emailEscolhido));
         let nomeEscolhido = fornEscolhidoObj ? getNomeExibicao(fornEscolhidoObj.email, fornEscolhidoObj.fornecedor) : "Selecione";
         const labelId = `label-escolhido-${idx}`;
@@ -292,8 +311,8 @@ function renderizarTabelaAnalise(textoOuId, containerOverride = null) {
         html += `<td style="text-align:center; padding:12px;">
                 <div style="background:#000; border:1px solid #10b981; padding:10px 14px; border-radius:8px; display:flex; align-items:center; justify-content:space-between; cursor:pointer; min-width:180px; position:relative;">
                    <div style="display:flex; align-items:center; gap:10px; color:#10b981; font-weight:800;">
-                      <i class="fa-solid fa-trophy" style="color:#fbbf24; font-size:16px;"></i> 
-                      <span id="${labelId}">${nomeEscolhido}</span>
+                       <i class="fa-solid fa-trophy" style="color:#fbbf24; font-size:16px;"></i> 
+                       <span id="${labelId}">${nomeEscolhido}</span>
                    </div>
                    ${(isAnalise && cotacao.status !== "aprovacao") ? `
                      <select onchange="atualizarDecisaoV3('${cotacao.numero || cotacao.id}', '${idx}', this.value, '${idx}')" style="position:absolute; top:0; left:0; width:100%; height:100%; opacity:0; cursor:pointer;">
@@ -308,7 +327,30 @@ function renderizarTabelaAnalise(textoOuId, containerOverride = null) {
         html += `</tr>`;
     });
 
-    html += `</tbody></table>`;
+    html += `</tbody>`;
+
+    // 🚀 RODAPÉ COM TOTAIS
+    html += `
+        <tfoot style="background: #0a0a0a; border-top: 2px solid #661155; font-weight: bold;">
+            <tr style="height: 60px;">
+                <td colspan="5" style="text-align: right; padding-right: 20px; color: #aaa; font-size: 14px; text-transform: uppercase;">
+                    <i class="fa-solid fa-calculator" style="margin-right: 8px;"></i>Totais:
+                </td>
+                ${totaisFornecedores.map(t => `
+                    <td style="text-align: center; color: #fff; font-size: 15px;">
+                        <div style="font-size: 9px; color: #888; font-weight: normal; margin-bottom: 2px;">TOTAL FORN.</div>
+                        R$ ${t.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                `).join('')}
+                <td style="text-align: center; background: rgba(16, 185, 129, 0.15); border-left: 2px solid #10b981;">
+                    <div style="font-size: 10px; color: #10b981; font-weight: normal; margin-bottom: 2px;">VALOR TOTAL DA COMPRA</div>
+                    <span style="color: #10b981; font-size: 20px; text-shadow: 0 0 10px rgba(16, 185, 129, 0.4);">
+                        R$ ${totalVencedores.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                </td>
+            </tr>
+        </tfoot>
+    </table>`;
 
     // 🏆 STATUS (Se for override/accordion, adiciona aqui no final do HTML)
     if (containerOverride && textoStatus) {
@@ -341,7 +383,9 @@ function renderizarTabelaAnalise(textoOuId, containerOverride = null) {
     container.innerHTML = html;
 
     // 💰 Verifica documentos financeiros no final da renderização
-    verificarDocumentosFinanceiros(cotacao);
+    if (typeof verificarDocumentosFinanceiros === 'function') {
+        verificarDocumentosFinanceiros(cotacao);
+    }
 }
 
 /**
@@ -1008,17 +1052,24 @@ function renderizarTabelaAnalise(textoOuId, containerOverride = null) {
 
     const produtos = cotacao.produtos || cotacao.itens || [];
 
+    // --- CÁLCULO DOS TOTAIS PARA O RODAPÉ ---
+    const totaisFornecedores = new Array(respostas.length).fill(0);
+    let totalVencedores = 0;
+
     produtos.forEach((prod, idx) => {
         const nomeItem = prod.nome || prod.descricao || ("Item " + (idx + 1));
         const nomeProd = prod.produto || nomeItem;
-        const qtd = prod.quantidade || 0;
+        const qtd = Number(prod.quantidade || 0);
 
         let precosRow = [];
-        respostas.forEach(r => {
+        respostas.forEach((r, rIdx) => {
             const pItem = (r.itens || []).find(it => (it.produto === nomeProd) || (it.nome === nomeProd) || (it.produto === nomeItem));
             if (pItem) {
                 let valor = Number(pItem.preco || pItem.valor || pItem.precoUnitario || 0);
-                if (valor > 0) precosRow.push({ fornecedor: r.fornecedor, email: r.email, val: valor });
+                if (valor > 0) {
+                    precosRow.push({ fornecedor: r.fornecedor, email: r.email, val: valor });
+                    totaisFornecedores[rIdx] += (valor * qtd);
+                }
             }
         });
         precosRow.sort((a, b) => a.val - b.val);
@@ -1068,6 +1119,18 @@ function renderizarTabelaAnalise(textoOuId, containerOverride = null) {
             window.decisoesAnalise[cotacao.numero || cotacao.id][keyItem] = emailEscolhido;
         }
 
+        // --- SOMA DO VENCEDOR PARA O TOTAL GERAL ---
+        if (emailEscolhido) {
+            const respVenc = respostas.find(r => (r.email || "").toLowerCase().trim() === emailEscolhido.toLowerCase().trim());
+            if (respVenc) {
+                const pItemVenc = (respVenc.itens || []).find(it => (it.produto === nomeProd) || (it.nome === nomeProd) || (it.produto === nomeItem));
+                if (pItemVenc) {
+                    const valorVenc = Number(pItemVenc.preco || pItemVenc.valor || pItemVenc.precoUnitario || 0);
+                    totalVencedores += (valorVenc * qtd);
+                }
+            }
+        }
+
         let fornEscolhidoObj = respostas.find(r => normalizarEmail(r.email) === normalizarEmail(emailEscolhido));
         let nomeEscolhido = fornEscolhidoObj ? getNomeExibicao(fornEscolhidoObj.email, fornEscolhidoObj.fornecedor) : "Selecione";
         const labelId = `label-escolhido-${idx}`;
@@ -1091,7 +1154,30 @@ function renderizarTabelaAnalise(textoOuId, containerOverride = null) {
         html += `</tr>`;
     });
 
-    html += `</tbody></table>`;
+    html += `</tbody>`;
+
+    // 🚀 RODAPÉ COM TOTAIS
+    html += `
+        <tfoot style="background: #0a0a0a; border-top: 2px solid #661155; font-weight: bold;">
+            <tr style="height: 60px;">
+                <td colspan="5" style="text-align: right; padding-right: 20px; color: #aaa; font-size: 14px; text-transform: uppercase;">
+                    <i class="fa-solid fa-calculator" style="margin-right: 8px;"></i>Totais:
+                </td>
+                ${totaisFornecedores.map(t => `
+                    <td style="text-align: center; color: #fff; font-size: 15px;">
+                        <div style="font-size: 9px; color: #888; font-weight: normal; margin-bottom: 2px;">TOTAL FORN.</div>
+                        R$ ${t.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                `).join('')}
+                <td style="text-align: center; background: rgba(16, 185, 129, 0.15); border-left: 2px solid #10b981;">
+                    <div style="font-size: 10px; color: #10b981; font-weight: normal; margin-bottom: 2px;">VALOR TOTAL DA COMPRA</div>
+                    <span style="color: #10b981; font-size: 20px; text-shadow: 0 0 10px rgba(16, 185, 129, 0.4);">
+                        R$ ${totalVencedores.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                </td>
+            </tr>
+        </tfoot>
+    </table>`;
 
     // 🏆 STATUS (Se for override/accordion, adiciona aqui no final do HTML)
     if (containerOverride && textoStatus) {
