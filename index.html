@@ -9862,12 +9862,16 @@
         if (v) {
           html += `
            <td class="acao" style="text-align:center; vertical-align:middle;">
-             <div style="color:#00ff99; font-weight:bold; margin-bottom:5px;">
-               <i class="fa-solid fa-trophy" style="color:#ffcc00; margin-right:4px;"></i> ${v.fornecedor}
+             <div style="color:#00ff99; font-weight:bold; margin:0; display:flex; align-items:center; justify-content:center; gap:6px;">
+               <i class="fa-solid fa-trophy" style="color:#ffcc00;"></i> 
+               ${v.fornecedor}
+               ${respostas.find(r => normalizarEmail(r.email) === normalizarEmail(v.emailFornecedor))?.anexo || respostas.find(r => normalizarEmail(r.email) === normalizarEmail(v.emailFornecedor))?.anexos?.length > 0 ? `
+                 <i class="fa-solid fa-paperclip" 
+                    style="color:#3ab9b6; cursor:pointer; font-size:12px;" 
+                    title="Ver anexos deste fornecedor" 
+                    onclick="visualizarDocumentos('${cotacao.numero}', '${v.emailFornecedor}')"></i>
+               ` : ''}
              </div>
-             <button onclick="visualizarDocumentos('${cotacao.numero}')" style="padding:4px 8px; font-size:11px; background:#3ab9b6; color:white; border:none; border-radius:4px; cursor:pointer;">
-               📄 Ver Anexos
-             </button>
            </td>
          `;
         } else {
