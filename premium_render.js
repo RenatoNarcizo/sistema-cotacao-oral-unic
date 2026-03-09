@@ -10,6 +10,7 @@ function renderizarTabelaAnalise(textoOuId, containerOverride = null) {
 
     // 🔍 Helper Local
     const normalizarEmail = (e) => (e || "").toLowerCase().trim();
+    const normalizarTexto = (t) => (t || "").toLowerCase().trim();
 
     const cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
     let cotacao = cotacoes.find(c => c.id === textoOuId);
@@ -236,7 +237,12 @@ function renderizarTabelaAnalise(textoOuId, containerOverride = null) {
 
         let precosRow = [];
         respostas.forEach((r, rIdx) => {
-            const pItem = (r.itens || []).find(it => (it.produto === nomeProd) || (it.nome === nomeProd) || (it.produto === nomeItem));
+            const pItem = (r.itens || []).find(it =>
+                normalizarTexto(it.produto) === normalizarTexto(nomeProd) ||
+                normalizarTexto(it.nome) === normalizarTexto(nomeProd) ||
+                normalizarTexto(it.produto) === normalizarTexto(nomeItem) ||
+                normalizarTexto(it.nome) === normalizarTexto(nomeItem)
+            );
             if (pItem) {
                 let valor = Number(pItem.preco || pItem.valor || pItem.precoUnitario || 0);
                 if (valor > 0) {
@@ -262,7 +268,12 @@ function renderizarTabelaAnalise(textoOuId, containerOverride = null) {
                <td style="text-align:center; color:#ccc;">${qtd}</td>`;
 
         respostas.forEach(r => {
-            const pItem = (r.itens || []).find(it => (it.produto === nomeProd) || (it.nome === nomeProd) || (it.produto === nomeItem));
+            const pItem = (r.itens || []).find(it =>
+                normalizarTexto(it.produto) === normalizarTexto(nomeProd) ||
+                normalizarTexto(it.nome) === normalizarTexto(nomeProd) ||
+                normalizarTexto(it.produto) === normalizarTexto(nomeItem) ||
+                normalizarTexto(it.nome) === normalizarTexto(nomeItem)
+            );
             const valor = pItem ? (Number(pItem.preco) || Number(pItem.valor) || 0) : 0;
             const rankIndex = precosRow.findIndex(x => x.email === r.email);
 
@@ -294,9 +305,14 @@ function renderizarTabelaAnalise(textoOuId, containerOverride = null) {
 
         // --- SOMA DO VENCEDOR PARA O TOTAL GERAL ---
         if (emailEscolhido) {
-            const respVenc = respostas.find(r => (r.email || "").toLowerCase().trim() === emailEscolhido.toLowerCase().trim());
+            const respVenc = respostas.find(r => normalizarEmail(r.email) === normalizarEmail(emailEscolhido));
             if (respVenc) {
-                const pItemVenc = (respVenc.itens || []).find(it => (it.produto === nomeProd) || (it.nome === nomeProd) || (it.produto === nomeItem));
+                const pItemVenc = (respVenc.itens || []).find(it =>
+                    normalizarTexto(it.produto) === normalizarTexto(nomeProd) ||
+                    normalizarTexto(it.nome) === normalizarTexto(nomeProd) ||
+                    normalizarTexto(it.produto) === normalizarTexto(nomeItem) ||
+                    normalizarTexto(it.nome) === normalizarTexto(nomeItem)
+                );
                 if (pItemVenc) {
                     const valorVenc = Number(pItemVenc.preco || pItemVenc.valor || pItemVenc.precoUnitario || 0);
                     totalVencedores += (valorVenc * qtd);
@@ -837,6 +853,7 @@ function renderizarTabelaAnalise(textoOuId, containerOverride = null) {
 
     // 🔍 Helper Local
     const normalizarEmail = (e) => (e || "").toLowerCase().trim();
+    const normalizarTexto = (t) => (t || "").toLowerCase().trim();
 
     const cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
     let cotacao = cotacoes.find(c => c.id === textoOuId);
@@ -1063,7 +1080,12 @@ function renderizarTabelaAnalise(textoOuId, containerOverride = null) {
 
         let precosRow = [];
         respostas.forEach((r, rIdx) => {
-            const pItem = (r.itens || []).find(it => (it.produto === nomeProd) || (it.nome === nomeProd) || (it.produto === nomeItem));
+            const pItem = (r.itens || []).find(it =>
+                normalizarTexto(it.produto) === normalizarTexto(nomeProd) ||
+                normalizarTexto(it.nome) === normalizarTexto(nomeProd) ||
+                normalizarTexto(it.produto) === normalizarTexto(nomeItem) ||
+                normalizarTexto(it.nome) === normalizarTexto(nomeItem)
+            );
             if (pItem) {
                 let valor = Number(pItem.preco || pItem.valor || pItem.precoUnitario || 0);
                 if (valor > 0) {
@@ -1089,7 +1111,12 @@ function renderizarTabelaAnalise(textoOuId, containerOverride = null) {
                <td style="text-align:center; color:#ccc;">${qtd}</td>`;
 
         respostas.forEach(r => {
-            const pItem = (r.itens || []).find(it => (it.produto === nomeProd) || (it.nome === nomeProd) || (it.produto === nomeItem));
+            const pItem = (r.itens || []).find(it =>
+                normalizarTexto(it.produto) === normalizarTexto(nomeProd) ||
+                normalizarTexto(it.nome) === normalizarTexto(nomeProd) ||
+                normalizarTexto(it.produto) === normalizarTexto(nomeItem) ||
+                normalizarTexto(it.nome) === normalizarTexto(nomeItem)
+            );
             const valor = pItem ? (Number(pItem.preco) || Number(pItem.valor) || 0) : 0;
             const rankIndex = precosRow.findIndex(x => x.email === r.email);
 
@@ -1121,9 +1148,14 @@ function renderizarTabelaAnalise(textoOuId, containerOverride = null) {
 
         // --- SOMA DO VENCEDOR PARA O TOTAL GERAL ---
         if (emailEscolhido) {
-            const respVenc = respostas.find(r => (r.email || "").toLowerCase().trim() === emailEscolhido.toLowerCase().trim());
+            const respVenc = respostas.find(r => normalizarEmail(r.email) === normalizarEmail(emailEscolhido));
             if (respVenc) {
-                const pItemVenc = (respVenc.itens || []).find(it => (it.produto === nomeProd) || (it.nome === nomeProd) || (it.produto === nomeItem));
+                const pItemVenc = (respVenc.itens || []).find(it =>
+                    normalizarTexto(it.produto) === normalizarTexto(nomeProd) ||
+                    normalizarTexto(it.nome) === normalizarTexto(nomeProd) ||
+                    normalizarTexto(it.produto) === normalizarTexto(nomeItem) ||
+                    normalizarTexto(it.nome) === normalizarTexto(nomeItem)
+                );
                 if (pItemVenc) {
                     const valorVenc = Number(pItemVenc.preco || pItemVenc.valor || pItemVenc.precoUnitario || 0);
                     totalVencedores += (valorVenc * qtd);

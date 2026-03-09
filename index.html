@@ -12674,6 +12674,7 @@
 
     // 🔍 Helper Local
     const normalizarEmail = (e) => (e || "").toLowerCase().trim();
+    const normalizarTexto = (t) => (t || "").toLowerCase().trim();
 
     const cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
     let cotacao = cotacoes.find(c => c.id === textoOuId);
@@ -12821,9 +12822,6 @@
       statusDiv.innerHTML = textoStatus;
     }
 
-    /* ==========================
-       📊 DADOS (Sincronizados via Nuvem)
-    ========================== */
     const listaFornGlobal = JSON.parse(localStorage.getItem("fornecedores")) || [];
     const getNomeExibicao = (email, nomeOriginal) => {
       const f = listaFornGlobal.find(x => (x.email || "").toLowerCase().trim() === (email || "").toLowerCase().trim());
@@ -12841,13 +12839,83 @@
         container.innerHTML += `
               <div style="margin-top:20px;">
                  <button onclick="excluirCotacao('${cotacao.numero}')" 
-                      style="background:#b93a3a; color:white; border:none; padding:10px 20px; border-radius:6px; cursor:pointer;">
+                       style="background:#b93a3a; color:white; border:none; padding:10px 20px; border-radius:6px; cursor:pointer;">
                     <i class="fa-solid fa-trash"></i> Excluir Cotação
                  </button>
               </div>`;
       }
       return;
     }
+
+    const produtos = cotacao.produtos || cotacao.itens || [];
+
+    // 🚀 CÁLCULO DE TOTAIS
+    const totaisFornecedores = respostas.map(r => {
+      let total = 0;
+      produtos.forEach((prod, pIdx) => {
+        const nomeItem = normalizarTexto(prod.nome || prod.descricao || ("Item " + (pIdx + 1)));
+        const nomeProd = normalizarTexto(prod.produto || nomeItem);
+        const pItem = (r.itens || []).find(it =>
+          normalizarTexto(it.produto) === nomeProd ||
+          normalizarTexto(it.nome) === nomeProd ||
+          normalizarTexto(it.produto) === nomeItem ||
+          normalizarTexto(it.nome) === nomeItem
+        );
+        if (pItem) {
+          const valor = Number(pItem.preco || pItem.valor || 0);
+          total += (valor * (prod.quantidade || 0));
+        }
+      });
+      return total;
+    });
+
+    let totalVencedores = 0;
+    produtos.forEach((prod, pIdx) => {
+      const keyItem = `item_${pIdx}`;
+      let emailEscolhido = (window.decisoesAnalise?.[cotacao.numero || cotacao.id]?.[keyItem]) ||
+        (cotacao.decisoes?.[keyItem]);
+
+      // Se não houver email escolhido ainda, tenta achar o menor preço para compor o total inicial
+      if (!emailEscolhido) {
+        let menorPreco = Infinity;
+        let vencedorAuto = null;
+        respostas.forEach(r => {
+          const nomeItem = normalizarTexto(prod.nome || prod.descricao || ("Item " + (pIdx + 1)));
+          const nomeProd = normalizarTexto(prod.produto || nomeItem);
+          const pItem = (r.itens || []).find(it =>
+            normalizarTexto(it.produto) === nomeProd ||
+            normalizarTexto(it.nome) === nomeProd ||
+            normalizarTexto(it.produto) === nomeItem ||
+            normalizarTexto(it.nome) === nomeItem
+          );
+          if (pItem) {
+            const v = Number(pItem.preco || pItem.valor || 0);
+            if (v > 0 && v < menorPreco) {
+              menorPreco = v;
+              vencedorAuto = r.email;
+            }
+          }
+        });
+        emailEscolhido = vencedorAuto;
+      }
+
+      if (emailEscolhido) {
+        const respVencedor = respostas.find(r => normalizarEmail(r.email) === normalizarEmail(emailEscolhido));
+        if (respVencedor) {
+          const nomeItem = normalizarTexto(prod.nome || prod.descricao || ("Item " + (pIdx + 1)));
+          const nomeProd = normalizarTexto(prod.produto || nomeItem);
+          const pItem = (respVencedor.itens || []).find(it =>
+            normalizarTexto(it.produto) === nomeProd ||
+            normalizarTexto(it.nome) === nomeProd ||
+            normalizarTexto(it.produto) === nomeItem ||
+            normalizarTexto(it.nome) === nomeItem
+          );
+          if (pItem) {
+            totalVencedores += (Number(pItem.preco || pItem.valor || 0) * (prod.quantidade || 0));
+          }
+        }
+      }
+    });
 
     /* ==========================
        🏗️ MATRIZ VISUAL
@@ -12887,8 +12955,6 @@
     html += `<th style="text-align:center; color:#10b981; min-width:180px; font-weight:bold;">🏆 VENCEDOR</th>`;
     html += `</tr></thead><tbody style="background:#000;">`;
 
-    const produtos = cotacao.produtos || cotacao.itens || [];
-
     produtos.forEach((prod, idx) => {
       const nomeItem = prod.nome || prod.descricao || ("Item " + (idx + 1));
       const nomeProd = prod.produto || nomeItem;
@@ -12896,7 +12962,12 @@
 
       let precosRow = [];
       respostas.forEach(r => {
-        const pItem = (r.itens || []).find(it => (it.produto === nomeProd) || (it.nome === nomeProd) || (it.produto === nomeItem));
+        const pItem = (r.itens || []).find(it =>
+          normalizarTexto(it.produto) === normalizarTexto(nomeProd) ||
+          normalizarTexto(it.nome) === normalizarTexto(nomeProd) ||
+          normalizarTexto(it.produto) === normalizarTexto(nomeItem) ||
+          normalizarTexto(it.nome) === normalizarTexto(nomeItem)
+        );
         if (pItem) {
           let valor = Number(pItem.preco || pItem.valor || pItem.precoUnitario || 0);
           if (valor > 0) precosRow.push({ fornecedor: r.fornecedor, email: r.email, val: valor });
@@ -12919,7 +12990,12 @@
                <td style="text-align:center; color:#ccc;">${qtd}</td>`;
 
       respostas.forEach(r => {
-        const pItem = (r.itens || []).find(it => (it.produto === nomeProd) || (it.nome === nomeProd) || (it.produto === nomeItem));
+        const pItem = (r.itens || []).find(it =>
+          normalizarTexto(it.produto) === normalizarTexto(nomeProd) ||
+          normalizarTexto(it.nome) === normalizarTexto(nomeProd) ||
+          normalizarTexto(it.produto) === normalizarTexto(nomeItem) ||
+          normalizarTexto(it.nome) === normalizarTexto(nomeItem)
+        );
         const valor = pItem ? (Number(pItem.preco) || Number(pItem.valor) || 0) : 0;
         const rankIndex = precosRow.findIndex(x => x.email === r.email);
 
@@ -12972,7 +13048,29 @@
       html += `</tr>`;
     });
 
-    html += `</tbody></table>`;
+    html += `</tbody>`;
+
+    // 🚀 RODAPÉ COM TOTAIS
+    html += `
+        <tfoot style="background: #0a0a0a; border-top: 2px solid #661155; font-weight: bold;">
+            <tr style="height: 60px;">
+                <td colspan="5" style="text-align: right; padding-right: 20px; color: #aaa; font-size: 14px; text-transform: uppercase;">
+                    <i class="fa-solid fa-calculator" style="margin-right: 8px;"></i>Totais:
+                </td>
+                ${totaisFornecedores.map(t => `
+                    <td style="text-align: center; color: #fff; font-size: 15px;">
+                        <div style="font-size: 9px; color: #888; font-weight: normal; margin-bottom: 2px;">TOTAL FORN.</div>
+                        R$ ${t.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                `).join('')}
+                <td style="text-align: center; color: #00ff99; font-size: 16px; background: rgba(0, 255, 153, 0.05); border-left: 1px solid #333;">
+                    <div style="font-size: 9px; color: #10b981; font-weight: normal; margin-bottom: 2px;">VALOR TOTAL DA COMPRA</div>
+                    R$ ${totalVencedores.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </td>
+            </tr>
+        </tfoot>`;
+
+    html += `</table>`;
 
     // 🏆 STATUS (Se for override/accordion, adiciona aqui no final do HTML)
     if (containerOverride && textoStatus) {
