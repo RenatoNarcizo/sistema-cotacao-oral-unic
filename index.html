@@ -12847,8 +12847,6 @@
       return;
     }
 
-    const produtos = cotacao.produtos || cotacao.itens || [];
-
     // 🚀 CÁLCULO DE TOTAIS
     const totaisFornecedores = respostas.map(r => {
       let total = 0;
@@ -12869,17 +12867,14 @@
       return total;
     });
 
-    let totalVencedores = 0;
-    produtos.forEach((prod, pIdx) => {
-      const keyItem = `item_${pIdx}`;
-      let emailEscolhido = (window.decisoesAnalise?.[cotacao.numero || cotacao.id]?.[keyItem]) ||
-        (cotacao.decisoes?.[keyItem]);
+    const valorGanhandoFornecedores = respostas.map(r => {
+      let totalGanhando = 0;
+      produtos.forEach((prod, pIdx) => {
+        const keyItem = `item_${pIdx}`;
+        let emailEscolhido = (window.decisoesAnalise?.[cotacao.numero || cotacao.id]?.[keyItem]) ||
+          (cotacao.decisoes?.[keyItem]);
 
-      // Se não houver email escolhido ainda, tenta achar o menor preço para compor o total inicial
-      if (!emailEscolhido) {
-        let menorPreco = Infinity;
-        let vencedorAuto = null;
-        respostas.forEach(r => {
+        if (emailEscolhido && normalizarEmail(emailEscolhido) === normalizarEmail(r.email)) {
           const nomeItem = normalizarTexto(prod.nome || prod.descricao || ("Item " + (pIdx + 1)));
           const nomeProd = normalizarTexto(prod.produto || nomeItem);
           const pItem = (r.itens || []).find(it =>
@@ -12889,31 +12884,32 @@
             normalizarTexto(it.nome) === nomeItem
           );
           if (pItem) {
-            const v = Number(pItem.preco || pItem.valor || 0);
-            if (v > 0 && v < menorPreco) {
-              menorPreco = v;
-              vencedorAuto = r.email;
-            }
-          }
-        });
-        emailEscolhido = vencedorAuto;
-      }
-
-      if (emailEscolhido) {
-        const respVencedor = respostas.find(r => normalizarEmail(r.email) === normalizarEmail(emailEscolhido));
-        if (respVencedor) {
-          const nomeItem = normalizarTexto(prod.nome || prod.descricao || ("Item " + (pIdx + 1)));
-          const nomeProd = normalizarTexto(prod.produto || nomeItem);
-          const pItem = (respVencedor.itens || []).find(it =>
-            normalizarTexto(it.produto) === nomeProd ||
-            normalizarTexto(it.nome) === nomeProd ||
-            normalizarTexto(it.produto) === nomeItem ||
-            normalizarTexto(it.nome) === nomeItem
-          );
-          if (pItem) {
-            totalVencedores += (Number(pItem.preco || pItem.valor || 0) * (prod.quantidade || 0));
+            totalGanhando += (Number(pItem.preco || pItem.valor || 0) * (prod.quantidade || 0));
           }
         }
+      });
+      return totalGanhando;
+    });
+
+    let totalMenorPrecoGeral = 0;
+    produtos.forEach((prod, pIdx) => {
+      let menorPrecoItem = Infinity;
+      respostas.forEach(r => {
+        const nomeItem = normalizarTexto(prod.nome || prod.descricao || ("Item " + (pIdx + 1)));
+        const nomeProd = normalizarTexto(prod.produto || nomeItem);
+        const pItem = (r.itens || []).find(it =>
+          normalizarTexto(it.produto) === nomeProd ||
+          normalizarTexto(it.nome) === nomeProd ||
+          normalizarTexto(it.produto) === nomeItem ||
+          normalizarTexto(it.nome) === nomeItem
+        );
+        if (pItem) {
+          const v = Number(pItem.preco || pItem.valor || 0);
+          if (v > 0 && v < menorPrecoItem) menorPrecoItem = v;
+        }
+      });
+      if (menorPrecoItem !== Infinity) {
+        totalMenorPrecoGeral += (menorPrecoItem * (prod.quantidade || 0));
       }
     });
 
@@ -13017,7 +13013,9 @@
       });
 
       const keyItem = `item_${idx}`;
-      let emailEscolhido = window.decisoesAnalise?.[cotacao.numero || cotacao.id]?.[keyItem];
+      let emailEscolhido = (window.decisoesAnalise?.[cotacao.numero || cotacao.id]?.[keyItem]) ||
+        (cotacao.decisoes?.[keyItem]);
+
       if (!emailEscolhido && melhorPreco) {
         emailEscolhido = melhorPreco.email;
         if (!window.decisoesAnalise) window.decisoesAnalise = {};
@@ -13050,27 +13048,43 @@
 
     html += `</tbody>`;
 
-    // 🚀 RODAPÉ COM TOTAIS
+    // 🚀 RODAPÉ COM TOTAIS (2 LINHAS)
     html += `
         <tfoot style="background: #0a0a0a; border-top: 2px solid #661155; font-weight: bold;">
-            <tr style="height: 60px;">
-                <td colspan="5" style="text-align: right; padding-right: 20px; color: #aaa; font-size: 14px; text-transform: uppercase;">
-                    <i class="fa-solid fa-calculator" style="margin-right: 8px;"></i>Totais:
+            <!-- LINHA 1: TOTAIS BRUTOS -->
+            <tr style="height: 50px; border-bottom: 1px solid #222;">
+                <td colspan="5" style="text-align: right; padding-right: 20px; color: #aaa; font-size: 13px; text-transform: uppercase;">
+                    <i class="fa-solid fa-calculator" style="margin-right: 8px;"></i>Totais Brutos:
                 </td>
                 ${totaisFornecedores.map(t => `
+                    <td style="text-align: center; color: #888; font-size: 14px;">
+                        R$ ${t.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                `).join('')}
+                <td style="text-align: center; color: #555; font-size: 14px; background: rgba(255, 255, 255, 0.02);">
+                    -
+                </td>
+            </tr>
+            <!-- LINHA 2: VALOR GANHANDO / MELHOR COMPRA -->
+            <tr style="height: 60px;">
+                <td colspan="5" style="text-align: right; padding-right: 20px; color: #3ab9b6; font-size: 14px; text-transform: uppercase;">
+                    <i class="fa-solid fa-trophy" style="margin-right: 8px;"></i>Valor Ganhando:
+                </td>
+                ${valorGanhandoFornecedores.map(t => `
                     <td style="text-align: center; color: #fff; font-size: 15px;">
-                        <div style="font-size: 9px; color: #888; font-weight: normal; margin-bottom: 2px;">TOTAL FORN.</div>
+                        <div style="font-size: 9px; color: #3ab9b6; font-weight: normal; margin-bottom: 2px;">ESTÁ GANHANDO</div>
                         R$ ${t.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
                 `).join('')}
                 <td style="text-align: center; color: #00ff99; font-size: 16px; background: rgba(0, 255, 153, 0.05); border-left: 1px solid #333;">
-                    <div style="font-size: 9px; color: #10b981; font-weight: normal; margin-bottom: 2px;">VALOR TOTAL DA COMPRA</div>
-                    R$ ${totalVencedores.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    <div style="font-size: 9px; color: #10b981; font-weight: normal; margin-bottom: 2px;">VALOR TOTAL DA COMPRA (1ºs)</div>
+                    R$ ${totalMenorPrecoGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </td>
             </tr>
         </tfoot>`;
 
     html += `</table>`;
+
 
     // 🏆 STATUS (Se for override/accordion, adiciona aqui no final do HTML)
     if (containerOverride && textoStatus) {
