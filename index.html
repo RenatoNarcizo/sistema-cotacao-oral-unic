@@ -12847,71 +12847,12 @@
       return;
     }
 
-    // 🚀 CÁLCULO DE TOTAIS
-    const totaisFornecedores = respostas.map(r => {
-      let total = 0;
-      produtos.forEach((prod, pIdx) => {
-        const nomeItem = normalizarTexto(prod.nome || prod.descricao || ("Item " + (pIdx + 1)));
-        const nomeProd = normalizarTexto(prod.produto || nomeItem);
-        const pItem = (r.itens || []).find(it =>
-          normalizarTexto(it.produto) === nomeProd ||
-          normalizarTexto(it.nome) === nomeProd ||
-          normalizarTexto(it.produto) === nomeItem ||
-          normalizarTexto(it.nome) === nomeItem
-        );
-        if (pItem) {
-          const valor = Number(pItem.preco || pItem.valor || 0);
-          total += (valor * (prod.quantidade || 0));
-        }
-      });
-      return total;
-    });
+    const produtos = cotacao.produtos || cotacao.itens || [];
 
-    const valorGanhandoFornecedores = respostas.map(r => {
-      let totalGanhando = 0;
-      produtos.forEach((prod, pIdx) => {
-        const keyItem = `item_${pIdx}`;
-        let emailEscolhido = (window.decisoesAnalise?.[cotacao.numero || cotacao.id]?.[keyItem]) ||
-          (cotacao.decisoes?.[keyItem]);
-
-        if (emailEscolhido && normalizarEmail(emailEscolhido) === normalizarEmail(r.email)) {
-          const nomeItem = normalizarTexto(prod.nome || prod.descricao || ("Item " + (pIdx + 1)));
-          const nomeProd = normalizarTexto(prod.produto || nomeItem);
-          const pItem = (r.itens || []).find(it =>
-            normalizarTexto(it.produto) === nomeProd ||
-            normalizarTexto(it.nome) === nomeProd ||
-            normalizarTexto(it.produto) === nomeItem ||
-            normalizarTexto(it.nome) === nomeItem
-          );
-          if (pItem) {
-            totalGanhando += (Number(pItem.preco || pItem.valor || 0) * (prod.quantidade || 0));
-          }
-        }
-      });
-      return totalGanhando;
-    });
-
+    // 🚀 INICIALIZA TOTAIS PARA O RODAPÉ
+    const totaisBrutos = new Array(respostas.length).fill(0);
+    const valorGanhando = new Array(respostas.length).fill(0);
     let totalMenorPrecoGeral = 0;
-    produtos.forEach((prod, pIdx) => {
-      let menorPrecoItem = Infinity;
-      respostas.forEach(r => {
-        const nomeItem = normalizarTexto(prod.nome || prod.descricao || ("Item " + (pIdx + 1)));
-        const nomeProd = normalizarTexto(prod.produto || nomeItem);
-        const pItem = (r.itens || []).find(it =>
-          normalizarTexto(it.produto) === nomeProd ||
-          normalizarTexto(it.nome) === nomeProd ||
-          normalizarTexto(it.produto) === nomeItem ||
-          normalizarTexto(it.nome) === nomeItem
-        );
-        if (pItem) {
-          const v = Number(pItem.preco || pItem.valor || 0);
-          if (v > 0 && v < menorPrecoItem) menorPrecoItem = v;
-        }
-      });
-      if (menorPrecoItem !== Infinity) {
-        totalMenorPrecoGeral += (menorPrecoItem * (prod.quantidade || 0));
-      }
-    });
 
     /* ==========================
        🏗️ MATRIZ VISUAL
@@ -12957,7 +12898,7 @@
       const qtd = prod.quantidade || 0;
 
       let precosRow = [];
-      respostas.forEach(r => {
+      respostas.forEach((r, rIdx) => {
         const pItem = (r.itens || []).find(it =>
           normalizarTexto(it.produto) === normalizarTexto(nomeProd) ||
           normalizarTexto(it.nome) === normalizarTexto(nomeProd) ||
@@ -12966,12 +12907,37 @@
         );
         if (pItem) {
           let valor = Number(pItem.preco || pItem.valor || pItem.precoUnitario || 0);
-          if (valor > 0) precosRow.push({ fornecedor: r.fornecedor, email: r.email, val: valor });
+          if (valor > 0) {
+            precosRow.push({ fornecedor: r.fornecedor, email: r.email, val: valor, rIdx: rIdx });
+            totaisBrutos[rIdx] += (valor * qtd);
+          }
         }
       });
       precosRow.sort((a, b) => a.val - b.val);
 
       const melhorPreco = precosRow.length > 0 ? precosRow[0] : null;
+
+      // 🏆 LÓGICA DE VENCEDOR PARA O RODAPÉ
+      const keyItem = `item_${idx}`;
+      let emailEscolhido = (window.decisoesAnalise?.[cotacao.numero || cotacao.id]?.[keyItem]) ||
+        (cotacao.decisoes?.[keyItem]);
+
+      if (!emailEscolhido && melhorPreco) {
+        emailEscolhido = melhorPreco.email;
+        if (!window.decisoesAnalise) window.decisoesAnalise = {};
+        if (!window.decisoesAnalise[cotacao.numero || cotacao.id]) window.decisoesAnalise[cotacao.numero || cotacao.id] = {};
+        window.decisoesAnalise[cotacao.numero || cotacao.id][keyItem] = emailEscolhido;
+      }
+
+      if (emailEscolhido) {
+        const winRes = precosRow.find(p => normalizarEmail(p.email) === normalizarEmail(emailEscolhido));
+        if (winRes) {
+          valorGanhando[winRes.rIdx] += (winRes.val * qtd);
+        }
+      }
+      if (melhorPreco) {
+        totalMenorPrecoGeral += (melhorPreco.val * qtd);
+      }
 
       html += `<tr style="border-bottom:1px solid #222;">
                <td style="text-align:center; padding:10px;"></td>
@@ -13012,16 +12978,6 @@
         html += `</td>`;
       });
 
-      const keyItem = `item_${idx}`;
-      let emailEscolhido = (window.decisoesAnalise?.[cotacao.numero || cotacao.id]?.[keyItem]) ||
-        (cotacao.decisoes?.[keyItem]);
-
-      if (!emailEscolhido && melhorPreco) {
-        emailEscolhido = melhorPreco.email;
-        if (!window.decisoesAnalise) window.decisoesAnalise = {};
-        if (!window.decisoesAnalise[cotacao.numero || cotacao.id]) window.decisoesAnalise[cotacao.numero || cotacao.id] = {};
-        window.decisoesAnalise[cotacao.numero || cotacao.id][keyItem] = emailEscolhido;
-      }
 
       let fornEscolhidoObj = respostas.find(r => normalizarEmail(r.email) === normalizarEmail(emailEscolhido));
       let nomeEscolhido = fornEscolhidoObj ? getNomeExibicao(fornEscolhidoObj.email, fornEscolhidoObj.fornecedor) : "Selecione";
@@ -13056,7 +13012,7 @@
                 <td colspan="5" style="text-align: right; padding-right: 20px; color: #aaa; font-size: 13px; text-transform: uppercase;">
                     <i class="fa-solid fa-calculator" style="margin-right: 8px;"></i>Totais Brutos:
                 </td>
-                ${totaisFornecedores.map(t => `
+                ${totaisBrutos.map(t => `
                     <td style="text-align: center; color: #888; font-size: 14px;">
                         R$ ${t.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
@@ -13070,7 +13026,7 @@
                 <td colspan="5" style="text-align: right; padding-right: 20px; color: #3ab9b6; font-size: 14px; text-transform: uppercase;">
                     <i class="fa-solid fa-trophy" style="margin-right: 8px;"></i>Valor Ganhando:
                 </td>
-                ${valorGanhandoFornecedores.map(t => `
+                ${valorGanhando.map(t => `
                     <td style="text-align: center; color: #fff; font-size: 15px;">
                         <div style="font-size: 9px; color: #3ab9b6; font-weight: normal; margin-bottom: 2px;">ESTÁ GANHANDO</div>
                         R$ ${t.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
