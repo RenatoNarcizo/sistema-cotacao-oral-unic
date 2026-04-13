@@ -11765,22 +11765,26 @@
       if (cotIndex === -1) throw new Error("Cotação não encontrada no cache local.");
       let cotacao = todasCotacoes[cotIndex];
 
-      // 5. Coletar Itens
-      const linhas = document.querySelectorAll("#tabelaResponderCorpo tr");
-      let itensRespondidos = [];
-      linhas.forEach(tr => {
-        const input = tr.querySelector("input");
-        const valRef = window.limparMoeda(input.value);
-        if (input && valRef > 0) {
-          const produto = tr.cells[0]?.innerText.trim() || "Produto";
-          itensRespondidos.push({
-            produto: produto,
-            nome: produto,
-            preco: valRef,
-            valor: valRef
-          });
-        }
-      });
+     // 5. Coletar Itens (VERSÃO BLINDADA)
+const linhas = document.querySelectorAll("#tabelaResponderCorpo tr");
+let itensRespondidos = [];
+
+linhas.forEach((tr, index) => {
+  const input = tr.querySelector("input");
+  const valRef = window.limparMoeda(input.value);
+
+  if (input && valRef > 0) {
+    const produto = tr.cells[0]?.innerText.trim() || "Produto";
+
+    itensRespondidos.push({
+      produto: produto,
+      nome: produto,
+      preco: valRef,
+      valor: valRef,
+      index: index // 🔥 CHAVE PRINCIPAL (resolve tudo)
+    });
+  }
+});
 
       if (itensRespondidos.length === 0) {
         if (btnOriginal) { btnOriginal.disabled = false; btnOriginal.innerText = textoOriginal; }
@@ -12123,13 +12127,39 @@
         temURL: !!resposta.anexo?.url,
         temBase64: !!resposta.anexo?.base64
       });
-      (resposta.itens || []).forEach(item => {
-        const idx = (cotacao.produtos || []).findIndex(p => p.nome === item.produto || p.nome === item.nome);
-        if (idx !== -1) {
-          const input = document.getElementById("preco_" + idx);
-          if (input) input.value = window.formatarMoedaBRL(item.preco ?? item.valor ?? 0);
-        }
-      });
+     // 🔥 PREENCHIMENTO BLINDADO
+(resposta.itens || []).forEach(item => {
+  let input = null;
+
+  // 1. PRIORIDADE: usa index salvo
+  if (item.index !== undefined) {
+    input = document.getElementById("preco_" + item.index);
+  }
+
+  // 2. FALLBACK (compatível com dados antigos)
+  if (!input) {
+    const normalizar = (str) =>
+      (str || "")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .trim();
+
+    const idx = (cotacao.produtos || []).findIndex(
+      p => normalizar(p.nome) === normalizar(item.produto || item.nome)
+    );
+
+    if (idx !== -1) {
+      input = document.getElementById("preco_" + idx);
+    }
+  }
+
+  // 3. SETAR VALOR COM SEGURANÇA
+  if (input) {
+    const valor = item.preco ?? item.precoUnitario ?? item.valor ?? "";
+    input.value = window.formatarMoedaBRL(valor);
+  }
+});
 
       if (resposta.anexo && resposta.anexo.nome) {
         const label = containerAnexo ? containerAnexo.querySelector('span[id^="labelLocal_"]') : null;
