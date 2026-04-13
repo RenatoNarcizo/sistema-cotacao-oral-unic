@@ -5452,7 +5452,7 @@
     if (respostaSalva) {
       respostaSalva.itens.forEach(item => {
         const input = document.querySelector(`input[data-produto="${item.produto}"]`);
-        if (input) input.value = item.preco;
+        if (input) input.value = item.preco || item.precoUnitario || item.valor || 0;
       });
     }
 
@@ -8008,7 +8008,7 @@
     setTimeout(() => {
       (resposta.itens || []).forEach((item, i) => {
         const input = document.getElementById("preco_" + i);
-        if (input) input.value = item.preco ?? 0;
+        if (input) input.value = item.preco || item.precoUnitario || item.valor || 0;
       });
 
       // 🔒 controle de edição
