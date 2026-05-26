@@ -2073,7 +2073,72 @@
     .troca-senha-box .input-group {
       margin-bottom: 20px;
     }
-  </style>
+  
+    /* ======================================================
+      ⭐  ESTRELAS PARA AVALIAÇÃO (SCORECARD)
+    ====================================================== */
+    .rating-stars {
+      display: flex;
+      flex-direction: row-reverse;
+      justify-content: flex-end;
+      gap: 5px;
+    }
+    .rating-stars input {
+      display: none;
+    }
+    .rating-stars label {
+      cursor: pointer;
+      width: 25px;
+      height: 25px;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23333'%3E%3Cpath d='M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: center;
+      background-size: contain;
+      transition: 0.2s;
+    }
+    .rating-stars input:checked ~ label,
+    .rating-stars label:hover,
+    .rating-stars label:hover ~ label {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ffcc00'%3E%3Cpath d='M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z'/%3E%3C/svg%3E");
+    }
+
+    /* BADGES DE STATUS NO RANKING */
+    .badge-score {
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: bold;
+      text-transform: uppercase;
+    }
+    .badge-elite { background: rgba(0, 255, 153, 0.1); color: #00ff99; border: 1px solid #00ff99; }
+    .badge-atencao { background: rgba(255, 204, 0, 0.1); color: #ffcc00; border: 1px solid #ffcc00; }
+    .badge-risco { background: rgba(255, 68, 68, 0.1); color: #ff4444; border: 1px solid #ff4444; }
+    .badge-novo { background: rgba(170, 170, 170, 0.1); color: #aaa; border: 1px solid #aaa; }
+    .badge-bom { background: rgba(58, 185, 182, 0.1); color: #3ab9b6; border: 1px solid #3ab9b6; }
+
+    /* CARD COM CONTADOR (BADGE) */
+    .card-badge {
+      position: absolute;
+      top: -10px;
+      right: -10px;
+      background: #ef4444;
+      color: white;
+      min-width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: bold;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+    }
+    .card-relative { position: relative; }
+    
+    .rating-stars input:checked ~ label { color: #fbbf24 !important; }
+    .rating-stars label:hover, .rating-stars label:hover ~ label { color: #fbbf24 !important; opacity: 0.8; }
+    .btn-aba.ativo { background: #661155 !important; color: white !important; border-color: #661155 !important; }
+</style>
 </head>
 
 <body>
@@ -2316,12 +2381,74 @@
         <h3>Gerenciar Usuários</h3>
         <p>Adicionar e controlar acessos do sistema</p>
       </div>
+
+      <!-- 🌟 GESTÃO DE SCORECARDS -->
+      <div class="card card-relative" id="cardScorecard" onclick="abrirGestaoScorecards()">
+        <i class="fa-solid fa-star-half-stroke"></i>
+        <div id="badgeScorecard" class="card-badge" style="display:none;">0</div>
+        <h3>Gestão de Scorecards</h3>
+        <p>Analisar o desempenho e ranking dos fornecedores</p>
+      </div>
     </div>
 
     <div class="rodape">
       © Sistema de Cotação • Oral Unica Campo Grande
     </div>
   </section>
+
+  <section id="gestaoScorecards" style="display:none;">
+      <header>
+        <button class="btn-sair" onclick="voltarMenu()">🏠 Menu Principal</button>
+        <h1>Gestão de Scorecards (Vendor Rating)</h1>
+      </header>
+
+      <div style="background:#111; border:1px solid #661155; border-radius:10px; padding:20px; margin:20px auto; width:95%; max-width:1200px; color:black; box-shadow:0 0 30px yellow; min-height: 500px;">
+        
+        <!-- ABAS -->
+        <div class="status-buttons" style="margin-bottom: 20px;">
+          <button id="btnTabRanking" class="ativo" onclick="mudarTabScorecard('ranking')">🏆 Ranking Geral</button>
+          <button id="btnTabPendentes" onclick="mudarTabScorecard('pendentes')">⏳ Recebimentos Pendentes</button>
+        </div>
+
+        <!-- CONTEÚDO: RANKING -->
+        <div id="abaRanking">
+          <div style="margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
+            <input type="text" id="buscaRanking" placeholder="Filtrar fornecedor..." onkeyup="renderizarRanking()" style="flex: 1; min-width: 200px; padding: 10px; background: #1a1a1a; border: 1px solid #661155; color: white; border-radius: 5px;">
+            <select id="filtroStatusRanking" onchange="renderizarRanking()" style="width: 150px; padding: 10px; background: #1a1a1a; border: 1px solid #661155; color: white; border-radius: 5px;">
+              <option value="todos">Todos Status</option>
+              <option value="elite">Elite (4.5+)</option>
+              <option value="bom">Bom (3.5 - 4.4)</option>
+              <option value="atencao">Atenção (3.0 - 3.4)</option>
+              <option value="risco">Risco (< 3.0)</option>
+              <option value="novo">Sem Nota</option>
+            </select>
+          </div>
+          <div style="overflow-x: auto;">
+            <table class="matriz-cotacao" style="width: 100%;">
+              <thead>
+                <tr>
+                  <th>Fornecedor</th>
+                  <th>Média Geral</th>
+                  <th>Status</th>
+                  <th>Última Avaliação</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="listaRankingCorpo"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- CONTEÚDO: PENDENTES -->
+        <div id="abaPendentes" style="display:none;">
+          <p style="color: #ccc; margin-bottom: 15px;">Listagem de cotações finalizadas aguardando confirmação de recebimento físico e avaliação técnica.</p>
+          <div id="listaPendentesScorecard" class="lista-aprovacao">
+            <!-- JS preenche -->
+          </div>
+        </div>
+
+      </div>
+    </section>
 
   <!-- GESTÃO FINANCEIRA (FORNECEDORES) -->
   <section id="financeiro" style="display:none;">
@@ -2991,16 +3118,112 @@
     </div>
   </section>
 
-  <!-- 👁️ MODAL – VISUALIZAR FORNECEDOR -->
-  <div id="modalVerFornecedor" class="modal" style="display:none;">
-    <div class="modal-content" style="max-width:900px;">
+  <!-- 👁️ MODAL: FICHA DO FORNECEDOR (SCORECARD) -->
+  <div id="modalVerFornecedor" class="modal" style="display:none; align-items:center; justify-content:center;">
+    <div class="modal-content" style="max-width:800px; width:95%; background:#000; border:1px solid #661155; padding:0; border-radius:15px; overflow:hidden;">
+        <div style="background:#661155; padding:20px; display:flex; justify-content:space-between; align-items:center;">
+            <h2 id="modalFornNome" style="margin:0; color:white; font-size:20px;">Ficha do Fornecedor</h2>
+            <span class="close" onclick="fecharModalVerFornecedor()" style="cursor:pointer; font-size:28px;">&times;</span>
+        </div>
+        <div id="conteudoFichaFornecedor" style="padding:30px; max-height:75vh; overflow-y:auto;">
+            <!-- JS preenche -->
+        </div>
+    </div>
+  </div>
 
-      <button class="close-btn" onclick="fecharModalVerFornecedor()">&times;</button>
+  <div id="modalAvaliacaoScorecard" class="modal" style="display:none; align-items:center; justify-content:center; background:rgba(0,0,0,0.9);">
+    <div class="modal-content" style="max-width:550px; padding:35px; border-radius:15px; background:#000; border:2px solid #661155; position:relative; box-shadow:0 0 50px rgba(102,17,85,0.5);">
+      <button class="close-btn" onclick="fecharModalAvaliacao()" style="top:15px; right:20px; font-size:30px;">&times;</button>
+      <h2 style="color:#661155; margin-bottom:5px; font-size:24px; font-weight:800;">⭐ Avaliar Fornecedor</h2>
+      <p id="infoFornecedorAvaliar" style="color:#aaa; font-size:14px; margin-bottom:30px; letter-spacing:0.5px;">Fornecedor: -</p>
 
-      <h2 style="color:#661155;">👁️ Ficha do Fornecedor</h2>
+      <form onsubmit="salvarAvaliacaoScorecard(event)">
+        <input type="hidden" id="avalCotacaoId">
+        <input type="hidden" id="avalFornecedorId">
+        <input type="hidden" id="avalFornecedorNome">
 
-      <div id="conteudoVerFornecedor"></div>
+        <div style="display: flex; flex-direction: column; gap: 25px;">
+          
+          <div class="item-aval">
+            <label style="display:flex; justify-content:space-between; font-weight:700; margin-bottom:10px;">
+              <span>1. Qualidade dos Produtos</span>
+              <span class="nota-sel" style="color:#3ab9b6;">-</span>
+            </label>
+            <div class="rating-stars" data-group="qualidade" style="display:flex; flex-direction:row-reverse; gap:10px; justify-content:flex-end;">
+              <input type="radio" name="qualidade" id="q5" value="5" required style="display:none;"><label for="q5" class="fa-solid fa-star" style="cursor:pointer; font-size:20px; color:#333;"></label>
+              <input type="radio" name="qualidade" id="q4" value="4" style="display:none;"><label for="q4" class="fa-solid fa-star" style="cursor:pointer; font-size:20px; color:#333;"></label>
+              <input type="radio" name="qualidade" id="q3" value="3" style="display:none;"><label for="q3" class="fa-solid fa-star" style="cursor:pointer; font-size:20px; color:#333;"></label>
+              <input type="radio" name="qualidade" id="q2" value="2" style="display:none;"><label for="q2" class="fa-solid fa-star" style="cursor:pointer; font-size:20px; color:#333;"></label>
+              <input type="radio" name="qualidade" id="q1" value="1" style="display:none;"><label for="q1" class="fa-solid fa-star" style="cursor:pointer; font-size:20px; color:#333;"></label>
+            </div>
+          </div>
 
+          <div class="item-aval">
+            <label style="display:flex; justify-content:space-between; font-weight:700; margin-bottom:10px;">
+              <span>2. Pontualidade na Entrega</span>
+              <span class="nota-sel" style="color:#3ab9b6;">-</span>
+            </label>
+            <div class="rating-stars" data-group="pontualidade" style="display:flex; flex-direction:row-reverse; gap:10px; justify-content:flex-end;">
+              <input type="radio" name="pontualidade" id="p5" value="5" required style="display:none;"><label for="p5" class="fa-solid fa-star" style="cursor:pointer; font-size:20px; color:#333;"></label>
+              <input type="radio" name="pontualidade" id="p4" value="4" style="display:none;"><label for="p4" class="fa-solid fa-star" style="cursor:pointer; font-size:20px; color:#333;"></label>
+              <input type="radio" name="pontualidade" id="p3" value="3" style="display:none;"><label for="p3" class="fa-solid fa-star" style="cursor:pointer; font-size:20px; color:#333;"></label>
+              <input type="radio" name="pontualidade" id="p2" value="2" style="display:none;"><label for="p2" class="fa-solid fa-star" style="cursor:pointer; font-size:20px; color:#333;"></label>
+              <input type="radio" name="pontualidade" id="p1" value="1" style="display:none;"><label for="p1" class="fa-solid fa-star" style="cursor:pointer; font-size:20px; color:#333;"></label>
+            </div>
+          </div>
+
+          <div class="item-aval">
+            <label style="display:flex; justify-content:space-between; font-weight:700; margin-bottom:10px;">
+              <span>3. Preço e Negociação</span>
+              <span class="nota-sel" style="color:#3ab9b6;">-</span>
+            </label>
+            <div class="rating-stars" data-group="preco" style="display:flex; flex-direction:row-reverse; gap:10px; justify-content:flex-end;">
+              <input type="radio" name="preco" id="pr5" value="5" required style="display:none;"><label for="pr5" class="fa-solid fa-star" style="cursor:pointer; font-size:20px; color:#333;"></label>
+              <input type="radio" name="preco" id="pr4" value="4" style="display:none;"><label for="pr4" class="fa-solid fa-star" style="cursor:pointer; font-size:20px; color:#333;"></label>
+              <input type="radio" name="preco" id="pr3" value="3" style="display:none;"><label for="pr3" class="fa-solid fa-star" style="cursor:pointer; font-size:20px; color:#333;"></label>
+              <input type="radio" name="preco" id="pr2" value="2" style="display:none;"><label for="pr2" class="fa-solid fa-star" style="cursor:pointer; font-size:20px; color:#333;"></label>
+              <input type="radio" name="preco" id="pr1" value="1" style="display:none;"><label for="pr1" class="fa-solid fa-star" style="cursor:pointer; font-size:20px; color:#333;"></label>
+            </div>
+          </div>
+
+          <div class="item-aval">
+            <label style="display:flex; justify-content:space-between; font-weight:700; margin-bottom:10px;">
+              <span>4. Capacidade Técnica</span>
+              <span class="nota-sel" style="color:#3ab9b6;">-</span>
+            </label>
+            <div class="rating-stars" data-group="tecnica" style="display:flex; flex-direction:row-reverse; gap:10px; justify-content:flex-end;">
+              <input type="radio" name="tecnica" id="t5" value="5" required style="display:none;"><label for="t5" class="fa-solid fa-star" style="cursor:pointer; font-size:20px; color:#333;"></label>
+              <input type="radio" name="tecnica" id="t4" value="4" style="display:none;"><label for="t4" class="fa-solid fa-star" style="cursor:pointer; font-size:20px; color:#333;"></label>
+              <input type="radio" name="tecnica" id="t3" value="3" style="display:none;"><label for="t3" class="fa-solid fa-star" style="cursor:pointer; font-size:20px; color:#333;"></label>
+              <input type="radio" name="tecnica" id="t2" value="2" style="display:none;"><label for="t2" class="fa-solid fa-star" style="cursor:pointer; font-size:20px; color:#333;"></label>
+              <input type="radio" name="tecnica" id="t1" value="1" style="display:none;"><label for="t1" class="fa-solid fa-star" style="cursor:pointer; font-size:20px; color:#333;"></label>
+            </div>
+          </div>
+
+          <div class="item-aval">
+            <label style="display:flex; justify-content:space-between; font-weight:700; margin-bottom:10px;">
+              <span>5. Atendimento / Suporte</span>
+              <span class="nota-sel" style="color:#3ab9b6;">-</span>
+            </label>
+            <div class="rating-stars" data-group="atendimento" style="display:flex; flex-direction:row-reverse; gap:10px; justify-content:flex-end;">
+              <input type="radio" name="atendimento" id="a5" value="5" required style="display:none;"><label for="a5" class="fa-solid fa-star" style="cursor:pointer; font-size:20px; color:#333;"></label>
+              <input type="radio" name="atendimento" id="a4" value="4" style="display:none;"><label for="a4" class="fa-solid fa-star" style="cursor:pointer; font-size:20px; color:#333;"></label>
+              <input type="radio" name="atendimento" id="a3" value="3" style="display:none;"><label for="a3" class="fa-solid fa-star" style="cursor:pointer; font-size:20px; color:#333;"></label>
+              <input type="radio" name="atendimento" id="a2" value="2" style="display:none;"><label for="a2" class="fa-solid fa-star" style="cursor:pointer; font-size:20px; color:#333;"></label>
+              <input type="radio" name="atendimento" id="a1" value="1" style="display:none;"><label for="a1" class="fa-solid fa-star" style="cursor:pointer; font-size:20px; color:#333;"></label>
+            </div>
+          </div>
+
+          <div style="margin-top:10px;">
+            <label style="display:block; font-weight:700; margin-bottom:10px;">Observações <small style="color:#ff3366; display:none;" id="obsObrigatorio">(Obrigatório para nota baixa)</small></label>
+            <textarea id="avalObservacao" placeholder="Descreva aqui os detalhes da performance deste fornecedor..." style="width:100%; min-height:100px; background:#111; border:1px solid #444; color:white; border-radius:8px; padding:12px; outline:none; font-family:'Inter', sans-serif;"></textarea>
+          </div>
+        </div>
+
+        <button type="submit" style="width:100%; margin-top:35px; padding:15px; font-size:16px; background:#661155; color:white; border:none; border-radius:10px; font-weight:800; cursor:pointer; text-transform:uppercase; letter-spacing:1px; box-shadow:0 10px 20px rgba(102,17,85,0.3); transition:0.3s;" onmouseover="this.style.transform='translateY(-2px)';" onmouseout="this.style.transform='translateY(0)';" id="btnSalvarScorecard">
+          💾 Salvar Avaliação Profissional
+        </button>
+      </form>
     </div>
   </div>
 
@@ -3373,7 +3596,7 @@
       <!-- 📎 Anexo -->
       <!-- 📎 Anexo (CONTAINER REINICIÁVEL) -->
       <div id="containerAnexoResponder" style="margin-top:15px;">
-        <label>Anexar Orçamento (PDF ou imagem):</label>
+        <label>Anexar Orçamento (PDF ou imagem) <span style="color:#ff4444; font-weight:bold;">(Obrigatório)</span>:</label>
         <input type="file" id="respAnexo" accept=".pdf,image/*" multiple style="
          width:100%;
          background:#1a1a1a;
@@ -3548,6 +3771,14 @@
               border-radius:6px;
               cursor:pointer;">
           🗺️ Gerar Mapa de Preços
+        </button>
+        <button onclick="confirmarRecebimentoCotacao(document.getElementById('analiseNumero').textContent.replace('Cotação: ', '').trim())" style="background:#10b981;
+              color:white;
+              border:none;
+              padding:10px 25px;
+              border-radius:6px;
+              cursor:pointer;">
+          <i class="fa-solid fa-circle-check"></i> Confirmar Recebimento (Finalizar Cotação)
         </button>
       </div>
 
@@ -4786,7 +5017,7 @@
                    ${email}<br>
                    <small>Perfil: ${tipo.toUpperCase()}</small>
                </div>
-               <div class="acoes">
+               <div class="acoes" style="display:flex; flex-direction:column; gap:6px;">
                    <button onclick="editarUsuario(${index})">✏️</button>
                    <button onclick='window.excluirUsuarioFirestore("${email}")'>🗑️</button>
                </div>
@@ -4895,7 +5126,7 @@
        ${u.email}<br>
        <small>${u.tipo}</small>
      </div>
-     <div class="acoes">
+     <div class="acoes" style="display:flex; flex-direction:column; gap:6px;">
        <button onclick="editarUsuario(${u.id})">✏️</button>
        <button onclick="excluirUsuario(${u.id})">🗑️</button>
      </div>
@@ -4974,6 +5205,7 @@
        👑 ADMINISTRADOR
     ============================ */
     if (tipo === "administrador") {
+      mostrar("Gestão de Scorecards");
       mostrar("Solicitação de Compra");
       mostrar("Gestão de Requisições");
       mostrar("Criar Cotação");
@@ -4991,13 +5223,14 @@
        🛒 COMPRADOR
     ============================ */
     if (tipo === "comprador") {
+      mostrar("Gestão de Scorecards");
+      mostrar("Solicitação de Compra");
       mostrar("Criar Cotação");
       mostrar("Gestão de Requisições");
       mostrar("Cadastrar Fornecedor");
       mostrar("Cadastrar Material");
       mostrar("Cadastrar Serviço");
       mostrar("Cotações Respondidas");
-      mostrar("Aprovar Compras");
       mostrar("Gestão Financeira");
       // mostrar("Configurações");
     }
@@ -6396,8 +6629,29 @@
               gruposMes[mesFormatado].push(item);
             });
 
-            // 3. Renderização Final com Estilo Premium
-            Object.keys(gruposMes).forEach((mes, idx) => {
+            // 3. Renderização Final com Estilo Premium (Mês atual primeiro, depois ordenados cronologicamente)
+            const mesesMap = {
+              "janeiro": 0, "fevereiro": 1, "março": 2, "abril": 3,
+              "maio": 4, "junho": 5, "julho": 6, "agosto": 7,
+              "setembro": 8, "outubro": 9, "novembro": 10, "dezembro": 11
+            };
+            const agora = new Date();
+            const mesAnoAtual = agora.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+            const mesAtualFormatado = mesAnoAtual.charAt(0).toUpperCase() + mesAnoAtual.slice(1);
+
+            const chavesOrdenadas = Object.keys(gruposMes).sort((a, b) => {
+              if (a === mesAtualFormatado) return -1;
+              if (b === mesAtualFormatado) return 1;
+              const parseKey = (k) => {
+                const parts = k.toLowerCase().split(/\s+de\s+|\s+/);
+                const mIdx = mesesMap[parts[0]] !== undefined ? mesesMap[parts[0]] : 0;
+                const aVal = parseInt(parts[parts.length - 1]) || agora.getFullYear();
+                return new Date(aVal, mIdx, 1).getTime();
+              };
+              return parseKey(a) - parseKey(b);
+            });
+
+            chavesOrdenadas.forEach((mes, idx) => {
               const grupo = gruposMes[mes];
               const sectionId = `ship-grupo-${idx}`;
               const iconId = `ship-icon-${idx}`;
@@ -6416,14 +6670,14 @@
                     onmouseout="this.style.background='rgba(30, 30, 30, 0.8)';"
                >
                  <h3 style="color: white; margin: 0; font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 10px;">
-                   <i id="${iconId}" class="fa-solid fa-chevron-down" style="font-size: 12px; color: #661155; transition: 0.3s;"></i>
+                   <i id="${iconId}" class="fa-solid fa-chevron-right" style="font-size: 12px; color: #661155; transition: 0.3s;"></i>
                    <span style="font-size: 14px;">🗓️</span> Envios de ${mes}
                  </h3>
                  <span style="background: #661155; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 800; min-width: 25px; text-align: center;">
                    ${grupo.length}
                  </span>
                </div>
-               <div id="${sectionId}" style="padding: 15px; display: flex; flex-direction: column; gap: 10px;">
+               <div id="${sectionId}" style="padding: 15px; display: none; flex-direction: column; gap: 10px;">
                  ${grupo.map(item => {
                 const nDocs = item.docs.length;
                 return `
@@ -6557,8 +6811,29 @@
             gruposMes[mesFormatado].push(item);
           });
 
-          // 3. Renderização Final com Estilo Premium
-          Object.keys(gruposMes).forEach((mes, idx) => {
+          // 3. Renderização Final com Estilo Premium (Mês atual primeiro, depois ordenados cronologicamente)
+          const mesesMap = {
+            "janeiro": 0, "fevereiro": 1, "março": 2, "abril": 3,
+            "maio": 4, "junho": 5, "julho": 6, "agosto": 7,
+            "setembro": 8, "outubro": 9, "novembro": 10, "dezembro": 11
+          };
+          const agora = new Date();
+          const mesAnoAtual = agora.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+          const mesAtualFormatado = mesAnoAtual.charAt(0).toUpperCase() + mesAnoAtual.slice(1);
+
+          const chavesOrdenadas = Object.keys(gruposMes).sort((a, b) => {
+            if (a === mesAtualFormatado) return -1;
+            if (b === mesAtualFormatado) return 1;
+            const parseKey = (k) => {
+              const parts = k.toLowerCase().split(/\s+de\s+|\s+/);
+              const mIdx = mesesMap[parts[0]] !== undefined ? mesesMap[parts[0]] : 0;
+              const aVal = parseInt(parts[parts.length - 1]) || agora.getFullYear();
+              return new Date(aVal, mIdx, 1).getTime();
+            };
+            return parseKey(a) - parseKey(b);
+          });
+
+          chavesOrdenadas.forEach((mes, idx) => {
             const grupo = gruposMes[mes];
             const sectionId = `financeiro-grupo-${idx}`;
             const iconId = `financeiro-icon-${idx}`;
@@ -6577,14 +6852,14 @@
                   onmouseout="this.style.background='rgba(30, 30, 30, 0.8)';"
              >
                <h3 style="color: white; margin: 0; font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 10px;">
-                 <i id="${iconId}" class="fa-solid fa-chevron-down" style="font-size: 12px; color: #661155; transition: 0.3s;"></i>
+                 <i id="${iconId}" class="fa-solid fa-chevron-right" style="font-size: 12px; color: #661155; transition: 0.3s;"></i>
                  <span style="font-size: 14px;">🗓️</span> Solicitações de ${mes}
                </h3>
                <span style="background: #661155; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 800; min-width: 25px; text-align: center;">
                  ${grupo.length}
                </span>
              </div>
-             <div id="${sectionId}" style="padding: 15px; display: flex; flex-direction: column; gap: 10px;">
+             <div id="${sectionId}" style="padding: 15px; display: none; flex-direction: column; gap: 10px;">
                ${grupo.map(item => {
               const qtdNF = (item.docs || []).filter(d => d.tipo === 'Nota Fiscal').length;
               const qtdBOL = (item.docs || []).filter(d => d.tipo === 'Boleto').length;
@@ -7230,7 +7505,7 @@
         'publicadas': { listId: 'listaPublicadas', status: 'aberta' },
         'analise': { listId: 'listaAnalise', status: ["respondida", "reanalise", "analise"] },
         'aprovacao': { listId: 'listaAprovacao', status: 'aprovacao' },
-        'fechada': { listId: 'listaFechadas', status: 'fechada' }
+        'fechada': { listId: 'listaFechadas', status: ['fechada', 'finalizada'] }
       };
       const target = map[statusAba];
       const listEl = document.getElementById(target.listId);
@@ -7297,96 +7572,193 @@
       return;
     }
 
-    // List each quotation
-    filtradas.forEach(c => {
+    const ehAbaFechadas = statusFiltro.includes('fechada') || statusFiltro.includes('finalizada');
 
-      const respostas = Array.isArray(c.respostasFornecedores) ? c.respostasFornecedores : [];
-      const qtdRespostas = usuario.tipo === "fornecedor" ? 1 : respostas.length;
-      const qtdConvidados = Array.isArray(c.fornecedores) ? c.fornecedores.length : 0;
-      /* cleanup start */
-      /* cleaning... */
-      /* cleanup point 1 */
-      /* line removed */
-
-      /* line removed */
-      /* line removed */
-
-      const bloco = document.createElement("div");
-      bloco.className = "linha-cotacao";
-
-      if (c.status === "aberta") {
-        const agora = new Date();
-        // 🛠️ FIX: Usa o parser global para evitar Invalid Date
-        const fim = window.parseDateBR ? window.parseDateBR(c.dataFechamento) : new Date(c.dataFechamento);
-
-        const diffMs = fim - agora;
-        let tempoRestante = "Expirado";
-
-        if (diffMs > 0) {
-          const dias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-          const horas = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-          const minutos = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-          tempoRestante = `${dias}d ${horas}h ${minutos}m`;
+    if (ehAbaFechadas) {
+      // 2. Agrupamento por Mês
+      const gruposMes = {};
+      filtradas.forEach(c => {
+        let dataRef = new Date();
+        if (c.dataCriacao) {
+          const partes = c.dataCriacao.split(/[\/\s,]+/);
+          if (partes.length >= 3) dataRef = new Date(partes[2], partes[1] - 1, partes[0]);
         }
+        const mesAno = dataRef.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+        const mesFormatado = mesAno.charAt(0).toUpperCase() + mesAno.slice(1);
+        if (!gruposMes[mesFormatado]) gruposMes[mesFormatado] = [];
+        gruposMes[mesFormatado].push(c);
+      });
 
-        // 🟢 LABEL REABERTA
-        if (c.reaberta) {
-          tempoRestante += " <span style='color:#ffd700; font-size:11px;'>(Reaberta)</span>";
-        }
+      // 3. Renderização Final com Estilo Premium (Mês atual primeiro, depois ordenados cronologicamente)
+      const mesesMap = {
+        "janeiro": 0, "fevereiro": 1, "março": 2, "abril": 3,
+        "maio": 4, "junho": 5, "julho": 6, "agosto": 7,
+        "setembro": 8, "outubro": 9, "novembro": 10, "dezembro": 11
+      };
+      const agora = new Date();
+      const mesAnoAtual = agora.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+      const mesAtualFormatado = mesAnoAtual.charAt(0).toUpperCase() + mesAnoAtual.slice(1);
 
-        bloco.innerHTML = `
-         <div class="info">
-           <div style="font-weight:bold; font-size:16px; color:#fff;">${c.descricao || "Sem descrição"}</div>
-           <div style="margin-top:5px; font-size:12px; color:#aaa;">
-              <strong>Cotação #${c.numero}</strong> <span style="background:#555; padding:2px 6px; border-radius:4px; font-size:11px; margin-left:5px; color:white;">📢 Publicada</span>
-           </div>
-           <div style="margin-top:5px; color:#ccc; font-size:13px;">
-             <span>👤 Com fornecedores (${qtdConvidados} convidados)</span><br>
-             <span>📩 Respostas atuais: <b style="color:#0dcaf0;">${qtdRespostas}</b></span><br>
-             <span style="color:${diffMs > 0 ? '#3ab9b6' : '#ff5555'};">⏳ Tempo restante: <b>${tempoRestante}</b></span>
-           </div>
+      const chavesOrdenadas = Object.keys(gruposMes).sort((a, b) => {
+        if (a === mesAtualFormatado) return -1;
+        if (b === mesAtualFormatado) return 1;
+        const parseKey = (k) => {
+          const parts = k.toLowerCase().split(/\s+de\s+|\s+/);
+          const mIdx = mesesMap[parts[0]] !== undefined ? mesesMap[parts[0]] : 0;
+          const aVal = parseInt(parts[parts.length - 1]) || agora.getFullYear();
+          return new Date(aVal, mIdx, 1).getTime();
+        };
+        return parseKey(a) - parseKey(b);
+      });
+
+      chavesOrdenadas.forEach((mes, idx) => {
+        const grupo = gruposMes[mes];
+        const sectionId = `fechadas-grupo-${idx}`;
+        const iconId = `fechadas-icon-${idx}`;
+
+        const section = document.createElement("div");
+        section.style.marginBottom = "25px";
+        section.style.background = "rgba(40, 40, 40, 0.3)";
+        section.style.borderRadius = "12px";
+        section.style.overflow = "hidden";
+        section.style.border = "1px solid #222";
+
+        section.innerHTML = `
+         <div onclick="window.toggleSecaoFinanceira('${sectionId}', '${iconId}')" 
+              style="background: rgba(30, 30, 30, 0.8); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #661155; cursor: pointer; transition: 0.3s;"
+              onmouseover="this.style.background='rgba(50, 50, 50, 0.8)';"
+              onmouseout="this.style.background='rgba(30, 30, 30, 0.8)';"
+         >
+           <h3 style="color: white; margin: 0; font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 10px;">
+             <i id="${iconId}" class="fa-solid fa-chevron-right" style="font-size: 12px; color: #661155; transition: 0.3s;"></i>
+             <span style="font-size: 14px;">🗓️</span> Cotações de ${mes}
+           </h3>
+           <span style="background: #661155; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 800; min-width: 25px; text-align: center;">
+             ${grupo.length}
+           </span>
          </div>
-         <div class="acoes" style="display:flex; flex-wrap:wrap; gap:8px;">
-            ${usuario.tipo === 'fornecedor'
-            ? `<button onclick="abrirResponderCotacao('${c.numero}', 'novo')" style="background:#00ff99; color:#000; border:none; padding:8px 15px; border-radius:5px; cursor:pointer; font-weight:bold;">✍️ Responder Cotação</button>`
-            : `
-                <button onclick="encerrarCotacaoManualmente('${c.numero}')" style="background:#cc0000; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer;" title="Encerrar cotação agora">🔒 Encerrar</button>
-                <button onclick="reabrirCotacao('${c.numero}')" style="background:#e0a800; color:#000; border:none; padding:8px 12px; border-radius:5px; cursor:pointer; font-weight:bold;" title="Estender prazo por 3 dias">🔄 Reabrir / Estender</button>
-                <button onclick="excluirCotacao('${c.numero}')" style="background:transparent; border:1px solid #ff4444; color:#ff4444; padding:8px 12px; border-radius:5px; cursor:pointer;" title="Excluir Cotação"><i class="fa-solid fa-trash"></i></button>
-              `
-          }
+         <div id="${sectionId}" style="padding: 15px; display: none; flex-direction: column; gap: 10px;">
          </div>
-       `;
-      } else {
-        bloco.innerHTML = `
-         <div class="info">
-           <div style="font-weight:bold; font-size:15px; color:#fff;">${c.descricao || "Sem descrição"}</div>
-           <div style="font-size:12px; color:#aaa; margin-top:4px;">
-             <strong>Cotação #${c.numero}</strong>
+        `;
+
+        const contentContainer = section.querySelector(`#${sectionId}`);
+
+        grupo.forEach(c => {
+          const respostas = Array.isArray(c.respostasFornecedores) ? c.respostasFornecedores : [];
+          const qtdRespostas = usuario.tipo === "fornecedor" ? 1 : respostas.length;
+
+          const bloco = document.createElement("div");
+          bloco.className = "linha-cotacao";
+          bloco.innerHTML = `
+           <div class="info">
+             <div style="font-weight:bold; font-size:15px; color:#fff;">${c.descricao || "Sem descrição"}</div>
+             <div style="font-size:12px; color:#aaa; margin-top:4px;">
+               <strong>Cotação #${c.numero}</strong>
+             </div>
+             <div style="margin-top:4px; font-size:13px; color:#ccc;">
+               ${usuario.tipo === 'fornecedor'
+              ? "✅ Você respondeu"
+              : `Respostas recebidas: <b>${qtdRespostas}</b>`}
+               ${c.status === "reanalise"
+              ? "<br><span style='color:#ff5555;'>❌ Rejeitada — voltou para análise</span>"
+              : ""}
+               ${(c.status === "fechada" || c.status === "finalizada") ? `<br><span style='color:#0dcaf0;'>🏁 Concluída${c.status === "finalizada" ? " (Avaliada)" : ""}</span>` : ""}
+             </div>
            </div>
-           <div style="margin-top:4px; font-size:13px; color:#ccc;">
+
+           <div class="acoes" style="display:flex; gap:10px;">
              ${usuario.tipo === 'fornecedor'
-            ? "✅ Você respondeu"
-            : `Respostas recebidas: <b>${qtdRespostas}</b>`}
-             ${c.status === "reanalise"
-            ? "<br><span style='color:#ff5555;'>❌ Rejeitada — voltou para análise</span>"
-            : ""}
-             ${c.status === "fechada" ? "<br><span style='color:#0dcaf0;'>🏁 Concluída</span>" : ""}
+              ? `<button onclick="abrirResponderCotacao('${c.numero}', 'respondida')" style="background:#661155; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer;">👁️ Ver / Editar Resposta</button>`
+              : `<button onclick="analisarCotacao('${c.numero}')" style="background:#661155; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer;">📊 Analisar Respostas</button>`
+             }
            </div>
-         </div>
+          `;
+          contentContainer.appendChild(bloco);
+        });
 
-         <div class="acoes" style="display:flex; gap:10px;">
-           ${usuario.tipo === 'fornecedor'
-            ? `<button onclick="abrirResponderCotacao('${c.numero}', 'respondida')" style="background:#661155; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer;">👁️ Ver / Editar Resposta</button>`
-            : `<button onclick="analisarCotacao('${c.numero}')" style="background:#661155; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer;">📊 Analisar Respostas</button>`
+        container.appendChild(section);
+      });
+    } else {
+      // List each quotation (flat list for others)
+      filtradas.forEach(c => {
+        const respostas = Array.isArray(c.respostasFornecedores) ? c.respostasFornecedores : [];
+        const qtdRespostas = usuario.tipo === "fornecedor" ? 1 : respostas.length;
+        const qtdConvidados = Array.isArray(c.fornecedores) ? c.fornecedores.length : 0;
+
+        const bloco = document.createElement("div");
+        bloco.className = "linha-cotacao";
+
+        if (c.status === "aberta") {
+          const agora = new Date();
+          const fim = window.parseDateBR ? window.parseDateBR(c.dataFechamento) : new Date(c.dataFechamento);
+          const diffMs = fim - agora;
+          let tempoRestante = "Expirado";
+
+          if (diffMs > 0) {
+            const dias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+            const horas = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutos = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+            tempoRestante = `${dias}d ${horas}h ${minutos}m`;
           }
-         </div>
-       `;
-      }
 
-      container.appendChild(bloco);
-    });
-  }
+          if (c.reaberta) {
+            tempoRestante += " <span style='color:#ffd700; font-size:11px;'>(Reaberta)</span>";
+          }
+
+          bloco.innerHTML = `
+           <div class="info">
+             <div style="font-weight:bold; font-size:16px; color:#fff;">${c.descricao || "Sem descrição"}</div>
+             <div style="margin-top:5px; font-size:12px; color:#aaa;">
+                <strong>Cotação #${c.numero}</strong> <span style="background:#555; padding:2px 6px; border-radius:4px; font-size:11px; margin-left:5px; color:white;">📢 Publicada</span>
+             </div>
+             <div style="margin-top:5px; color:#ccc; font-size:13px;">
+               <span>👤 Com fornecedores (${qtdConvidados} convidados)</span><br>
+               <span>📩 Respostas atuais: <b style="color:#0dcaf0;">${qtdRespostas}</b></span><br>
+               <span style="color:${diffMs > 0 ? '#3ab9b6' : '#ff5555'};">⏳ Tempo restante: <b>${tempoRestante}</b></span>
+             </div>
+           </div>
+           <div class="acoes" style="display:flex; flex-wrap:wrap; gap:8px;">
+              ${usuario.tipo === 'fornecedor'
+              ? `<button onclick="abrirResponderCotacao('${c.numero}', 'novo')" style="background:#00ff99; color:#000; border:none; padding:8px 15px; border-radius:5px; cursor:pointer; font-weight:bold;">✍️ Responder Cotação</button>`
+              : `
+                  <button onclick="encerrarCotacaoManualmente('${c.numero}')" style="background:#cc0000; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer;" title="Encerrar cotação agora">🔒 Encerrar</button>
+                  <button onclick="reabrirCotacao('${c.numero}')" style="background:#e0a800; color:#000; border:none; padding:8px 12px; border-radius:5px; cursor:pointer; font-weight:bold;" title="Estender prazo por 3 dias">🔄 Reabrir / Estender</button>
+                  <button onclick="excluirCotacao('${c.numero}')" style="background:transparent; border:1px solid #ff4444; color:#ff4444; padding:8px 12px; border-radius:5px; cursor:pointer;" title="Excluir Cotação"><i class="fa-solid fa-trash"></i></button>
+                `
+            }
+           </div>
+         `;
+        } else {
+          bloco.innerHTML = `
+           <div class="info">
+             <div style="font-weight:bold; font-size:15px; color:#fff;">${c.descricao || "Sem descrição"}</div>
+             <div style="font-size:12px; color:#aaa; margin-top:4px;">
+               <strong>Cotação #${c.numero}</strong>
+             </div>
+             <div style="margin-top:4px; font-size:13px; color:#ccc;">
+               ${usuario.tipo === 'fornecedor'
+              ? "✅ Você respondeu"
+              : `Respostas recebidas: <b>${qtdRespostas}</b>`}
+               ${c.status === "reanalise"
+              ? "<br><span style='color:#ff5555;'>❌ Rejeitada — voltou para análise</span>"
+              : ""}
+               ${(c.status === "fechada" || c.status === "finalizada") ? `<br><span style='color:#0dcaf0;'>🏁 Concluída${c.status === "finalizada" ? " (Avaliada)" : ""}</span>` : ""}
+             </div>
+           </div>
+
+           <div class="acoes" style="display:flex; gap:10px;">
+             ${usuario.tipo === 'fornecedor'
+              ? `<button onclick="abrirResponderCotacao('${c.numero}', 'respondida')" style="background:#661155; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer;">👁️ Ver / Editar Resposta</button>`
+              : `<button onclick="analisarCotacao('${c.numero}')" style="background:#661155; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer;">📊 Analisar Respostas</button>`
+             }
+           </div>
+         `;
+        }
+
+        container.appendChild(bloco);
+      });
+    }
+}
 
 
   /* function abrirTela movida para consolidação no final do script */
@@ -8400,31 +8772,8 @@
      👁️ VER FICHA DO FORNECEDOR
   =============================== */
 
-  window.verFichaFornecedor = function (index) {
-    const fornecedores = JSON.parse(localStorage.getItem("fornecedores")) || [];
-    const f = fornecedores[index];
-    if (!f) return;
-
-    const div = document.getElementById("conteudoVerFornecedor");
-
-    div.innerHTML = `
-       <div style="background:#111;border:1px solid #661155;border-radius:10px;padding:20px;color:white;">
-     <p><strong>Nome da Empresa:</strong> ${f.nome || "-"}</p>
-     <p><strong>CNPJ:</strong> ${f.cnpj || "-"}</p>
-     <p><strong>Endereço:</strong>
-       ${f.logradouro || ""}, ${f.numero || ""} - ${f.bairro || ""}<br>
-       ${f.cidade || ""} - ${f.cep || ""}
-     </p>
-     <p><strong>WhatsApp:</strong> ${f.whats || "-"}</p>
-     <p><strong>Telefone:</strong> ${f.telefone || "-"}</p>
-     <p><strong>E-mails:</strong> ${f.emails || "-"}</p>
-     <p><strong>Responsável:</strong> ${f.responsavel || "-"}</p>
-     <p><strong>Tipo:</strong> ${f.tipo || "-"}</p>
-   </div>
-       `;
-
-    document.getElementById("modalVerFornecedor").style.display = "flex";
-  };
+  /* Old verFichaFornecedor removed */
+;
 
   window.fecharModalVerFornecedor = function () {
     document.getElementById("modalVerFornecedor").style.display = "none";
@@ -9973,7 +10322,7 @@
       'publicadas': { listId: 'listaPublicadas', btnId: 'btnPublicadas', status: 'aberta' },
       'analise': { listId: 'listaAnalise', btnId: 'btnAnalise', status: ["analise", "reanalise", "respondida"] },
       'aprovacao': { listId: 'listaAprovacao', btnId: 'btnAprovacao', status: 'aprovacao' },
-      'fechada': { listId: 'listaFechadas', btnId: 'btnFechadas', status: 'fechada' }
+      'fechada': { listId: 'listaFechadas', btnId: 'btnFechadas', status: ['fechada', 'finalizada'] }
     };
 
     const target = map[window.ultimaAbaRespondidas] || map['analise'];
@@ -10344,7 +10693,28 @@
     const grupos = agruparSolicitacoesPorMes(lista);
     container.innerHTML = "";
 
-    Object.keys(grupos).forEach((mesAno, index) => {
+    const mesesMap = {
+      "janeiro": 0, "fevereiro": 1, "março": 2, "abril": 3,
+      "maio": 4, "junho": 5, "julho": 6, "agosto": 7,
+      "setembro": 8, "outubro": 9, "novembro": 10, "dezembro": 11
+    };
+    const mesesExtenso = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+    const agora = new Date();
+    const mesAtualFormatado = `${mesesExtenso[agora.getMonth()]} ${agora.getFullYear()}`;
+
+    const chavesOrdenadas = Object.keys(grupos).sort((a, b) => {
+      if (a === mesAtualFormatado) return -1;
+      if (b === mesAtualFormatado) return 1;
+      const parseKey = (k) => {
+        const parts = k.toLowerCase().split(/\s+de\s+|\s+/);
+        const mIdx = mesesMap[parts[0]] !== undefined ? mesesMap[parts[0]] : 0;
+        const aVal = parseInt(parts[parts.length - 1]) || agora.getFullYear();
+        return new Date(aVal, mIdx, 1).getTime();
+      };
+      return parseKey(a) - parseKey(b);
+    });
+
+    chavesOrdenadas.forEach((mesAno, index) => {
       const gId = `grupo_${mesAno.replace(/\s+/g, '_')}`;
       const solicitacoes = grupos[mesAno];
 
@@ -10355,7 +10725,7 @@
       const header = document.createElement("div");
       header.style.cssText = `
        background: #222;
-       border: 1px solid #661155;
+       border: 1px solid #333;
        border-radius: 8px;
        padding: 12px 20px;
        cursor: pointer;
@@ -10363,16 +10733,16 @@
        justify-content: space-between;
        align-items: center;
        transition: 0.3s;
-     `;
+      `;
       header.innerHTML = `
        <span style="font-weight:bold; color:white; font-size:16px;">📅 Solicitações de ${mesAno}</span>
        <span style="background:#661155; color:white; padding:2px 10px; border-radius:12px; font-size:12px;">${solicitacoes.length}</span>
-     `;
+      `;
 
       // Conteúdo do Acordeão
       const content = document.createElement("div");
       content.id = gId;
-      content.style.display = index === 0 ? "block" : "none"; // Abre o primeiro mês por padrão
+      content.style.display = "none"; // Inicia fechado por padrão
       content.style.marginTop = "10px";
       content.style.paddingLeft = "10px";
 
@@ -11792,19 +12162,29 @@ linhas.forEach((tr, index) => {
       }
 
       // 6. Upload de Anexo (Múltiplos Arquivos)
-      let anexosArray = [];
-
-      // 🔴 PERSISTÊNCIA: Se não selecionou arquivo novo, manter o que já existia
-      // PRIORIDADE: Tenta pegar da chave individual (que preserva o Base64)
       const chaveIndiv = `res_${numCotacao}_${usuario.email.toLowerCase().trim()}`;
       let respAntiga = JSON.parse(localStorage.getItem(chaveIndiv));
 
-      // Fallback: Tenta pegar da lista global (onde o Base64 pode estar removido)
       if (!respAntiga) {
         const respondidas = cotacao.respostasFornecedores || [];
         respAntiga = respondidas.find(r => (r.email || "").toLowerCase().trim() === usuario.email.toLowerCase().trim());
       }
 
+      const temNovoAnexo = fileInput && fileInput.files.length > 0;
+      const temAnexoAntigo = respAntiga && Array.isArray(respAntiga.anexos) && respAntiga.anexos.length > 0;
+
+      if (!temNovoAnexo && !temAnexoAntigo) {
+        if (btnOriginal) { 
+          btnOriginal.disabled = false; 
+          btnOriginal.innerText = textoOriginal; 
+        }
+        return alert("⚠️ Atenção: É obrigatório anexar o orçamento (PDF ou imagem) para concluir o envio da sua resposta.");
+      }
+
+      let anexosArray = [];
+
+      // 🔴 PERSISTÊNCIA: Se não selecionou arquivo novo, manter o que já existia
+      // (Usa respAntiga carregada na validação acima)
       if (respAntiga) {
         if (Array.isArray(respAntiga.anexos)) {
           anexosArray = [...respAntiga.anexos];
@@ -12849,6 +13229,9 @@ linhas.forEach((tr, index) => {
       textoStatus = "🔒 Fechada (Pedido Gerado)";
       if (!containerOverride && divAcoesFechada) divAcoesFechada.style.display = "flex";
       window.cotacaoAtualPDF = cotacao;
+    } else if (cotacao.status === "finalizada") {
+      textoStatus = "✅ Finalizada (Recebida & Avaliada)";
+      if (!containerOverride && divAcoesFechada) divAcoesFechada.style.display = "none";
     }
 
     // Se estiver no modal, atualiza o statusDiv global. Se estiver no acordeão, guardamos para o HTML.
@@ -12891,7 +13274,52 @@ linhas.forEach((tr, index) => {
     /* ==========================
        🏗️ MATRIZ VISUAL
     ========================== */
-    let html = `
+    /* ==========================
+       🌟 PAINEL DE PERFORMANCE (SCORECARD)
+    ========================== */
+    const emailsParticipantes = [...new Set(respostas.map(r => normalizarEmail(r.email)))];
+    let resumoPerformanceHtml = `
+      <div id="painelPerformanceScorecard" style="background:#111; border:1px solid #661155; border-radius:12px; padding:15px; margin-bottom:20px; display:flex; flex-wrap:wrap; gap:20px; align-items:center;">
+        <div style="color:#661155; font-weight:bold; font-size:12px; text-transform:uppercase; border-right:1px solid #333; padding-right:15px; display:flex; align-items:center; gap:8px;">
+           <i class="fa-solid fa-ranking-star" style="font-size:20px;"></i>
+           PERFORMANCE DOS<br>PARTICIPANTES
+        </div>
+        <div style="display:flex; flex-wrap:wrap; gap:15px;">
+    `;
+
+    emailsParticipantes.forEach(email => {
+       const forn = listaFornGlobal.find(f => normalizarEmail(f.email) === normalizarEmail(email));
+       const nota = forn?.mediaScorecard || 0;
+       
+       let badgeClass = "badge-novo";
+       let status = "Novo Parceiro";
+       if (nota >= 4.5) { badgeClass = "badge-elite"; status = "Elite"; }
+       else if (nota >= 3.5) { badgeClass = "badge-bom"; status = "Bom"; }
+       else if (nota >= 3.0) { badgeClass = "badge-atencao"; status = "Atenção"; }
+       else if (nota > 0) { badgeClass = "badge-risco"; status = "Risco"; }
+
+       resumoPerformanceHtml += `
+         <div style="background:#0a0a0a; border:1px solid #333; padding:8px 12px; border-radius:8px; display:flex; align-items:center; gap:10px; min-width:180px;">
+           <div style="flex:1;">
+             <div style="font-size:11px; font-weight:bold; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:140px;">${forn?.nome || email}</div>
+             <div style="display:flex; align-items:center; gap:5px; margin-top:3px;">
+                <span style="color:#fbbf24; font-weight:bold; font-size:14px;">${nota > 0 ? nota.toFixed(1) : "-"}</span>
+                <span class="badge-score ${badgeClass}" style="transform:scale(0.85); transform-origin:left;">${status}</span>
+             </div>
+           </div>
+         </div>
+       `;
+    });
+
+    resumoPerformanceHtml += `
+        </div>
+        <div style="margin-left:auto; color:#666; font-size:11px; font-style:italic;">
+           * Baseado no histórico de recebimentos desta clínica.
+        </div>
+      </div>
+    `;
+
+    let html = resumoPerformanceHtml + `
        <table class="matriz-cotacao" style="width:100%; border-collapse:collapse; margin-top:20px;">
            <thead style="background:#500a40; color:white;">
                <tr>
@@ -13332,6 +13760,62 @@ linhas.forEach((tr, index) => {
   /* ======================================================
     ✏️ ATUALIZAÇÃO MANUAL DE VENCEDOR (V3 - Index Based)
   ====================================================== */
+  /* ======================================================
+     🏁 CONFIRMAR RECEBIMENTO (FINALIZAR E AVALIAR)
+  ====================================================== */
+  window.confirmarRecebimentoCotacao = async function (numero) {
+    if (!numero) return alert("Erro ao identificar o número da cotação.");
+    if (!confirm("Deseja confirmar o recebimento físico desta compra e finalizar a cotação? Isso habilitará a avaliação de desempenho do fornecedor.")) return;
+
+    try {
+      const cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
+      const idx = cotacoes.findIndex(c => String(c.numero) === String(numero) || String(c.id) === String(numero));
+      if (idx === -1) return alert("Cotação não encontrada.");
+
+      cotacoes[idx].status = "finalizada";
+      cotacoes[idx].dataFinalizacao = new Date().toLocaleString();
+      localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
+
+      // Sincroniza com Firebase RTDB se disponível
+      if (typeof rtdb !== "undefined") {
+        await rtdb.ref("cotacoes/" + numero).update({
+          status: "finalizada",
+          dataFinalizacao: cotacoes[idx].dataFinalizacao
+        });
+      }
+
+      // Sincroniza com Firestore se disponível
+      if (typeof db !== "undefined") {
+        await db.collection("cotacoes").doc(numero).update({
+          status: "finalizada",
+          dataFinalizacao: cotacoes[idx].dataFinalizacao
+        });
+      }
+
+      alert("✅ Cotação finalizada! Vamos para a tela de avaliação.");
+      
+      // Fecha o modal de análise
+      if (typeof window.fecharModalAnalise === "function") window.fecharModalAnalise();
+      
+      // Abre a tela de Scorecard e inicia a avaliação
+      if (typeof window.abrirGestaoScorecards === "function") {
+        window.abrirGestaoScorecards();
+        if (typeof window.mudarTabScorecard === "function") {
+          window.mudarTabScorecard('pendentes');
+        }
+        setTimeout(() => {
+          if (typeof window.prepararAvaliacao === "function") {
+            window.prepararAvaliacao(numero);
+          }
+        }, 500);
+      }
+
+    } catch (e) {
+      console.error("Erro ao finalizar cotação:", e);
+      alert("Erro ao finalizar cotação. Tente novamente.");
+    }
+  };
+
   window.atualizarDecisaoV3 = function (numeroCotacao, itemIndex, emailFornecedor, labelIndex) {
     console.log(`✏️ Decisão Manual (Index): ${numeroCotacao} | Item #${itemIndex} -> ${emailFornecedor}`);
 
@@ -13348,33 +13832,18 @@ linhas.forEach((tr, index) => {
     if (!window.decisoesAnalise) window.decisoesAnalise = {};
     window.decisoesAnalise = decisoes;
 
-    // 3. Atualiza UI imediatamente
-    const labelId = `label-escolhido-${labelIndex}`; // labelIndex deve ser igual ao itemIndex aqui, mas mantive separado por segurança
-    const labelEl = document.getElementById(labelId);
+    // 3. Salva a posição do scroll para evitar saltos visuais incômodos
+    const modal = document.getElementById("modalAnaliseCotacao");
+    const scrollTop = modal ? modal.scrollTop : 0;
 
-    if (labelEl) {
-      // Tenta achar o nome do fornecedor no select oculto
-      const selectEl = labelEl.parentElement.parentElement.querySelector('select');
-      let novoNome = "Manual";
+    // 4. Re-renderiza a tabela inteira para recalcular "Valor Ganhando" e totais
+    if (typeof window.renderizarTabelaAnalise === "function") {
+      window.renderizarTabelaAnalise(numeroCotacao);
+    }
 
-      if (selectEl) {
-        const option = Array.from(selectEl.options).find(o => o.value === emailFornecedor);
-        if (option) {
-          novoNome = option.getAttribute('data-nome') || option.innerText.split(' - R$')[0];
-        }
-      }
-
-      labelEl.innerText = novoNome;
-
-      // Feedback visual
-      const container = labelEl.closest('div');
-      if (container) {
-        container.style.borderColor = "#10b981";
-        container.style.backgroundColor = "rgba(16, 185, 129, 0.1)";
-        setTimeout(() => {
-          container.style.backgroundColor = "#000";
-        }, 500);
-      }
+    // 5. Restaura o scroll para a mesma posição após a renderização
+    if (modal) {
+      modal.scrollTop = scrollTop;
     }
   };
 
@@ -13637,6 +14106,297 @@ linhas.forEach((tr, index) => {
     const modalAnalise = document.getElementById("modalAnaliseCotacao");
     if (modalAnalise) modalAnalise.style.display = "none";
   };
+
+
+
+  window.verFichaFornecedor = function(identificador) {
+    console.log("🔍 Abrindo ficha para:", identificador);
+    const fornecedores = JSON.parse(localStorage.getItem('fornecedores')) || [];
+    
+    // Busca por index (se for número) ou por email
+    let f;
+    if (typeof identificador === 'number') {
+        f = fornecedores[identificador];
+    } else {
+        const emailBusca = String(identificador).toLowerCase().trim();
+        f = fornecedores.find(item => (item.email || "").toLowerCase().trim() === emailBusca);
+    }
+
+    if (!f) {
+        console.error("❌ Fornecedor não encontrado para:", identificador);
+        return;
+    }
+
+    const modalNome = document.getElementById('modalFornNome');
+    if (modalNome) modalNome.innerText = `Ficha: ${f.nome || 'Fornecedor'}`;
+    
+    const corpo = document.getElementById('conteudoFichaFornecedor');
+    if (!corpo) return;
+    
+    const nota = Number(f.mediaScorecard || 0);
+    let b = "badge-novo", s = "Sem Histórico";
+    if (nota >= 4.5) { b="badge-elite"; s="Elite"; }
+    else if (nota >= 3.5) { b="badge-bom"; s="Bom"; }
+    else if (nota >= 3.0) { b="badge-atencao"; s="Atenção"; }
+    else if (nota > 0) { b="badge-risco"; s="Risco"; }
+
+    corpo.innerHTML = `
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:25px; margin-bottom:30px;">
+        <div style="background:#111; padding:20px; border-radius:10px; border:1px solid #333;">
+          <h3 style="color:#661155; margin-top:0; font-size:16px;"><i class="fa-solid fa-id-card"></i> Dados Cadastrais</h3>
+          <p style="margin:8px 0;"><strong>Nome:</strong> ${f.nome || '-'}</p>
+          <p style="margin:8px 0;"><strong>E-mail:</strong> ${f.email || '-'}</p>
+          <p style="margin:8px 0;"><strong>WhatsApp:</strong> ${f.whats || f.whatsapp || '-'}</p>
+          <p style="margin:8px 0;"><strong>CNPJ:</strong> ${f.cnpj || '-'}</p>
+          <p style="margin:8px 0;"><strong>Responsável:</strong> ${f.responsavel || '-'}</p>
+        </div>
+        <div style="background:#111; padding:20px; border-radius:10px; border:1px solid #661155; text-align:center;">
+          <h3 style="color:#661155; margin-top:0; font-size:16px;"><i class="fa-solid fa-chart-line"></i> Performance</h3>
+          <div style="font-size:48px; font-weight:800; color:#fff; margin:10px 0;">${nota > 0 ? nota.toFixed(1) : '-'}</div>
+          <span class="badge-score ${b}" style="font-size:14px; padding:8px 20px;">${s}</span>
+          <p style="margin-top:15px; color:#aaa; font-size:12px;">Total de ${f.totalAvaliacoes || 0} avaliações</p>
+        </div>
+      </div>
+      <div style="background:#111; padding:20px; border-radius:10px; border:1px solid #333;">
+        <h3 style="color:#661155; margin-top:0; font-size:16px;"><i class="fa-solid fa-clock-rotate-left"></i> Últimas Observações</h3>
+        <p style="font-style:italic; color:#ccc; line-height:1.6;">${f.ultimaObservacao || "Nenhuma observação registrada recentemente."}</p>
+      </div>
+    `;
+    
+    const modal = document.getElementById('modalVerFornecedor');
+    if (modal) modal.style.display = 'flex';
+  };
+
+  window.fecharModalVerFornecedor = function() {
+    const modal = document.getElementById('modalVerFornecedor');
+    if (modal) modal.style.display = 'none';
+  };
+
+  window.abrirGestaoScorecards = function() {
+    console.log("🚀 Abrindo Gestao de Scorecards (Surgical Fix)...");
+    try {
+        // 1. Oculta os principais sem interferir no estado global
+        const dbd = document.getElementById('dashboard'); if (dbd) dbd.style.display = 'none';
+        const lgc = document.getElementById('login-container'); if (lgc) lgc.style.display = 'none';
+        const mna = document.getElementById('main-app'); if (mna) mna.style.display = 'none';
+
+        // 2. Garante que o Scorecard apareça
+        const sec = document.getElementById('gestaoScorecards');
+        if (sec) {
+            sec.style.setProperty('display', 'block', 'important');
+            sec.style.zIndex = "100";
+        }
+
+        // 3. Renderiza com dados locais IMEDIATAMENTE
+        if (typeof window.mudarTabScorecard === 'function') {
+            window.mudarTabScorecard('ranking');
+        }
+        
+        // 4. Dispara a sync em background depois de mostrar
+        setTimeout(() => {
+          if (typeof window.carregarDadosFornecedores === 'function') {
+              window.carregarDadosFornecedores();
+          }
+        }, 100);
+
+    } catch (e) { 
+        console.error("Erro Scorecard:", e);
+    }
+  };
+
+  window.mudarTabScorecard = function(tab) {
+    console.log("Switching Tab to:", tab);
+    const r = document.getElementById('abaRanking');
+    const p = document.getElementById('abaPendentes');
+    const btnR = document.getElementById('btnTabRanking');
+    const btnP = document.getElementById('btnTabPendentes');
+    
+    if (!r || !p) {
+        console.warn("⚠️ Abas do Scorecard não encontradas no DOM.");
+        return;
+    }
+
+    if (tab === 'ranking') {
+       r.style.display = 'block'; 
+       p.style.display = 'none';
+       if (btnR) btnR.classList.add('ativo'); 
+       if (btnP) btnP.classList.remove('ativo');
+       if (typeof window.renderizarRanking === 'function') window.renderizarRanking();
+    } else {
+       r.style.display = 'none'; 
+       p.style.display = 'block';
+       if (btnR) btnR.classList.remove('ativo'); 
+       if (btnP) btnP.classList.add('ativo');
+       if (typeof window.renderizarPendentesScorecard === 'function') window.renderizarPendentesScorecard();
+    }
+  };
+
+  window.atualizarContadorScorecard = async function() {
+    const cotacoes = JSON.parse(localStorage.getItem('cotacoes')) || [];
+    const scorecards = JSON.parse(localStorage.getItem('scorecards')) || [];
+    const pendentes = cotacoes.filter(c => c.status === "finalizada" && !scorecards.find(s => s.idCotacao === c.numero));
+    const badge = document.getElementById('badgeScorecard');
+    if (badge) {
+      if (pendentes.length > 0) { badge.innerText = pendentes.length; badge.style.display = 'flex'; }
+      else { badge.style.display = 'none'; }
+    }
+  };
+
+  window.renderizarPendentesScorecard = function() {
+    const cotacoes = JSON.parse(localStorage.getItem('cotacoes')) || [];
+    const scorecards = JSON.parse(localStorage.getItem('scorecards')) || [];
+    const lista = document.getElementById('listaPendentesScorecard');
+    if (!lista) return;
+    const pendentes = cotacoes.filter(c => c.status === "finalizada" && !scorecards.find(s => s.idCotacao === c.numero));
+    if (pendentes.length === 0) {
+      lista.innerHTML = "<p style='text-align:center; padding:20px; color:#666;'>✅ Tudo em dia! Nenhuma avaliação pendente.</p>";
+      return;
+    }
+    lista.innerHTML = pendentes.map(c => `
+      <div class="usuario-card">
+        <div class="usuario-info">
+          <strong>Cotação: ${c.numero}</strong><br>
+          <span>Descrição: ${c.descricao || "Sem descrição"}</span>
+        </div>
+        <div class="usuario-acoes">
+          <button onclick="window.prepararAvaliacao('${c.numero}')">⭐ Avaliar Fornecedor</button>
+        </div>
+      </div>
+    `).join("");
+  };
+
+  window.prepararAvaliacao = function(numeroCotacao) {
+    const cotacoes = JSON.parse(localStorage.getItem('cotacoes')) || [];
+    const cot = cotacoes.find(c => c.numero === numeroCotacao);
+    if (!cot || !cot.adjudicacao || cot.adjudicacao.length === 0) {
+      alert("Erro: Dados de adjudicação não encontrados."); return;
+    }
+    const vencedor = cot.adjudicacao[0];
+    const cid = document.getElementById('avalCotacaoId'); if (cid) cid.value = numeroCotacao;
+    const fid = document.getElementById('avalFornecedorId'); if (fid) fid.value = vencedor.emailFornecedor;
+    const fnome = document.getElementById('avalFornecedorNome'); if (fnome) fnome.value = vencedor.fornecedor;
+    const info = document.getElementById('infoFornecedorAvaliar'); if (info) info.innerText = `Fornecedor: ${vencedor.fornecedor} | Cotação: ${numeroCotacao}`;
+    document.querySelectorAll('#modalAvaliacaoScorecard input[type="radio"]').forEach(i => i.checked = false);
+    const obs = document.getElementById('avalObservacao'); if (obs) obs.value = "";
+    const modal = document.getElementById('modalAvaliacaoScorecard'); if (modal) modal.style.display = 'flex';
+  };
+
+  window.fecharModalAvaliacao = function() { 
+    const modal = document.getElementById('modalAvaliacaoScorecard');
+    if (modal) modal.style.display = 'none'; 
+  };
+
+  window.salvarAvaliacaoScorecard = async function(e) {
+    if (e) e.preventDefault();
+    const idCotacao = document.getElementById('avalCotacaoId').value;
+    const semail = (document.getElementById('avalFornecedorId').value || "").toLowerCase().trim();
+    const snome = document.getElementById('avalFornecedorNome').value;
+    const obs = document.getElementById('avalObservacao').value.trim();
+    const notas = {
+      qualidade: Number(document.querySelector('input[name="qualidade"]:checked')?.value || 0),
+      pontualidade: Number(document.querySelector('input[name="pontualidade"]:checked')?.value || 0),
+      preco: Number(document.querySelector('input[name="preco"]:checked')?.value || 0),
+      tecnica: Number(document.querySelector('input[name="tecnica"]:checked')?.value || 0),
+      atendimento: Number(document.querySelector('input[name="atendimento"]:checked')?.value || 0)
+    };
+    const media = (notas.qualidade + notas.pontualidade + notas.preco + notas.tecnica + notas.atendimento) / 5;
+    if (media < 3 && obs.length < 5) { alert("Por favor, descreva o motivo da nota baixa."); return; }
+    const scorecard = { id: Date.now(), idCotacao, idFornecedor: semail, nomeFornecedor: snome, data: new Date().toISOString(), notas, media, observacao: obs };
+    try {
+      if (typeof db !== "undefined") await db.collection("scorecards").add(scorecard);
+      let scs = JSON.parse(localStorage.getItem('scorecards')) || [];
+      scs.push(scorecard);
+      localStorage.setItem('scorecards', JSON.stringify(scs));
+      await window.recalcularMediaFornecedor(semail);
+      alert("✅ Avaliação salva!");
+      window.fecharModalAvaliacao();
+      window.mudarTabScorecard('ranking');
+      window.atualizarContadorScorecard();
+    } catch (err) { alert("Erro ao salvar."); }
+  };
+
+  window.recalcularMediaFornecedor = async function(email) {
+    try {
+      if (typeof db === "undefined") return;
+      const snap = await db.collection("scorecards").where("idFornecedor", "==", email).get();
+      const docs = snap.docs.map(d => d.data());
+      if (docs.length === 0) return;
+      const mediaFinal = docs.reduce((acc, c) => acc + c.media, 0) / docs.length;
+      await db.collection("fornecedores").doc(email).update({ mediaScorecard: mediaFinal, totalAvaliacoes: docs.length });
+      let fornLocal = JSON.parse(localStorage.getItem('fornecedores')) || [];
+      const idx = fornLocal.findIndex(f => (f.email || "").toLowerCase().trim() === email);
+      if (idx !== -1) { 
+          fornLocal[idx].mediaScorecard = mediaFinal; 
+          fornLocal[idx].totalAvaliacoes = docs.length; 
+          localStorage.setItem('fornecedores', JSON.stringify(fornLocal)); 
+      }
+    } catch (e) { console.warn("Erro Recalcular:", e); }
+  };
+
+  window.renderizarRanking = function() {
+    const fornecedores = JSON.parse(localStorage.getItem('fornecedores')) || [];
+    const corpo = document.getElementById('listaRankingCorpo');
+    if (!corpo) return;
+
+    const busca = (document.getElementById('buscaRanking')?.value || "").toLowerCase();
+    const filtro = document.getElementById('filtroStatusRanking')?.value || "todos";
+
+    let filtrados = fornecedores.filter(f => 
+      (f.nome || "").toLowerCase().includes(busca) || 
+      (f.email || "").toLowerCase().includes(busca)
+    );
+
+    if (filtro !== "todos") {
+       filtrados = filtrados.filter(f => {
+         const m = Number(f.mediaScorecard || 0);
+         if (filtro === "novo") return m === 0;
+         if (filtro === "elite") return m >= 4.5;
+         if (filtro === "bom") return m >= 3.5 && m < 4.5;
+         if (filtro === "atencao") return m >= 3.0 && m < 3.5;
+         if (filtro === "risco") return m > 0 && m < 3.0;
+         return true;
+       });
+    }
+
+    if (filtrados.length === 0) {
+      corpo.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:50px; color:#666;">
+        <i class="fa-solid fa-folder-open" style="font-size:24px; display:block; margin-bottom:10px; opacity:0.3;"></i>
+        Nenhum fornecedor encontrado no ranking
+      </td></tr>`;
+      return;
+    }
+
+    filtrados.sort((a,b) => (Number(b.mediaScorecard || 0)) - (Number(a.mediaScorecard || 0)));
+    
+    corpo.innerHTML = filtrados.map((f, index) => {
+      const nota = Number(f.mediaScorecard || 0);
+      let b = "badge-novo", s = "Sem Histórico";
+      if (nota >= 4.5) { b="badge-elite"; s="Elite"; }
+      else if (nota >= 3.5) { b="badge-bom"; s="Bom"; }
+      else if (nota >= 3.0) { b="badge-atencao"; s="Atenção"; }
+      else if (nota > 0) { b="badge-risco"; s="Risco"; }
+
+      return `<tr>
+        <td style="padding:15px; border-bottom:1px solid #222;">
+          <strong style="color:#FFF; font-size:15px;">${f.nome}</strong><br>
+          <small style="color:#666; font-family:monospace;">${f.email}</small>
+        </td>
+        <td style="text-align:center; border-bottom:1px solid #222; font-size:18px; font-weight:800; color:${nota >= 4 ? '#00ff99' : (nota >= 3.5 ? '#3ab9b6' : (nota >= 3 ? '#fbbf24' : '#ff3366'))}">
+          ${nota > 0 ? nota.toFixed(1) : "-"}
+        </td>
+        <td style="text-align:center; border-bottom:1px solid #222;"><span class="badge-score ${b}">${s}</span></td>
+        <td style="text-align:center; border-bottom:1px solid #222; color:#aaa;">${f.totalAvaliacoes || 0}</td>
+        <td style="text-align:center; border-bottom:1px solid #222;">
+          <button onclick="window.verFichaFornecedor('${f.email}')" style="background:#500a40; color:#fff; border:1px solid #661155; padding:8px 18px; border-radius:6px; cursor:pointer; font-weight:bold; transition:0.2s;" onmouseover="this.style.background='#661155'" onmouseout="this.style.background='#500a40'">
+            👁️ Ver Ficha
+          </button>
+        </td>
+      </tr>`;
+    }).join("");
+  };
+
+  setTimeout(window.atualizarContadorScorecard, 2000);
+</script>
 
 </script>
 
