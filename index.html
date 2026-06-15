@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <!-- 🔥 FIREBASE SDK (VERSÃO 8 COMPATIBILITY PARA MÁXIMA COMPATIBILIDADE) -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
@@ -602,9 +602,18 @@
       width: 80px;
     }
 
-    .matriz-cotacao .col-fixa-3 {
+    .matriz-cotacao .col-fixa-emb {
       position: sticky;
       left: 350px;
+      z-index: 31;
+      background: #0a0a0a;
+      min-width: 100px;
+      width: 100px;
+    }
+
+    .matriz-cotacao .col-fixa-3 {
+      position: sticky;
+      left: 450px;
       z-index: 31;
       background: #0a0a0a;
       min-width: 60px;
@@ -874,10 +883,16 @@
       left: 260px !important;
     }
 
+    .compact-mode .matriz-cotacao .col-fixa-emb {
+      min-width: 100px !important;
+      width: 100px !important;
+      left: 350px !important;
+    }
+
     .compact-mode .matriz-cotacao .col-fixa-3 {
       min-width: 60px !important;
       width: 60px !important;
-      left: 350px !important;
+      left: 450px !important;
     }
 
     .compact-mode .matriz-cotacao th:first-child,
@@ -2302,11 +2317,50 @@
       <h1>Painel de Controle</h1>
     </header>
 
+    <!-- 🌟 SCORECARD DO FORNECEDOR (visível apenas para fornecedores) -->
+    <div id="bannerScorecardFornecedor" style="display:none; background:#111; border:1px solid #661155; border-radius:10px; padding:20px; margin:20px auto; width:95%; max-width:1200px; color:white; text-align:center; box-shadow:0 0 15px rgba(102,17,85,0.4);">
+      <h2 style="color:var(--secundaria); margin-top:0;"><i class="fa-solid fa-star"></i> Sua Reputação no Sistema</h2>
+      <div style="font-size:32px; font-weight:800; color:#00ff99; margin:10px 0;" id="scoreFornecedorTexto">Calculando...</div>
+      <p style="color:#aaa; font-size:14px; margin-bottom:0;" id="scoreFornecedorSub">Mantenha entregas pontuais e de qualidade para subir no ranking.</p>
+    </div>
+
+    <!-- MODAL DETALHES DA REPUTAÇÃO DO FORNECEDOR -->
+    <div id="modalDetalhesReputacao" class="modal" style="display:none; z-index:200;">
+      <div class="modal-content" style="width: 90%; max-width: 800px; background: #111; border: 1px solid #661155;">
+        <button class="close-btn" onclick="document.getElementById('modalDetalhesReputacao').style.display='none'">×</button>
+        <h2 style="color:var(--secundaria);"><i class="fa-solid fa-star"></i> Histórico de Avaliações</h2>
+        <p style="color:#aaa; font-size:14px; margin-top:-10px;">Aqui você pode ver o detalhamento das notas e observações recebidas nas suas vendas concluídas.</p>
+        
+        <div style="max-height: 400px; overflow-y: auto; margin-top:20px; border: 1px solid #333; border-radius: 8px;">
+          <table class="tabela-fornecedores" style="width:100%; border-collapse:collapse;">
+            <thead style="background:#222; position:sticky; top:0;">
+              <tr>
+                <th style="padding:12px; text-align:center; color:#fff;">Data</th>
+                <th style="padding:12px; text-align:center; color:#fff;">Nota</th>
+                <th style="padding:12px; text-align:left; color:#fff;">Critérios</th>
+                <th style="padding:12px; text-align:left; color:#fff;">Observações do Comprador</th>
+              </tr>
+            </thead>
+            <tbody id="listaDetalhesReputacaoCorpo">
+              <!-- Preenchido via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <div class="dashboard">
       <div class="card" onclick="abrirModalCotacao()">
         <i class="fa-solid fa-file-circle-plus"></i>
         <h3>Criar Cotação</h3>
         <p>Gerar novo pedido de orçamento</p>
+      </div>
+
+      <!-- 🌟 Minhas Avaliações (FORNECEDOR) -->
+      <div class="card" id="cardAvaliacoesFornecedor" style="display:none;" onclick="abrirDetalhesReputacao()">
+        <i class="fa-solid fa-star-half-stroke"></i>
+        <h3>Minhas Avaliações</h3>
+        <p>Ver detalhes e comentários dos compradores</p>
       </div>
 
       <!-- 📝 Solicitação de Compra -->
@@ -2382,6 +2436,13 @@
         <p>Adicionar e controlar acessos do sistema</p>
       </div>
 
+      <!-- 📊 ECONOMÔMETRO -->
+      <div class="card" id="cardEconomometro" onclick="abrirEconomometro()">
+        <i class="fa-solid fa-chart-line"></i>
+        <h3>Economômetro e Relatórios</h3>
+        <p>Análise financeira e estatísticas de economia</p>
+      </div>
+
       <!-- 🌟 GESTÃO DE SCORECARDS -->
       <div class="card card-relative" id="cardScorecard" onclick="abrirGestaoScorecards()">
         <i class="fa-solid fa-star-half-stroke"></i>
@@ -2395,6 +2456,80 @@
       © Sistema de Cotação • Oral Unica Campo Grande
     </div>
   </section>
+
+  <!-- 📊 ECONOMÔMETRO -->
+  <section id="secEconomometro" style="display:none;">
+    <header>
+      <button class="btn-sair" onclick="voltarMenu()">🏠 Menu Principal</button>
+      <h1>Economômetro e Relatórios</h1>
+    </header>
+
+    <div style="background:#111; border:1px solid #661155; border-radius:10px; padding:20px; margin:20px auto; width:95%; max-width:1200px; color:white; min-height: 500px;">
+      <h2 style="color:var(--secundaria); margin-bottom:20px;"><i class="fa-solid fa-chart-pie"></i> Resumo de Economia</h2>
+      
+      <!-- Cards de Resumo -->
+      <div style="display:flex; gap:20px; margin-bottom:30px; flex-wrap:wrap;">
+        <div style="flex:1; min-width:200px; background:#1a1a1a; padding:20px; border-radius:8px; border-left:4px solid var(--secundaria); text-align:center;">
+          <h3 style="color:#aaa; font-size:14px; margin:0 0 10px 0;">Economia (Mês Atual)</h3>
+          <div id="ecoMes" style="font-size:28px; font-weight:bold; color:var(--secundaria);">R$ 0,00</div>
+        </div>
+        <div style="flex:1; min-width:200px; background:#1a1a1a; padding:20px; border-radius:8px; border-left:4px solid var(--secundaria); text-align:center;">
+          <h3 style="color:#aaa; font-size:14px; margin:0 0 10px 0;">Economia (Total Ano)</h3>
+          <div id="ecoAno" style="font-size:28px; font-weight:bold; color:var(--secundaria);">R$ 0,00</div>
+        </div>
+        <div style="flex:1; min-width:200px; background:#1a1a1a; padding:20px; border-radius:8px; border-left:4px solid #f39c12; text-align:center;">
+          <h3 style="color:#aaa; font-size:14px; margin:0 0 10px 0;">Cotações Finalizadas</h3>
+          <div id="ecoQtd" style="font-size:28px; font-weight:bold; color:#f39c12;">0</div>
+        </div>
+        <div style="flex:1; min-width:200px; background:#1a1a1a; padding:20px; border-radius:8px; border-left:4px solid #0dcaf0; text-align:center;">
+          <h3 style="color:#aaa; font-size:14px; margin:0 0 10px 0;">Tempo Médio de Fechamento</h3>
+          <div id="ecoTempo" style="font-size:28px; font-weight:bold; color:#0dcaf0;">0 dias</div>
+        </div>
+        <div style="flex:1; min-width:200px; background:#1a1a1a; padding:20px; border-radius:8px; border-left:4px solid #661155; text-align:center; cursor:pointer; transition:0.3s;" onclick="abrirEconomiaPorCotacao()" onmouseover="this.style.background='#2a2a2a'" onmouseout="this.style.background='#1a1a1a'">
+          <h3 style="color:#aaa; font-size:14px; margin:0 0 10px 0;">Economia por Cotação</h3>
+          <div style="font-size:28px; font-weight:bold; color:#661155;"><i class="fa-solid fa-list-check"></i></div>
+          <div style="color:#888; font-size:12px; margin-top:5px;">Ver detalhes</div>
+        </div>
+      </div>
+
+      <!-- Área de Gráficos -->
+      <div style="display:flex; gap:20px; flex-wrap:wrap;">
+        <div style="flex:2; min-width:300px; background:#1a1a1a; padding:20px; border-radius:8px;">
+          <h3 style="color:var(--primaria); margin-top:0;">Economia Mensal (Últimos 6 meses)</h3>
+          <canvas id="graficoEconomia"></canvas>
+        </div>
+        <div style="flex:1; min-width:300px; background:#1a1a1a; padding:20px; border-radius:8px;">
+          <h3 style="color:var(--primaria); margin-top:0;">Pedidos por Material vs Serviço</h3>
+          <canvas id="graficoTipo"></canvas>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- MODAL ECONOMIA POR COTAÇÃO -->
+  <div id="modalEconomiaCotacao" class="modal" style="display:none; z-index:200;">
+    <div class="modal-content" style="width: 90%; max-width: 800px; background: #111; border: 1px solid #661155;">
+      <button class="close-btn" onclick="document.getElementById('modalEconomiaCotacao').style.display='none'">×</button>
+      <h2 style="color:var(--secundaria);"><i class="fa-solid fa-list-check"></i> Economia por Cotação</h2>
+      <p style="color:#aaa; font-size:14px; margin-top:-10px;">Detalhamento da economia calculada para cada cotação finalizada.</p>
+      
+      <div style="max-height: 400px; overflow-y: auto; margin-top:20px; border: 1px solid #333; border-radius: 8px;">
+        <table class="tabela-fornecedores" style="width:100%; border-collapse:collapse;">
+          <thead style="background:#222; position:sticky; top:0;">
+            <tr>
+              <th style="padding:12px; text-align:left; color:#fff;">Cotação</th>
+              <th style="padding:12px; text-align:center; color:#fff;">Data</th>
+              <th style="padding:12px; text-align:right; color:#fff;">Economia (R$)</th>
+            </tr>
+          </thead>
+          <tbody id="listaEconomiaCotacaoCorpo">
+            <!-- Preenchido via JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 
   <section id="gestaoScorecards" style="display:none;">
       <header>
@@ -2590,6 +2725,7 @@
             <th>#</th>
             <th style="padding-left: 10px;">Nome do Produto</th>
             <th style="padding-left: 15px;">Marca</th>
+            <th style="padding-left: 15px;">Embalagem</th>
             <th style="padding-left: 15px;">Quantidade</th>
           </tr>
         </thead>
@@ -2643,6 +2779,7 @@
             <th>#</th>
             <th style="padding-left: 10px;">Nome do Produto</th>
             <th style="padding-left: 15px;">Marca</th>
+            <th style="padding-left: 15px;">Embalagem</th>
             <th style="padding-left: 15px;">Quantidade</th>
             <th>Ação</th>
           </tr>
@@ -2656,10 +2793,22 @@
             <td style="padding-left: 15px;"><input type="text"
                 style="width:100%;background:#1a1a1a;color:white;border:1px solid #661155;border-radius:5px;padding:4px;">
             </td>
+            <td style="padding-left: 15px;">
+              <select style="background:#1a1a1a;color:white;border:1px solid #661155;border-radius:5px;padding:4px;">
+                <option value="Balde">Balde</option>
+                <option value="Caixa">Caixa</option>
+                <option value="Fardo">Fardo</option>
+                <option value="Frasco">Frasco</option>
+                <option value="Garrafa">Garrafa</option>
+                <option value="Litro">Litro</option>
+                <option value="Pote">Pote</option>
+                <option value="Unidade" selected>Unidade</option>
+              </select>
+            </td>
             <td style="padding-left: 15px;"><input type="number"
                 style="width:80px;background:#1a1a1a;color:white;border:1px solid #661155;border-radius:5px;padding:4px;">
             </td>
-            <td><button onclick="removerLinhaManual(this)"
+            <td><button onclick="this.closest('tr').remove(); renumerarLinhasManual();"
                 style="background:#661155;color:white;border:none;border-radius:4px;padding:5px 10px;">🗑️</button></td>
           </tr>
         </tbody>
@@ -3083,9 +3232,13 @@
         <!-- LISTA -->
         <div id="listaFornecedoresCadastrados" style="display:none;margin-top:15px;">
 
-          <h3 style="color:#661155;text-align:center;margin-bottom:10px;">
+          <h3 style="color:#661155;text-align:center;margin-bottom:15px;">
             📋 Fornecedores Cadastrados
           </h3>
+
+          <div style="margin-bottom:15px; display:flex; gap:10px;">
+            <input type="text" id="inputBuscaFornecedorLista" oninput="window.filtrarFornecedoresLista()" placeholder="🔍 Buscar fornecedores por nome, e-mail, responsável, endereço ou tipo..." style="flex:1; background:#1a1a1a; color:white; border:1px solid #661155; border-radius:5px; padding:8px 12px; font-size:14px;">
+          </div>
 
           <div style="overflow-x:auto;">
             <table style="width:100%;border-collapse:collapse;">
@@ -3556,6 +3709,9 @@
           <p><strong>Data de Criação:</strong> <span id="respDataCriacao"></span></p>
           <p><strong>Data e hora de Fechamento:</strong> <span id="respDataFechamento"></span></p>
           <p><strong>Descrição:</strong> <span id="respDescricao"></span></p>
+          <button id="btnExportarPlanilhaFornecedor" onclick="exportarPlanilhaRespostaParaExcel()" style="margin-top:15px; background:#10b981; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer; font-weight:bold; font-size:13px; display:flex; align-items:center; gap:5px; transition:0.2s;">
+            <i class="fa-solid fa-file-excel"></i> Baixar Planilha de Itens
+          </button>
         </div>
 
         <!-- ⏳ TIMER RELÓGIO -->
@@ -3772,7 +3928,7 @@
               cursor:pointer;">
           🗺️ Gerar Mapa de Preços
         </button>
-        <button onclick="confirmarRecebimentoCotacao(document.getElementById('analiseNumero').textContent.replace('Cotação: ', '').trim())" style="background:#10b981;
+        <button id="btnConfirmarRecebimentoCotacao" onclick="confirmarRecebimentoCotacao(document.getElementById('analiseNumero').textContent.replace('Cotação: ', '').trim())" style="background:#10b981;
               color:white;
               border:none;
               padding:10px 25px;
@@ -4309,11 +4465,16 @@
       <button class="close-btn" onclick="fecharMapaPrecos()"
         style="position:fixed; top:20px; right:25px; background:#661155; border:none; color:white; font-size:24px; cursor:pointer; z-index:999999; border-radius:50%; width:40px; height:40px; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 5px rgba(0,0,0,0.5);">&times;</button>
 
-      <div style="padding:15px 25px; border-bottom:1px solid #333;">
-        <h2 style="color:#661155; margin:0 0 10px 0;">🗺️ Mapa de Preços Premium</h2>
-        <div id="cabecalhoMapa" style="display:flex; gap:30px; font-size:14px; opacity:0.9;">
+      <div style="padding:15px 25px; border-bottom:1px solid #333; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <h2 style="color:#661155; margin:0 0 10px 0;">🗺️ Mapa de Preços Premium</h2>
+          <div id="cabecalhoMapa" style="display:flex; gap:30px; font-size:14px; opacity:0.9;">
           <!-- JS preenche aqui -->
+          </div>
         </div>
+        <button onclick="window.exportarMapaPDF()" style="background:#198754; color:white; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; font-weight:bold; display:flex; align-items:center; gap:8px; margin-right:60px;">
+          <i class="fa-solid fa-file-pdf"></i> Exportar PDF do Mapa
+        </button>
       </div>
 
       <!-- aqui entra SOMENTE a matriz -->
@@ -5206,6 +5367,7 @@
     ============================ */
     if (tipo === "administrador") {
       mostrar("Gestão de Scorecards");
+      mostrar("Economômetro e Relatórios");
       mostrar("Solicitação de Compra");
       mostrar("Gestão de Requisições");
       mostrar("Criar Cotação");
@@ -5224,6 +5386,7 @@
     ============================ */
     if (tipo === "comprador") {
       mostrar("Gestão de Scorecards");
+      mostrar("Economômetro e Relatórios");
       mostrar("Solicitação de Compra");
       mostrar("Criar Cotação");
       mostrar("Gestão de Requisições");
@@ -5240,6 +5403,7 @@
        ✅ APROVADOR
     ============================ */
     if (tipo === "aprovador") {
+      mostrar("Economômetro e Relatórios");
       mostrar("Cotações Respondidas");
       mostrar("Aprovar Compras");
       mostrar("Gestão Financeira");
@@ -5258,6 +5422,45 @@
     if (tipo === "fornecedor") {
       mostrar("Responder Cotação");
       mostrar("Gestão Financeira");
+      
+      const bannerScore = document.getElementById("bannerScorecardFornecedor");
+      if (bannerScore) {
+          bannerScore.style.display = "block";
+          
+          setTimeout(() => {
+              const u = getUsuarioLogado();
+              const fornecedoresCad = JSON.parse(localStorage.getItem("fornecedores")) || [];
+              const ficha = fornecedoresCad.find(f => (f.email || "").toLowerCase() === (u.email || "").toLowerCase());
+              
+              const nomeEmpresa = (ficha && ficha.nome) ? ficha.nome : (u.empresa || u.fornecedor || u.nome || "Fornecedor");
+              
+              const txtScore = document.getElementById("scoreFornecedorTexto");
+              const subScore = document.getElementById("scoreFornecedorSub");
+              const cardAvaliacoes = document.getElementById("cardAvaliacoesFornecedor");
+              
+              if (ficha && Number(ficha.totalAvaliacoes || 0) > 0) {
+                  let nota = Number(ficha.mediaScorecard || 0);
+                  let estrelas = "";
+                  for (let i=1; i<=5; i++) {
+                      if (nota >= i) estrelas += "★";
+                      else if (nota >= i - 0.5) estrelas += "☆"; // Meia estrela (simplificado)
+                      else estrelas += "☆";
+                  }
+                  txtScore.innerText = `${nota.toFixed(1)} ${estrelas}`;
+                  txtScore.style.color = nota >= 4 ? '#00ff99' : (nota >= 3 ? '#fbbf24' : '#ff5555');
+                  subScore.innerText = `Você possui ${ficha.totalAvaliacoes} avaliações. Aqui você encontra a pontuação referente ao serviço prestado ou material vendido. Sua nota e desempenho ficam visíveis aos compradores.`;
+                  if (cardAvaliacoes) cardAvaliacoes.style.display = 'block';
+              } else {
+                  txtScore.innerText = nomeEmpresa;
+                  txtScore.style.color = "#ccc";
+                  subScore.innerText = "Aqui você encontra a pontuação referente ao serviço prestado ou material vendido. Ao realizar vendas e entregas, sua nota aparecerá aqui, sendo um diferencial visível para os compradores.";
+                  if (cardAvaliacoes) cardAvaliacoes.style.display = 'none';
+              }
+          }, 500); // Dá tempo para o ranking carregar em background
+      }
+    } else {
+       const bannerScore = document.getElementById("bannerScorecardFornecedor");
+       if (bannerScore) bannerScore.style.display = "none";
     }
   }
 
@@ -5872,12 +6075,20 @@
 
       sheet.slice(1).forEach(r => {
         if (r.length < 4) return;
+        const index = r[0];
+        const item = r[1];
+        const marca = r[2];
+        const is5Cols = r.length >= 5 && typeof r[4] === 'number';
+        const embalagem = is5Cols ? r[3] : "Unidade";
+        const qtd = is5Cols ? r[4] : r[3];
+
         const tr = document.createElement("tr");
         tr.innerHTML = `
-       <td>${r[0]}</td>
-       <td style="padding-left: 10px;">${r[1]}</td>
-       <td style="padding-left: 15px;">${r[2]}</td>
-       <td style="padding-left: 15px;">${r[3]}</td>
+       <td>${index}</td>
+       <td style="padding-left: 10px;">${item}</td>
+       <td style="padding-left: 15px;">${marca}</td>
+       <td style="padding-left: 15px;">${embalagem}</td>
+       <td style="padding-left: 15px;">${qtd}</td>
      `;
         tbody.appendChild(tr);
       });
@@ -5931,6 +6142,7 @@
           adicionarLinhaManual(
             item.nome || item.produto || item.item || "",
             item.marca || "",
+            item.embalagem || "Unidade",
             item.quantidade || item.qtd || ""
           );
         });
@@ -5943,11 +6155,15 @@
   }
 
 
-  function adicionarLinhaManual(nome = "", marca = "", quantidade = "") {
+  function adicionarLinhaManual(nome = "", marca = "", embalagem = "Unidade", quantidade = "") {
     const tabela = document.getElementById("tabelaManualCorpo");
     if (!tabela) return;
 
     const index = tabela.children.length + 1;
+
+    const optionsHtml = ["Balde", "Caixa", "Fardo", "Frasco", "Garrafa", "Litro", "Pote", "Unidade"].map(opt =>
+      `<option value="${opt}" ${opt.toLowerCase() === embalagem.trim().toLowerCase() ? 'selected' : ''}>${opt}</option>`
+    ).join("");
 
     const tr = document.createElement("tr");
     tr.innerHTML = `
@@ -5969,6 +6185,11 @@
      >
    </td>
    <td style="padding-left: 15px;">
+     <select style="background:#1a1a1a;color:white;border:1px solid #661155;border-radius:5px;padding:4px;">
+       ${optionsHtml}
+     </select>
+   </td>
+   <td style="padding-left: 15px;">
      <input
        type="number"
        value="${quantidade}"
@@ -5982,7 +6203,7 @@
        style="background:#661155;color:white;border:none;border-radius:4px;padding:5px 10px;"
      >🗑️</button>
    </td>
- `;
+  `;
 
     tabela.appendChild(tr);
   }
@@ -6291,18 +6512,89 @@
     if (origemCotacao === "excel") {
       document.getElementById("fornecedoresCotacaoExcel").value = texto;
     }
-    if (origemCotacao === "manual") {
+    else if (origemCotacao === "manual") {
       document.getElementById("fornecedoresCotacaoManual").value = texto;
     }
-    if (origemCotacao === "materiais") {
+    else if (origemCotacao === "materiais") {
       document.getElementById("fornecedoresCotacaoMateriais").value = texto;
     }
-    if (origemCotacao === "servicos") {
+    else if (origemCotacao === "servicos") {
       document.getElementById("fornecedoresCotacaoServicos").value = texto;
+    }
+    else if (origemCotacao && origemCotacao.startsWith("ativa_")) {
+      const numCotacao = origemCotacao.replace("ativa_", "");
+      if (typeof window.adicionarFornecedoresCotacaoAtiva === "function") {
+        window.adicionarFornecedoresCotacaoAtiva(numCotacao, fornecedoresSelecionados);
+      }
     }
 
     fecharModalFornecedores();
   }
+
+  // NOVA FUNÇÃO: Adiciona fornecedores a uma cotação já publicada
+  window.abrirSelecaoFornecedoresAtiva = function(numeroCotacao) {
+    origemCotacao = "ativa_" + numeroCotacao;
+    document.getElementById("modalFornecedores").style.display = "flex";
+    carregarFornecedoresModal();
+  };
+
+  window.adicionarFornecedoresCotacaoAtiva = async function(numeroCotacao, novosFornecedores) {
+    try {
+      // 1. Pega os dados mais atualizados do Cache Local (que já faz merge do RTDB)
+      let localCotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
+      const index = localCotacoes.findIndex(c => String(c.numero) === String(numeroCotacao) || String(c.id) === String(numeroCotacao));
+      
+      if (index === -1) {
+        alert("Cotação não encontrada no cache local para adição.");
+        return;
+      }
+      
+      const cotacaoLocal = localCotacoes[index];
+      const fornecedoresAtuais = Array.isArray(cotacaoLocal.fornecedores) ? cotacaoLocal.fornecedores : [];
+      
+      // Filtra apenas os fornecedores que ainda não estão na cotação (usando email normalizado)
+      const fornecedoresParaAdicionar = novosFornecedores.filter(novoF => 
+        !fornecedoresAtuais.some(atualF => normalizarEmail(atualF.email) === normalizarEmail(novoF.email))
+      );
+
+      if (fornecedoresParaAdicionar.length === 0) {
+        alert("Todos os fornecedores selecionados já fazem parte desta cotação.");
+        return;
+      }
+
+      const listaAtualizada = [...fornecedoresAtuais, ...fornecedoresParaAdicionar];
+
+      // Atualiza Firestore
+      await db.collection("cotacoes").doc(String(numeroCotacao)).update({
+        fornecedores: listaAtualizada
+      });
+
+      // Atualiza RTDB (Sincronização Rápida)
+      if (typeof rtdb !== "undefined") {
+        try {
+          await rtdb.ref("cotacoes/" + numeroCotacao).update({
+            fornecedores: listaAtualizada
+          });
+        } catch (e) {
+          console.warn("Aviso ao atualizar RTDB:", e);
+        }
+      }
+
+      // Atualiza LocalStorage
+      localCotacoes[index].fornecedores = listaAtualizada;
+      localStorage.setItem("cotacoes", JSON.stringify(localCotacoes));
+
+      alert(`✅ Fornecedores adicionados com sucesso à cotação #${numeroCotacao}!`);
+      
+      // Atualiza a interface
+      if (typeof toggleListaRespondidas === "function") {
+        toggleListaRespondidas("publicadas", true);
+      }
+    } catch (e) {
+      console.error("Erro ao adicionar fornecedor à cotação:", e);
+      alert("Erro ao adicionar fornecedor. Verifique a conexão.");
+    }
+  };
 
   /* ======================================================
      ✅ APROVAÇÃO DE COMPRAS (COMPRADOR/APROVADOR)
@@ -6601,7 +6893,7 @@
             snap.forEach(doc => {
               const data = doc.data();
               const arqs = data.arquivos || [];
-              const filtrados = arqs.filter(a => (a.usuario === usuario.nome || a.email === usuario.email));
+              const filtrados = arqs.filter(a => (a.usuario === usuario.nome || a.email === usuario.email) && (a.tipo === 'Nota Fiscal' || a.tipo === 'Boleto'));
               if (filtrados.length > 0) {
                 const idCot = doc.id.replace("docs_", "");
                 const cot = cotacoesLocal.find(c => String(c.numero) === String(idCot)) || { numero: idCot, descricao: "Documento Enviado", dataCriacao: new Date().toLocaleString() };
@@ -6726,7 +7018,7 @@
           const key = localStorage.key(i);
           if (key.startsWith("docs_")) {
             const num = key.replace("docs_", "");
-            const docs = JSON.parse(localStorage.getItem(key)) || [];
+            const docs = (JSON.parse(localStorage.getItem(key)) || []).filter(d => d.tipo === 'Nota Fiscal' || d.tipo === 'Boleto');
             if (docs.length > 0) {
               const cot = cotacoesLocal.find(c => String(c.numero) === String(num)) || { numero: num, descricao: "Cotação Direta" };
               itensComDocsMap.set(num, { cotacao: cot, docs: docs });
@@ -6740,7 +7032,7 @@
           cloudSnap.forEach(doc => {
             const num = doc.id.replace("docs_", "");
             const data = doc.data();
-            const cloudDocs = data.arquivos || [];
+            const cloudDocs = (data.arquivos || []).filter(d => d.tipo === 'Nota Fiscal' || d.tipo === 'Boleto');
 
             if (cloudDocs.length > 0) {
               const existente = itensComDocsMap.get(num);
@@ -7705,6 +7997,37 @@
             tempoRestante += " <span style='color:#ffd700; font-size:11px;'>(Reaberta)</span>";
           }
 
+          let listaFornecedoresConvidadosHTML = "";
+          if (usuario.tipo !== 'fornecedor') {
+             const convidados = Array.isArray(c.fornecedores) ? c.fornecedores : [];
+             let respostas = [];
+             if (Array.isArray(c.respostasFornecedores)) {
+               respostas = [...c.respostasFornecedores];
+             } else if (c.respostasFornecedores && typeof c.respostasFornecedores === "object") {
+               respostas = Object.values(c.respostasFornecedores);
+             }
+             
+             let responderamHtml = [];
+             
+             convidados.forEach(f => {
+               const jaRespondeu = respostas.some(r => normalizarEmail(r.email) === normalizarEmail(f.email));
+               if (jaRespondeu) {
+                 responderamHtml.push(`<span style="color:#0dcaf0; font-size:11px; margin-right:8px;"><i class="fa-solid fa-check-circle"></i> ${f.nome} respondeu</span>`);
+               }
+             });
+             
+             if (responderamHtml.length > 0) {
+               listaFornecedoresConvidadosHTML = `
+                 <div style="margin-top: 5px; font-size: 11px;">
+                   <div style="font-weight: bold; margin-bottom: 2px; color: #ccc;">Status das Respostas:</div>
+                   <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+                     ${responderamHtml.join("")}
+                   </div>
+                 </div>
+               `;
+             }
+          }
+
           bloco.innerHTML = `
            <div class="info">
              <div style="font-weight:bold; font-size:16px; color:#fff;">${c.descricao || "Sem descrição"}</div>
@@ -7713,6 +8036,7 @@
              </div>
              <div style="margin-top:5px; color:#ccc; font-size:13px;">
                <span>👤 Com fornecedores (${qtdConvidados} convidados)</span><br>
+               ${listaFornecedoresConvidadosHTML}
                <span>📩 Respostas atuais: <b style="color:#0dcaf0;">${qtdRespostas}</b></span><br>
                <span style="color:${diffMs > 0 ? '#3ab9b6' : '#ff5555'};">⏳ Tempo restante: <b>${tempoRestante}</b></span>
              </div>
@@ -7723,6 +8047,7 @@
               : `
                   <button onclick="encerrarCotacaoManualmente('${c.numero}')" style="background:#cc0000; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer;" title="Encerrar cotação agora">🔒 Encerrar</button>
                   <button onclick="reabrirCotacao('${c.numero}')" style="background:#e0a800; color:#000; border:none; padding:8px 12px; border-radius:5px; cursor:pointer; font-weight:bold;" title="Estender prazo por 3 dias">🔄 Reabrir / Estender</button>
+                  <button onclick="abrirSelecaoFornecedoresAtiva('${c.numero}')" style="background:#17a2b8; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer;" title="Convidar mais fornecedores para esta cotação">➕ Adicionar Fornecedor</button>
                   <button onclick="excluirCotacao('${c.numero}')" style="background:transparent; border:1px solid #ff4444; color:#ff4444; padding:8px 12px; border-radius:5px; cursor:pointer;" title="Excluir Cotação"><i class="fa-solid fa-trash"></i></button>
                 `
             }
@@ -8614,7 +8939,11 @@
     };
   }
 
-  async function carregarDadosFornecedores(manterAberto = false) {
+  window.filtrarFornecedoresLista = function() {
+    carregarDadosFornecedores(true);
+  };
+
+    async function carregarDadosFornecedores(manterAberto = false) {
     const tbody = document.getElementById("tabelaFornecedores");
     if (!tbody) return;
 
@@ -8657,27 +8986,107 @@
 
     tbody.innerHTML = "";
 
-    if (fornecedores.length === 0) {
-      tbody.innerHTML = "<tr><td colspan='5' style='text-align:center;padding:10px;'>Nenhum fornecedor cadastrado.</td></tr>";
+    // Adiciona _origIndex a cada fornecedor antes de qualquer filtragem
+    fornecedores.forEach((f, index) => {
+      f._origIndex = index;
+    });
+
+    // Filtra fornecedores se houver busca
+    const buscaVal = (document.getElementById("inputBuscaFornecedorLista")?.value || "").toLowerCase().trim();
+    let filtrados = fornecedores;
+    if (buscaVal) {
+      filtrados = fornecedores.filter(f => {
+        const nome = (f.nome || "").toLowerCase();
+        const endereco = (f.endereco || f.logradouro || "").toLowerCase();
+        const whats = (f.whats || f.whatsapp || f.telefone || "").toLowerCase();
+        const responsavel = (f.responsavel || "").toLowerCase();
+        const tipo = (f.tipo || "").toLowerCase();
+        const email = (f.email || "").toLowerCase();
+        return nome.includes(buscaVal) ||
+               endereco.includes(buscaVal) ||
+               whats.includes(buscaVal) ||
+               responsavel.includes(buscaVal) ||
+               tipo.includes(buscaVal) ||
+               email.includes(buscaVal);
+      });
+    }
+
+    if (filtrados.length === 0) {
+      tbody.innerHTML = "<tr><td colspan='5' style='text-align:center;padding:10px;'>Nenhum fornecedor encontrado.</td></tr>";
       return;
     }
 
-    fornecedores.forEach((f, index) => {
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${f.nome || "-"}</td>
-        <td>${f.endereco || f.logradouro || "-"}</td>
-        <td>${f.whats || f.whatsapp || f.telefone || "-"}</td>
-        <td>${f.responsavel || "-"}</td>
-        <td style="text-align:center;">
-          <div style="display:flex; justify-content:center; gap:8px;">
-            <button onclick="verFichaFornecedor(${index})" title="Ver ficha">👁️</button>
-            <button onclick="editarFornecedor(${index})" title="Editar">✏️</button>
-            <button onclick='window.excluirFornecedor(${index})' title="Excluir">🗑️</button>
-          </div>
+    // Agrupa por Tipo de Produto / Serviço
+    const grupos = {};
+    filtrados.forEach(f => {
+      const tipo = f.tipo || "Sem Categoria";
+      if (!grupos[tipo]) grupos[tipo] = [];
+      grupos[tipo].push(f);
+    });
+
+    // Ordena as categorias
+    const categoriasOrdenadas = Object.keys(grupos).sort((a, b) => {
+      if (a === "Sem Categoria") return 1;
+      if (b === "Sem Categoria") return -1;
+      return a.localeCompare(b);
+    });
+
+    categoriasOrdenadas.forEach((cat, indexCat) => {
+      const isOpen = buscaVal !== ""; // aberto se houver busca
+
+      // Adiciona linha divisória da categoria
+      const trHeader = document.createElement("tr");
+      trHeader.style.background = "rgba(102, 17, 85, 0.15)";
+      trHeader.style.borderBottom = "1px solid #661155";
+      trHeader.style.cursor = "pointer";
+      trHeader.innerHTML = `
+        <td colspan="5" style="padding: 12px 15px; font-weight: bold; color: #3ab9b6; font-size: 13px; text-transform: uppercase;">
+          <i class="fa-solid ${isOpen ? 'fa-folder-open' : 'fa-folder'}" style="margin-right: 8px;" id="icon_cat_${indexCat}"></i> ${cat}
         </td>
       `;
-      tbody.appendChild(tr);
+      trHeader.onclick = function() {
+        const rows = document.querySelectorAll('.forn_cat_' + indexCat);
+        const icon = document.getElementById('icon_cat_' + indexCat);
+        let isHidden = false;
+        rows.forEach(r => {
+          if (r.style.display === "none") {
+            r.style.display = "table-row";
+            isHidden = false;
+          } else {
+            r.style.display = "none";
+            isHidden = true;
+          }
+        });
+        if (icon) {
+          icon.className = isHidden ? "fa-solid fa-folder" : "fa-solid fa-folder-open";
+        }
+      };
+      tbody.appendChild(trHeader);
+
+      // Renderiza fornecedores da categoria
+      grupos[cat].forEach(f => {
+        const tr = document.createElement("tr");
+        tr.className = 'forn_cat_' + indexCat;
+        tr.style.borderBottom = "1px solid #222";
+        tr.style.display = isOpen ? "table-row" : "none";
+        tr.innerHTML = `
+          <td style="padding: 10px 8px;">
+            <strong style="color:#FFF;">${f.nome || "-"}</strong><br>
+            <small style="color:#aaa; font-family:monospace;">${f.email || ""}</small>
+          </td>
+          <td style="padding: 10px 8px;">${f.endereco || f.logradouro || "-"}</td>
+          <td style="padding: 10px 8px;">${f.whats || f.whatsapp || f.telefone || "-"}</td>
+          <td style="padding: 10px 8px;">${f.responsavel || "-"}</td>
+          <td style="text-align:center; padding: 10px 8px;">
+            <div style="display:flex; justify-content:center; gap:8px;">
+              <button onclick="verFichaFornecedor(${f._origIndex})" title="Ver ficha">👁️</button>
+              <button onclick="editarFornecedor(${f._origIndex})" title="Editar">✏️</button>
+              <button onclick='window.excluirFornecedor(${f._origIndex})' title="Excluir">🗑️</button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
     });
   }
 
@@ -9204,7 +9613,7 @@
 
     if (tabela) {
       tabela.classList.toggle('expandida', window.isColunasExpandidas);
-      tabela.querySelectorAll('.col-fixa, .col-fixa-2, .col-fixa-3').forEach(td => {
+      tabela.querySelectorAll('.col-fixa, .col-fixa-2, .col-fixa-emb, .col-fixa-3').forEach(td => {
         td.style.whiteSpace = window.isColunasExpandidas ? 'normal' : '';
       });
     }
@@ -10062,6 +10471,97 @@
   }
 
 
+  window.exportarMapaPDF = function() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF("l", "mm", "a4");
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    
+    // Localiza cabecalho
+    const el = document.getElementById("cabecalhoMapa");
+    if (!el) return alert("Erro ao obter cotação.");
+    
+    // Puxa o numero da cotacao da div de texto do cabecalho
+    const matches = el.innerText.match(/Cotação:\s*(\S+)/);
+    const numero = matches ? matches[1].trim() : "";
+    if (!numero) return alert("Erro ao identificar número da cotação.");
+
+    const cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
+    const c = cotacoes.find(x => String(x.numero) === String(numero) || String(x.id) === String(numero));
+    if (!c) return alert("Cotação não encontrada no sistema.");
+
+    let y = 15;
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text(`MAPA COMPARATIVO DE PREÇOS - COT-${c.numero}`, pageWidth / 2, y, { align: "center" });
+    y += 10;
+    
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Descrição: ${c.descricao || "Sem descrição"}`, 15, y);
+    doc.text(`Data de Abertura: ${c.dataCriacao || "-"}`, pageWidth - 90, y);
+    y += 6;
+    doc.text(`Status: ${(c.status || "aberta").toUpperCase()}`, 15, y);
+    doc.text(`Data de Fechamento: ${c.dataFechamento || "-"}`, pageWidth - 90, y);
+    y += 10;
+    
+    let respostas = c.respostasFornecedores || [];
+    const colunasFixas = ["#", "Item", "Marca", "Embalagem", "Qtd"];
+    const fornecedores = respostas.map(r => r.fornecedor || "Fornecedor");
+    const headers = [...colunasFixas, ...fornecedores];
+    
+    // Calcula larguras das colunas
+    const colWidths = [10, 50, 25, 25, 12];
+    const fornWidth = (pageWidth - 30 - 122) / Math.max(1, fornecedores.length);
+    for (let i = 0; i < fornecedores.length; i++) {
+      colWidths.push(fornWidth);
+    }
+    
+    const drawRow = (rowCells, posY, isHeader = false) => {
+      let currentX = 15;
+      doc.setFont("helvetica", isHeader ? "bold" : "normal");
+      rowCells.forEach((cell, cellIdx) => {
+        const w = colWidths[cellIdx];
+        doc.rect(currentX, posY, w, 8);
+        doc.text(String(cell).substring(0, Math.floor(w / 1.8)), currentX + 2, posY + 5.5);
+        currentX += w;
+      });
+    };
+    
+    drawRow(headers, y, true);
+    y += 8;
+    
+    const produtos = c.produtos || [];
+    produtos.forEach((prod, pIdx) => {
+      if (y > pageHeight - 20) {
+        doc.addPage();
+        y = 15;
+        drawRow(headers, y, true);
+        y += 8;
+      }
+      
+      const nomeProd = prod.nome || prod.descricao || "";
+      const rowData = [
+        pIdx + 1,
+        nomeProd,
+        prod.marca || "-",
+        prod.embalagem || "Unidade",
+        prod.quantidade || 0
+      ];
+      
+      respostas.forEach(r => {
+        const itemResp = (r.itens || []).find(it => (it.produto === nomeProd) || (it.nome === nomeProd));
+        const preco = itemResp ? (Number(itemResp.preco) || Number(itemResp.valor) || 0) : 0;
+        rowData.push(preco > 0 ? `R$ ${preco.toFixed(2)}` : "-");
+      });
+      
+      drawRow(rowData, y);
+      y += 8;
+    });
+    
+    doc.save(`Mapa_Comparativo_${c.numero}.pdf`);
+  };
+
   function abrirMapaPrecos(numero) {
     console.log("🗺️ abrirMapaPrecos chamado com:", numero);
 
@@ -10142,7 +10642,13 @@
                <th style="width:40px; text-align:center;"></th>
                <th class="col-idx" style="width:60px; text-align:center;">#</th>
                <th class="col-fixa">Item</th>
-               <th class="col-fixa-2" style="text-align:center;">Qtd</th>
+               
+
+               <th class="col-fixa-2" style="text-align:center;">Marca</th>
+
+               <th class="col-fixa-emb" style="text-align:center;">Embalagem</th>
+
+               <th class="col-fixa-3" style="text-align:center;">Qtd</th>
                `;
 
     respostas.forEach(r => {
@@ -10414,12 +10920,14 @@
     const itens = [];
     document.querySelectorAll("#listaItensSolicitacao > div").forEach(linha => {
       const inputs = linha.querySelectorAll("input");
+      const select = linha.querySelector("select");
       if (inputs.length >= 3) {
         const nome = inputs[0].value.trim();
         const marca = inputs[1].value.trim();
+        const embalagem = select ? select.value : "Unidade";
         const qtd = inputs[2].value;
         if (nome && qtd) {
-          itens.push({ nome, marca: marca || "", quantidade: Number(qtd) });
+          itens.push({ nome, marca: marca || "", embalagem, quantidade: Number(qtd) });
         }
       }
     });
@@ -10527,9 +11035,19 @@
     const lista = document.getElementById("listaItensSolicitacao");
     if (lista) {
       lista.innerHTML = `
-       <div style="display:grid; grid-template-columns:2fr 2fr 1fr auto; gap:10px; margin-bottom:10px;">
+       <div style="display:grid; grid-template-columns:2fr 1.5fr 1.5fr 1fr auto; gap:10px; margin-bottom:10px;">
          <input placeholder="Nome do item">
          <input placeholder="Marca (opcional)">
+         <select style="background:#1a1a1a; color:white; border:1px solid #661155; border-radius:5px; padding:4px;">
+           <option value="Balde">Balde</option>
+           <option value="Caixa">Caixa</option>
+           <option value="Fardo">Fardo</option>
+           <option value="Frasco">Frasco</option>
+           <option value="Garrafa">Garrafa</option>
+           <option value="Litro">Litro</option>
+           <option value="Pote">Pote</option>
+           <option value="Unidade" selected>Unidade</option>
+         </select>
          <input type="number" min="1" placeholder="Qtd">
          <button onclick="this.parentElement.remove()">🗑️</button>
        </div>
@@ -10585,13 +11103,22 @@
 
         const div = document.createElement("div");
         div.style.display = "grid";
-        div.style.gridTemplateColumns = "2fr 2fr 1fr auto";
+        div.style.gridTemplateColumns = "2fr 1.5fr 1.5fr 1fr auto";
         div.style.gap = "10px";
         div.style.marginBottom = "10px";
+        
+        const emb = item.embalagem || item.embalagens || "Unidade";
+        const optionsHtml = ["Balde", "Caixa", "Fardo", "Frasco", "Garrafa", "Litro", "Pote", "Unidade"].map(opt =>
+          `<option value="${opt}" ${opt.toLowerCase() === emb.trim().toLowerCase() ? 'selected' : ''}>${opt}</option>`
+        ).join("");
+
         div.innerHTML = `
-             <input value="${item.nome || item.produto || ""}">
-             <input value="${item.marca || ""}">
-             <input type="number" value="${item.quantidade || 1}">
+             <input class="item-nome" value="${item.nome || item.produto || item.item || ""}">
+             <input class="item-marca" value="${item.marca || ""}">
+             <select class="item-embalagem" style="background:#1a1a1a; color:white; border:1px solid #661155; border-radius:5px; padding:4px;">
+               ${optionsHtml}
+             </select>
+             <input class="item-qtd" type="number" value="${item.quantidade || item.qtd || 1}">
                <button onclick="this.parentElement.remove()">🗑️</button>
                `;
 
@@ -11007,8 +11534,9 @@
 
 
   function renderizarItensSolicitacao(sol) {
-    if (!Array.isArray(sol.itens) || sol.itens.length === 0) {
-      return "<p>— Nenhum item manual informado.</p>";
+    const listaItens = sol.itens || sol.produtos || [];
+    if (!Array.isArray(listaItens) || listaItens.length === 0) {
+      return "<p>— Nenhum item informado.</p>";
     }
 
     let html = `
@@ -11017,17 +11545,19 @@
                                <tr>
                                  <th style="padding: 10px; text-align: left;">Item</th>
                                  <th style="padding: 10px; text-align: left;">Marca</th>
+                                 <th style="padding: 10px; text-align: left;">Embalagem</th>
                                  <th style="padding: 10px; text-align: center;">Qtd</th>
                                </tr>
                              </thead>
                              <tbody>
                                `;
 
-    sol.itens.forEach(i => {
+    listaItens.forEach(i => {
       html += `
      <tr style="background:#1a1a1a; border-bottom: 1px solid #333;">
        <td style="padding: 10px; text-align: left;">${i.nome || "-"}</td>
        <td style="padding: 10px; text-align: left;">${i.marca || "-"}</td>
+       <td style="padding: 10px; text-align: left;">${i.embalagem || "Unidade"}</td>
        <td style="padding: 10px; text-align: center;">${i.quantidade ?? i.qtd ?? "-"}</td>
      </tr>
    `;
@@ -11844,8 +12374,20 @@
       descricao = document.getElementById("descricaoCotacaoExcel")?.value.trim();
       document.querySelectorAll("#tabelaCotacaoExcelCorpo tr").forEach(tr => {
         const tds = tr.querySelectorAll("td");
-        if (tds[1]?.innerText && tds[3]?.innerText) {
-          produtos.push({ nome: tds[1].innerText, marca: tds[2]?.innerText || "-", quantidade: Number(tds[3].innerText) });
+        if (tds[1]?.innerText && tds[4]?.innerText) {
+          produtos.push({ 
+            nome: tds[1].innerText, 
+            marca: tds[2]?.innerText || "-", 
+            embalagem: tds[3]?.innerText || "Unidade", 
+            quantidade: Number(tds[4].innerText) 
+          });
+        } else if (tds[1]?.innerText && tds[3]?.innerText) { // Fallback para 4 colunas (antigo)
+          produtos.push({ 
+            nome: tds[1].innerText, 
+            marca: tds[2]?.innerText || "-", 
+            embalagem: "Unidade", 
+            quantidade: Number(tds[3].innerText) 
+          });
         }
       });
     } else if (tipo === "manual") {
@@ -11853,8 +12395,14 @@
       descricao = document.getElementById("descricaoCotacaoManual")?.value.trim();
       document.querySelectorAll("#tabelaManualCorpo tr").forEach(tr => {
         const inputs = tr.querySelectorAll("input");
+        const select = tr.querySelector("select");
         if (inputs[0]?.value && inputs[2]?.value) {
-          produtos.push({ nome: inputs[0].value, marca: inputs[1]?.value || "-", quantidade: Number(inputs[2].value) });
+          produtos.push({ 
+            nome: inputs[0].value, 
+            marca: inputs[1]?.value || "-", 
+            embalagem: select ? select.value : "Unidade", 
+            quantidade: Number(inputs[2].value) 
+          });
         }
       });
     } else if (tipo === "materiais") {
@@ -12569,6 +13117,7 @@ linhas.forEach((tr, index) => {
     if (modal) modal.style.display = 'none';
     document.body.style.overflow = "auto";
     if (window.timerCotacaoInterval) clearInterval(window.timerCotacaoInterval);
+    cotacaoRespostaAtual = null;
   }
 
   function configurarModalResposta(modo) {
@@ -12707,7 +13256,10 @@ linhas.forEach((tr, index) => {
 
     // B. Respostas Gravadas no Objeto Cotação
     if (cot && cot.respostasFornecedores) {
-      cot.respostasFornecedores.forEach(addResposta);
+      const respostasArr = Array.isArray(cot.respostasFornecedores) 
+        ? cot.respostasFornecedores 
+        : Object.values(cot.respostasFornecedores);
+      respostasArr.forEach(addResposta);
     }
 
     // B. Fonte Local (Chaves res_...)
@@ -13223,15 +13775,20 @@ linhas.forEach((tr, index) => {
 
     // 2. Lógica de Status (Texto)
     let textoStatus = "";
+    const btnConfirmaRec = document.getElementById("btnConfirmarRecebimentoCotacao");
+
     if (cotacao.status === "aprovacao") {
       textoStatus = "⏳ Aguardando Aprovação";
     } else if (cotacao.status === "fechada") {
       textoStatus = "🔒 Fechada (Pedido Gerado)";
       if (!containerOverride && divAcoesFechada) divAcoesFechada.style.display = "flex";
+      if (!containerOverride && btnConfirmaRec) btnConfirmaRec.style.display = "block";
       window.cotacaoAtualPDF = cotacao;
     } else if (cotacao.status === "finalizada") {
       textoStatus = "✅ Finalizada (Recebida & Avaliada)";
-      if (!containerOverride && divAcoesFechada) divAcoesFechada.style.display = "none";
+      if (!containerOverride && divAcoesFechada) divAcoesFechada.style.display = "flex";
+      if (!containerOverride && btnConfirmaRec) btnConfirmaRec.style.display = "none";
+      window.cotacaoAtualPDF = cotacao;
     }
 
     // Se estiver no modal, atualiza o statusDiv global. Se estiver no acordeão, guardamos para o HTML.
@@ -13248,6 +13805,8 @@ linhas.forEach((tr, index) => {
     let respostas = [];
     if (Array.isArray(cotacao.respostasFornecedores)) {
       respostas = [...cotacao.respostasFornecedores];
+    } else if (cotacao.respostasFornecedores && typeof cotacao.respostasFornecedores === "object") {
+      respostas = Object.values(cotacao.respostasFornecedores);
     }
 
     if (respostas.length === 0) {
@@ -13332,6 +13891,7 @@ linhas.forEach((tr, index) => {
                    <th style="width:45px; text-align:center;" class="col-idx">#</th>
                    <th class="col-fixa" style="text-align:left; padding-left:10px;">Item</th>
                    <th class="col-fixa-2" style="text-align:center;">Marca</th>
+                   <th class="col-fixa-emb" style="text-align:center;">Embalagem</th>
                    <th class="col-fixa-3" style="text-align:center;">Qtd</th>`;
 
     // Cabeçalhos dos fornecedores
@@ -13403,15 +13963,16 @@ linhas.forEach((tr, index) => {
 
       html += `<tr style="border-bottom:1px solid #222;">
                <td style="text-align:center; padding:10px;"></td>
-               <td style="text-align:center;">
+               <td style="text-align:center;" class="col-idx">
                  <span style="display:inline-block; padding:4px 8px; background:#000; border:1px solid #7e22ce; color:#d8b4fe; border-radius:6px; font-weight:bold; font-size:11px;">#${idx + 1}</span>
                </td>
-               <td style="padding:12px 10px; color:white;">
+               <td style="padding:12px 10px; color:white;" class="col-fixa">
                    <div style="font-weight:bold; font-size:14px; margin-bottom:2px;">${nomeItem}</div>
                    ${(nomeProd !== nomeItem && nomeProd) ? `<div style="font-size:12px; color:#888;">${nomeProd}</div>` : ''}
                </td>
-               <td style="text-align:center; color:#ccc;">${prod.marca || "-"}</td>
-               <td style="text-align:center; color:#ccc;">${qtd}</td>`;
+               <td style="text-align:center; color:#ccc;" class="col-fixa-2">${prod.marca || "-"}</td>
+               <td style="text-align:center; color:#ccc;" class="col-fixa-emb">${prod.embalagem || "Unidade"}</td>
+               <td style="text-align:center; color:#ccc;" class="col-fixa-3">${qtd}</td>`;
 
       respostas.forEach(r => {
         const pItem = (r.itens || []).find(it =>
@@ -13471,7 +14032,7 @@ linhas.forEach((tr, index) => {
         <tfoot style="background: #0a0a0a; border-top: 2px solid #661155; font-weight: bold;">
             <!-- LINHA 1: TOTAIS BRUTOS -->
             <tr style="height: 50px; border-bottom: 1px solid #222;">
-                <td colspan="5" style="text-align: right; padding-right: 20px; color: #aaa; font-size: 13px; text-transform: uppercase;">
+                <td colspan="6" style="text-align: right; padding-right: 20px; color: #aaa; font-size: 13px; text-transform: uppercase;">
                     <i class="fa-solid fa-calculator" style="margin-right: 8px;"></i>Totais Brutos:
                 </td>
                 ${totaisBrutos.map(t => `
@@ -13485,7 +14046,7 @@ linhas.forEach((tr, index) => {
             </tr>
             <!-- LINHA 2: VALOR GANHANDO / MELHOR COMPRA -->
             <tr style="height: 60px;">
-                <td colspan="5" style="text-align: right; padding-right: 20px; color: #3ab9b6; font-size: 14px; text-transform: uppercase;">
+                <td colspan="6" style="text-align: right; padding-right: 20px; color: #3ab9b6; font-size: 14px; text-transform: uppercase;">
                     <i class="fa-solid fa-trophy" style="margin-right: 8px;"></i>Valor Ganhando:
                 </td>
                 ${valorGanhando.map(t => `
@@ -14396,8 +14957,353 @@ linhas.forEach((tr, index) => {
   };
 
   setTimeout(window.atualizarContadorScorecard, 2000);
-</script>
 
+  /* ======================================================
+     📊 ECONOMÔMETRO E RELATÓRIOS
+  ====================================================== */
+  window.abrirEconomometro = function() {
+    console.log("🚀 Abrindo Economômetro...");
+    try {
+        const dbd = document.getElementById('dashboard'); if (dbd) dbd.style.display = 'none';
+        const lgc = document.getElementById('login-container'); if (lgc) lgc.style.display = 'none';
+        const mna = document.getElementById('main-app'); if (mna) mna.style.display = 'none';
+        
+        document.querySelectorAll('section').forEach(s => {
+          if (s.id !== 'secEconomometro') s.style.display = 'none';
+        });
+
+        const sec = document.getElementById('secEconomometro');
+        if (sec) {
+            sec.style.setProperty('display', 'block', 'important');
+            sec.style.zIndex = "100";
+        }
+
+        renderizarEconomometro();
+    } catch (e) { 
+        console.error("Erro Economômetro:", e);
+    }
+  };
+
+  window.renderizarEconomometro = function() {
+    let localCotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
+    let fechadas = localCotacoes.filter(c => c.status === "fechada" || c.status === "finalizada");
+    
+    let ecoMes = 0;
+    let ecoAno = 0;
+    let tempoSoma = 0;
+    let qtdTempos = 0;
+    
+    const hoje = new Date();
+    const mesAtual = hoje.getMonth();
+    const anoAtual = hoje.getFullYear();
+    
+    const dadosMes = [0,0,0,0,0,0]; 
+    const labelsMes = [];
+    
+    for (let i=5; i>=0; i--) {
+        const d = new Date(anoAtual, mesAtual - i, 1);
+        labelsMes.push(d.toLocaleString('pt-BR', { month: 'short' }).toUpperCase());
+    }
+    
+    let matVsServ = { mat: 0, serv: 0 };
+    
+    fechadas.forEach(c => {
+       let dataObj = new Date();
+       if (c.dataFechamento) {
+           const parts = c.dataFechamento.replace(',', '').split(' ')[0].split('/');
+           if (parts.length === 3) dataObj = new Date(parts[2], parts[1]-1, parts[0]);
+           else dataObj = new Date(c.dataFechamento); // fallback
+       } else if (c.criadoEm) {
+           dataObj = new Date(c.criadoEm);
+       }
+       
+       let isMesAtual = false;
+       let isAnoAtual = false;
+       let diffMeses = -1;
+       
+       if (!isNaN(dataObj.getTime())) {
+           isMesAtual = (dataObj.getMonth() === mesAtual && dataObj.getFullYear() === anoAtual);
+           isAnoAtual = (dataObj.getFullYear() === anoAtual);
+           diffMeses = (anoAtual - dataObj.getFullYear()) * 12 + (mesAtual - dataObj.getMonth());
+       }
+       
+       let tipoReal = (c.tipo || "").toLowerCase();
+       if (tipoReal === "materiais" || tipoReal === "materiais_excel" || tipoReal === "manual" || tipoReal === "excel") matVsServ.mat++;
+       else if (tipoReal === "servicos") matVsServ.serv++;
+       
+       let economiaCotacao = 0;
+       const respostas = Array.isArray(c.respostasFornecedores) ? c.respostasFornecedores : Object.values(c.respostasFornecedores || {});
+       
+       let itensList = c.itens || c.produtos || [];
+       if (itensList.length > 0 && respostas.length > 1) {
+           itensList.forEach(item => {
+               let precos = [];
+               respostas.forEach(r => {
+                   let rItem = (r.itens || []).find(i => (i.nome||"").trim().toLowerCase() === (item.nome||"").trim().toLowerCase());
+                   if (rItem && rItem.preco && Number(rItem.preco) > 0) precos.push(Number(rItem.preco));
+               });
+               if (precos.length > 1) {
+                   precos.sort((a,b) => a - b);
+                   let menor = precos[0];
+                   
+                   let precosValidos = precos.filter(p => p <= menor * 3);
+                   if (precosValidos.length > 1) {
+                       let somaOutros = precosValidos.slice(1).reduce((a,b)=>a+b, 0);
+                       let mediaOutros = somaOutros / (precosValidos.length - 1);
+                       economiaCotacao += (mediaOutros - menor) * (Number(item.quantidade) || 1);
+                   }
+               }
+           });
+       }
+       
+       if (isMesAtual) ecoMes += economiaCotacao;
+       if (isAnoAtual) ecoAno += economiaCotacao;
+       
+       if (diffMeses >= 0 && diffMeses <= 5) {
+           dadosMes[5 - diffMeses] += economiaCotacao;
+       }
+       
+       let dataCriacaoStr = c.criadoEm || c.dataCriacao;
+       if (dataCriacaoStr && c.dataFechamento) {
+           let partsCriacao = dataCriacaoStr.replace(',', '').split(' ')[0].split('/');
+           let d1 = new Date();
+           if (partsCriacao.length === 3) d1 = new Date(partsCriacao[2], partsCriacao[1]-1, partsCriacao[0]);
+           else d1 = new Date(dataCriacaoStr);
+           
+           let d2 = dataObj; // dataObj already parsed dataFechamento above safely
+           
+           if (!isNaN(d1.getTime()) && !isNaN(d2.getTime())) {
+               let diffTime = Math.abs(d2 - d1);
+               let diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+               tempoSoma += diffDays;
+               qtdTempos++;
+           }
+       }
+    });
+    
+    document.getElementById("ecoMes").innerText = `R$ ${ecoMes.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+    document.getElementById("ecoAno").innerText = `R$ ${ecoAno.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+    document.getElementById("ecoQtd").innerText = fechadas.length;
+    document.getElementById("ecoTempo").innerText = qtdTempos > 0 ? `${Math.round(tempoSoma/qtdTempos)} dias` : '0 dias';
+    
+    const ctxEco = document.getElementById('graficoEconomia').getContext('2d');
+    if (window.chartEco) window.chartEco.destroy();
+    window.chartEco = new Chart(ctxEco, {
+        type: 'bar',
+        data: {
+            labels: labelsMes,
+            datasets: [{
+                label: 'Economia Mensal (R$)',
+                data: dadosMes,
+                backgroundColor: '#3ab9b6',
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: { beginAtZero: true, grid: { color: '#333' }, ticks: { color: '#ccc' } },
+                x: { grid: { display: false }, ticks: { color: '#ccc' } }
+            },
+            plugins: { legend: { display: false } }
+        }
+    });
+    
+    const ctxTipo = document.getElementById('graficoTipo').getContext('2d');
+    if (window.chartTipo) window.chartTipo.destroy();
+    window.chartTipo = new Chart(ctxTipo, {
+        type: 'doughnut',
+        data: {
+            labels: ['Materiais', 'Serviços'],
+            datasets: [{
+                data: [matVsServ.mat, matVsServ.serv],
+                backgroundColor: ['#661155', '#f39c12'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { position: 'bottom', labels: { color: '#ccc' } } },
+            cutout: '70%'
+        }
+    });
+  };
+
+  window.abrirDetalhesReputacao = async function() {
+    const u = getUsuarioLogado();
+    if (!u) return;
+    const email = u.email;
+    
+    let docs = [];
+    try {
+        if (typeof db !== "undefined") {
+            const snap = await db.collection("scorecards").where("idFornecedor", "==", email).get();
+            docs = snap.docs.map(d => d.data());
+        }
+    } catch (e) { console.warn("Erro ao buscar avaliações no DB", e); }
+    
+    if (docs.length === 0) {
+        // Fallback local
+        const scs = JSON.parse(localStorage.getItem('scorecards')) || [];
+        docs = scs.filter(s => s.idFornecedor === email);
+    }
+    
+    let html = "";
+    docs.sort((a,b) => new Date(b.data || 0) - new Date(a.data || 0));
+    
+    docs.forEach(c => {
+       const dStr = c.data ? new Date(c.data).toLocaleDateString('pt-BR') : "-";
+       const n = c.notas || {};
+       let corNota = c.media >= 4 ? '#00ff99' : (c.media >= 3 ? '#fbbf24' : '#ff5555');
+       
+       let crit = [];
+       if(n.qualidade) crit.push(`Qualidade: ${n.qualidade}`);
+       if(n.pontualidade) crit.push(`Pontualidade: ${n.pontualidade}`);
+       if(n.preco) crit.push(`Preço: ${n.preco}`);
+       if(n.tecnica) crit.push(`Técnica: ${n.tecnica}`);
+       if(n.atendimento) crit.push(`Atend: ${n.atendimento}`);
+       
+       html += `
+         <tr style="border-bottom: 1px solid #333; background: #1a1a1a;">
+           <td style="padding:12px; text-align:center; color:#ccc;">${dStr}</td>
+           <td style="padding:12px; text-align:center; font-weight:bold; color:${corNota}; font-size:18px;">
+             ${Number(c.media).toFixed(1)} <i class="fa-solid fa-star" style="font-size:12px;"></i>
+           </td>
+           <td style="padding:12px; color:#aaa; font-size:12px;">
+             ${crit.join(' | ')}
+           </td>
+           <td style="padding:12px; color:#fff; font-size:13px; font-style:italic;">
+             "${c.observacao || 'Sem observações adicionais.'}"
+           </td>
+         </tr>
+       `;
+    });
+    
+    if (html === "") {
+        html = `<tr><td colspan="4" style="text-align:center; padding:30px; color:#666;">Nenhuma avaliação detalhada encontrada.</td></tr>`;
+    }
+    
+    document.getElementById("listaDetalhesReputacaoCorpo").innerHTML = html;
+    document.getElementById("modalDetalhesReputacao").style.display = "flex";
+  };
+
+  window.abrirEconomiaPorCotacao = function() {
+    let localCotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
+    let fechadas = localCotacoes.filter(c => c.status === "fechada" || c.status === "finalizada");
+    
+    let html = "";
+    
+    fechadas.sort((a,b) => {
+        let d1 = a.criadoEm ? new Date(a.criadoEm) : new Date(0);
+        let d2 = b.criadoEm ? new Date(b.criadoEm) : new Date(0);
+        return d2 - d1;
+    });
+    
+    fechadas.forEach(c => {
+       let economiaCotacao = 0;
+       const respostas = Array.isArray(c.respostasFornecedores) ? c.respostasFornecedores : Object.values(c.respostasFornecedores || {});
+       
+       let itensList = c.itens || c.produtos || [];
+       if (itensList.length > 0 && respostas.length > 1) {
+           itensList.forEach(item => {
+               let precos = [];
+               respostas.forEach(r => {
+                   let rItem = (r.itens || []).find(i => (i.nome||"").trim().toLowerCase() === (item.nome||"").trim().toLowerCase());
+                   if (rItem && rItem.preco && Number(rItem.preco) > 0) precos.push(Number(rItem.preco));
+               });
+               if (precos.length > 1) {
+                   precos.sort((a,b) => a - b);
+                   let menor = precos[0];
+                   
+                   let precosValidos = precos.filter(p => p <= menor * 3);
+                   if (precosValidos.length > 1) {
+                       let somaOutros = precosValidos.slice(1).reduce((a,b)=>a+b, 0);
+                       let mediaOutros = somaOutros / (precosValidos.length - 1);
+                       economiaCotacao += (mediaOutros - menor) * (Number(item.quantidade) || 1);
+                   }
+               }
+           });
+       }
+       
+       let dateStr = "-";
+       if (c.dataFechamento) {
+           dateStr = c.dataFechamento.replace(',', '').split(' ')[0];
+       } else if (c.criadoEm) {
+           dateStr = new Date(c.criadoEm).toLocaleDateString('pt-BR');
+       }
+       
+       html += `
+         <tr style="border-bottom: 1px solid #333; background: #1a1a1a;">
+           <td style="padding:12px; color:#fff;">
+             <strong>${c.numero || c.id}</strong><br>
+             <span style="font-size:11px; color:#888;">${c.descricao || 'Sem descrição'}</span>
+           </td>
+           <td style="padding:12px; text-align:center; color:#ccc;">${dateStr}</td>
+           <td style="padding:12px; text-align:right; font-weight:bold; color:${economiaCotacao > 0 ? '#00ff99' : '#888'};">
+             R$ ${economiaCotacao.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}
+           </td>
+         </tr>
+       `;
+    });
+    
+    if (html === "") {
+        html = `<tr><td colspan="3" style="text-align:center; padding:30px; color:#666;">Nenhuma cotação finalizada.</td></tr>`;
+    }
+    
+    document.getElementById("listaEconomiaCotacaoCorpo").innerHTML = html;
+    document.getElementById("modalEconomiaCotacao").style.display = "flex";
+  };
+
+  window.exportarPlanilhaRespostaParaExcel = function() {
+      try {
+          if (!cotacaoRespostaAtual) {
+              alert("Nenhuma cotação aberta no momento.");
+              return;
+          }
+          const c = cotacaoRespostaAtual;
+          
+          const header = ["Item", "Marca", "Embalagem", "Quantidade", "Preço Unitário (R$)"];
+          const rows = [];
+          
+          const itensBrutos = c.produtos || c.itens || [];
+          const listaItens = Array.isArray(itensBrutos) ? itensBrutos : Object.values(itensBrutos);
+          
+          if (listaItens.length === 0) {
+              alert("Esta cotação não possui itens listados.");
+              return;
+          }
+          
+          listaItens.forEach(p => {
+              rows.push([
+                  p.nome || "",
+                  p.marca || "-",
+                  p.embalagem || "Unidade",
+                  p.quantidade || 1,
+                  ""
+              ]);
+          });
+          
+          if (typeof XLSX === "undefined") {
+              alert("Biblioteca do Excel não carregada! Verifique sua conexão com a internet.");
+              return;
+          }
+          
+          const ws_data = [header, ...rows];
+          const ws = XLSX.utils.aoa_to_sheet(ws_data);
+          
+          ws['!cols'] = [{wch: 50}, {wch: 20}, {wch: 15}, {wch: 12}, {wch: 20}];
+          
+          const wb = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(wb, ws, "Itens");
+          
+          XLSX.writeFile(wb, `Cotacao_${c.numero || c.id}_Itens.xlsx`);
+      } catch (err) {
+          console.error("Erro ao exportar para Excel:", err);
+          alert("Ops! Ocorreu um erro ao baixar a planilha: " + err.message);
+      }
+  };
+
+</script>
 </script>
 
 </body>
