@@ -14740,6 +14740,7 @@ linhas.forEach((tr, index) => {
         const dbd = document.getElementById('dashboard'); if (dbd) dbd.style.display = 'none';
         const lgc = document.getElementById('login-container'); if (lgc) lgc.style.display = 'none';
         const mna = document.getElementById('main-app'); if (mna) mna.style.display = 'none';
+        const cr = document.getElementById('cotacoesRespondidas'); if (cr) cr.style.display = 'none';
 
         // 2. Garante que o Scorecard apareça
         const sec = document.getElementById('gestaoScorecards');
@@ -14826,20 +14827,52 @@ linhas.forEach((tr, index) => {
     `).join("");
   };
 
+  window.filaAvaliacaoScorecard = [];
+  window.numeroCotacaoAvaliacao = "";
+
+  window.avancarFilaAvaliacao = function() {
+      if (!window.filaAvaliacaoScorecard || window.filaAvaliacaoScorecard.length === 0) {
+          alert("✅ Todas as avaliações desta cotação foram concluídas!");
+          window.fecharModalAvaliacao();
+          window.mudarTabScorecard('ranking');
+          if (typeof window.atualizarContadorScorecard === "function") window.atualizarContadorScorecard();
+          return;
+      }
+      
+      const fornecedorAtual = window.filaAvaliacaoScorecard[0];
+      const numeroCotacao = window.numeroCotacaoAvaliacao;
+      
+      const cid = document.getElementById('avalCotacaoId'); if (cid) cid.value = numeroCotacao;
+      const fid = document.getElementById('avalFornecedorId'); if (fid) fid.value = fornecedorAtual.email;
+      const fnome = document.getElementById('avalFornecedorNome'); if (fnome) fnome.value = fornecedorAtual.nome;
+      const info = document.getElementById('infoFornecedorAvaliar'); 
+      if (info) info.innerText = `Avaliando Fornecedor: ${fornecedorAtual.nome} | Cotação: ${numeroCotacao} (${window.filaAvaliacaoScorecard.length} restante(s))`;
+      
+      document.querySelectorAll('#modalAvaliacaoScorecard input[type="radio"]').forEach(i => i.checked = false);
+      const obs = document.getElementById('avalObservacao'); if (obs) obs.value = "";
+      
+      const modal = document.getElementById('modalAvaliacaoScorecard'); if (modal) modal.style.display = 'flex';
+  };
+
   window.prepararAvaliacao = function(numeroCotacao) {
     const cotacoes = JSON.parse(localStorage.getItem('cotacoes')) || [];
     const cot = cotacoes.find(c => c.numero === numeroCotacao);
     if (!cot || !cot.adjudicacao || cot.adjudicacao.length === 0) {
       alert("Erro: Dados de adjudicação não encontrados."); return;
     }
-    const vencedor = cot.adjudicacao[0];
-    const cid = document.getElementById('avalCotacaoId'); if (cid) cid.value = numeroCotacao;
-    const fid = document.getElementById('avalFornecedorId'); if (fid) fid.value = vencedor.emailFornecedor;
-    const fnome = document.getElementById('avalFornecedorNome'); if (fnome) fnome.value = vencedor.fornecedor;
-    const info = document.getElementById('infoFornecedorAvaliar'); if (info) info.innerText = `Fornecedor: ${vencedor.fornecedor} | Cotação: ${numeroCotacao}`;
-    document.querySelectorAll('#modalAvaliacaoScorecard input[type="radio"]').forEach(i => i.checked = false);
-    const obs = document.getElementById('avalObservacao'); if (obs) obs.value = "";
-    const modal = document.getElementById('modalAvaliacaoScorecard'); if (modal) modal.style.display = 'flex';
+    
+    // Obter fornecedores únicos que venceram itens
+    const vencedoresUnicos = [];
+    cot.adjudicacao.forEach(adj => {
+       if (!vencedoresUnicos.find(u => u.email === adj.emailFornecedor)) {
+           vencedoresUnicos.push({email: adj.emailFornecedor, nome: adj.fornecedor});
+       }
+    });
+    
+    window.filaAvaliacaoScorecard = vencedoresUnicos;
+    window.numeroCotacaoAvaliacao = numeroCotacao;
+    
+    window.avancarFilaAvaliacao();
   };
 
   window.fecharModalAvaliacao = function() { 
@@ -14869,10 +14902,16 @@ linhas.forEach((tr, index) => {
       scs.push(scorecard);
       localStorage.setItem('scorecards', JSON.stringify(scs));
       await window.recalcularMediaFornecedor(semail);
-      alert("✅ Avaliação salva!");
-      window.fecharModalAvaliacao();
-      window.mudarTabScorecard('ranking');
-      window.atualizarContadorScorecard();
+      alert(`✅ Avaliação de ${snome} salva!`);
+      
+      if (window.filaAvaliacaoScorecard && window.filaAvaliacaoScorecard.length > 0) {
+          window.filaAvaliacaoScorecard.shift(); // remove o atual do início da fila
+          window.avancarFilaAvaliacao(); // chama o próximo
+      } else {
+          window.fecharModalAvaliacao();
+          window.mudarTabScorecard('ranking');
+          if (typeof window.atualizarContadorScorecard === "function") window.atualizarContadorScorecard();
+      }
     } catch (err) { alert("Erro ao salvar."); }
   };
 
