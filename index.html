@@ -368,6 +368,7 @@
       border-radius: 6px;
       padding: 10px;
       margin-bottom: 8px;
+      box-sizing: border-box;
     }
 
     .linha-cotacao .acoes button {
@@ -2675,15 +2676,104 @@
       <p>Escolha como deseja criar sua cotação:</p>
 
       <div style="display:flex;flex-direction:column;gap:18px;margin-top:25px;">
-        <button onclick="abrirCotacaoExcel()" style="padding:14px;font-size:15px;">📊 Importar via Excel</button>
-        <button onclick="abrirCotacaoManual()" style="padding:14px;font-size:15px;">🧾 Criar Manualmente</button>
-        <button onclick="abrirCotacaoMateriais()" style="padding:14px;font-size:15px;">📦 A partir de Materiais</button>
-        <button onclick="abrirCotacaoServicos()" style="padding:14px;font-size:15px;">🛠️ A partir de Serviços</button>
+        <button onclick="abrirCotacaoExcel()" style="padding:14px; font-size:15px; font-weight:bold; font-family:inherit;">📊 Importar via Excel</button>
+        <button onclick="abrirCotacaoManual()" style="padding:14px; font-size:15px; font-weight:bold; font-family:inherit;">🧾 Criar Manualmente</button>
+        <button onclick="abrirCotacaoMateriais()" style="padding:14px; font-size:15px; font-weight:bold; font-family:inherit;">📦 A partir de Materiais</button>
+        <button onclick="abrirCotacaoServicos()" style="padding:14px; font-size:15px; font-weight:bold; font-family:inherit;">🛠️ A partir de Serviços</button>
+        <button onclick="abrirCompraWeb()" style="padding:14px; font-size:15px; font-weight:bold; font-family:inherit;">🛒 Registrar Compra Web</button>
       </div>
     </div>
   </div>
 
   <input type="file" id="arquivoExcel" accept=".xlsx" style="display:none;" onchange="arquivoSelecionado(event)">
+
+  <!-- COMPRA WEB / B2C -->
+  <section id="compraWeb" style="display:none;">
+    <header>
+      <button class="btn-sair" onclick="voltarMenu()">🏠 Menu Principal</button>
+      <h1>Registrar Compra Web</h1>
+    </header>
+
+    <div style="background:#111;border:1px solid #661155;border-radius:10px;padding:20px;margin:30px auto;width:90%;max-width:900px;color:white;box-shadow:0 0 10px rgba(102,17,85,0.6);text-align:left;">
+      <h2 style="color:#661155;">🛒 Pesquisa de Mercado Online</h2>
+      <p style="color:#aaa;">Registre aqui os orçamentos que você pesquisou na internet. A cotação irá direto para aprovação.</p>
+
+      <div style="display:flex; gap:15px; margin-top:20px;">
+          <div style="flex:1;">
+              <label>O que você está comprando? (Item/Produto)</label>
+              <input type="text" id="cwNomeItem" placeholder="Ex: Monitor Dell 24..." style="width:100%;box-sizing:border-box;margin-bottom:15px;background:#1a1a1a;color:white;border:1px solid #661155;border-radius:5px;padding:8px;">
+          </div>
+          <div style="width:100px;">
+              <label>Qtd</label>
+              <input type="number" id="cwQtdItem" value="1" min="1" style="width:100%;box-sizing:border-box;margin-bottom:15px;background:#1a1a1a;color:white;border:1px solid #661155;border-radius:5px;padding:8px;">
+          </div>
+      </div>
+
+      <!-- Vencedor -->
+      <div style="background:#0a0a0a; border:1px solid #10b981; border-radius:5px; padding:15px; margin-bottom:15px;">
+          <h3 style="color:#10b981; margin-top:0;">🏆 Opção 1 (Vencedora - A que você escolheu)</h3>
+          <div style="display:flex; gap:10px;">
+              <div style="flex:1;">
+                  <label>Loja / Site</label>
+                  <input type="text" id="cwLoja1" placeholder="Ex: Mercado Livre" style="width:100%;box-sizing:border-box;background:#1a1a1a;color:white;border:1px solid #661155;border-radius:5px;padding:8px;">
+              </div>
+              <div style="width:150px;">
+                  <label>Preço (R$)</label>
+                  <input type="text" id="cwPreco1" placeholder="0,00" style="width:100%;box-sizing:border-box;background:#1a1a1a;color:white;border:1px solid #661155;border-radius:5px;padding:8px;">
+              </div>
+          </div>
+          <label style="margin-top:10px; display:block;">Link do Anúncio</label>
+          <input type="text" id="cwLink1" placeholder="https://..." style="width:100%;box-sizing:border-box;background:#1a1a1a;color:white;border:1px solid #661155;border-radius:5px;padding:8px;margin-bottom:10px;">
+          
+          <label>Anexar Print/Comprovante (Imagem ou PDF)</label>
+          <div style="display:flex; align-items:center; background:#111; border:1px solid #661155; border-radius:5px; padding:4px 10px; min-height:38px; width:100%; box-sizing:border-box;">
+             <button type="button" onclick="document.getElementById('cwAnexo1').click()" style="background:#efefef; color:#000; border:1px solid #767676; border-radius:2px; padding:2px 10px; font-size:13px; cursor:pointer; margin-right:12px;">Escolher arquivo</button>
+             <span id="cwLabelAnexo1" style="font-size:13px; color:#aaa; flex:1;">Nenhum arquivo escolhido</span>
+             <input type="file" id="cwAnexo1" accept=".pdf,image/*" style="display:none;" onchange="const span = document.getElementById('cwLabelAnexo1'); if(this.files.length){ span.innerText = this.files[0].name; span.style.color = '#fff'; } else { span.innerText = 'Nenhum arquivo escolhido'; span.style.color = '#aaa'; }">
+          </div>
+      </div>
+
+      <!-- Concorrente 2 -->
+      <div style="background:#1a1a1a; border:1px solid #333; border-radius:5px; padding:15px; margin-bottom:15px;">
+          <h3 style="color:#aaa; margin-top:0;">⚖️ Opção 2 (Concorrente)</h3>
+          <div style="display:flex; gap:10px;">
+              <div style="flex:1;">
+                  <label>Loja / Site</label>
+                  <input type="text" id="cwLoja2" placeholder="Ex: Amazon" style="width:100%;box-sizing:border-box;background:#111;color:white;border:1px solid #333;border-radius:5px;padding:8px;">
+              </div>
+              <div style="width:150px;">
+                  <label>Preço (R$)</label>
+                  <input type="text" id="cwPreco2" placeholder="0,00" style="width:100%;box-sizing:border-box;background:#111;color:white;border:1px solid #333;border-radius:5px;padding:8px;">
+              </div>
+          </div>
+          <label style="margin-top:10px; display:block;">Link do Anúncio</label>
+          <input type="text" id="cwLink2" placeholder="https://..." style="width:100%;box-sizing:border-box;background:#111;color:white;border:1px solid #333;border-radius:5px;padding:8px;">
+      </div>
+
+      <!-- Concorrente 3 -->
+      <div style="background:#1a1a1a; border:1px solid #333; border-radius:5px; padding:15px; margin-bottom:15px;">
+          <h3 style="color:#aaa; margin-top:0;">⚖️ Opção 3 (Concorrente)</h3>
+          <div style="display:flex; gap:10px;">
+              <div style="flex:1;">
+                  <label>Loja / Site</label>
+                  <input type="text" id="cwLoja3" placeholder="Ex: KaBuM" style="width:100%;box-sizing:border-box;background:#111;color:white;border:1px solid #333;border-radius:5px;padding:8px;">
+              </div>
+              <div style="width:150px;">
+                  <label>Preço (R$)</label>
+                  <input type="text" id="cwPreco3" placeholder="0,00" style="width:100%;box-sizing:border-box;background:#111;color:white;border:1px solid #333;border-radius:5px;padding:8px;">
+              </div>
+          </div>
+          <label style="margin-top:10px; display:block;">Link do Anúncio</label>
+          <input type="text" id="cwLink3" placeholder="https://..." style="width:100%;box-sizing:border-box;background:#111;color:white;border:1px solid #333;border-radius:5px;padding:8px;">
+      </div>
+
+      <div style="text-align:right; margin-top:20px;">
+          <button id="btnSalvarCompraWeb" onclick="salvarCompraWeb()" style="padding:12px 25px; font-size:16px;">🚀 Enviar para Aprovação</button>
+      </div>
+
+    </div>
+  </section>
+
 
   <!-- COTAÇÃO VIA EXCEL -->
   <section id="cotacaoExcel" style="display:none;">
@@ -4071,13 +4161,15 @@
       <div style="text-align:center; margin-bottom:10px;">
         <button onclick="toggleUsuariosEmpresa()">🏢 Lista de Usuários da Empresa</button>
       </div>
-      <div id="listaUsuariosEmpresa" style="display:none; margin-top:15px;"></div>
+      <input type="text" id="buscaUsuariosEmpresa" placeholder="Buscar por Nome, E-mail ou Perfil..." style="width:100%; margin-bottom:10px; padding:10px; border-radius:6px; border:1px solid #661155; display:none; background:#1a1a1a; color:white; box-sizing:border-box;" onkeyup="window.filtrarUsuariosLista('listaUsuariosEmpresa', this.value)">
+      <div id="listaUsuariosEmpresa" style="display:none; margin-top:15px; flex-direction:column; gap:10px;"></div>
 
       <h2 style="color:#661155; margin-top:30px;">🚚 Usuários Fornecedores</h2>
       <div style="text-align:center; margin-bottom:10px;">
         <button onclick="toggleUsuariosFornecedores()">🚚 Lista de Usuários Fornecedores</button>
       </div>
-      <div id="listaUsuariosFornecedores" style="display:none; margin-top:15px;"></div>
+      <input type="text" id="buscaUsuariosFornecedores" placeholder="Buscar por Nome, Empresa ou E-mail..." style="width:100%; margin-bottom:10px; padding:10px; border-radius:6px; border:1px solid #661155; display:none; background:#1a1a1a; color:white; box-sizing:border-box;" onkeyup="window.filtrarUsuariosLista('listaUsuariosFornecedores', this.value)">
+      <div id="listaUsuariosFornecedores" style="display:none; margin-top:15px; flex-direction:column; gap:10px;"></div>
 
       <hr style="margin:40px 0; border-color:#333;">
 
@@ -4472,9 +4564,14 @@
           <!-- JS preenche aqui -->
           </div>
         </div>
-        <button onclick="window.exportarMapaPDF()" style="background:#198754; color:white; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; font-weight:bold; display:flex; align-items:center; gap:8px; margin-right:60px;">
-          <i class="fa-solid fa-file-pdf"></i> Exportar PDF do Mapa
-        </button>
+        <div style="display:flex; gap:10px; margin-right:60px;">
+          <button onclick="window.exportarMapaPDF()" style="background:#198754; color:white; border:none; padding:8px 12px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold; display:flex; align-items:center; gap:6px;">
+            <i class="fa-solid fa-file-pdf"></i> PDF
+          </button>
+          <button onclick="window.exportarMapaExcel()" style="background:#0056b3; color:white; border:none; padding:8px 12px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold; display:flex; align-items:center; gap:6px;">
+            <i class="fa-solid fa-file-excel"></i> Excel
+          </button>
+        </div>
       </div>
 
       <!-- aqui entra SOMENTE a matriz -->
@@ -5198,18 +5295,24 @@
 
   function toggleUsuariosEmpresa() {
     const div = document.getElementById("listaUsuariosEmpresa");
+    const busca = document.getElementById("buscaUsuariosEmpresa");
     if (!div) return;
 
-    const aberto = div.style.display === "block";
+    const aberto = div.style.display === "block" || div.style.display === "flex";
 
     // fecha
     if (aberto) {
       div.style.display = "none";
+      if (busca) busca.style.display = "none";
       return;
     }
 
     // abre
-    div.style.display = "block";
+    div.style.display = "flex";
+    if (busca) {
+      busca.style.display = "block";
+      busca.value = "";
+    }
     carregarUsuarios();
   }
 
@@ -5246,20 +5349,40 @@
 
   function toggleUsuariosFornecedores() {
     const div = document.getElementById("listaUsuariosFornecedores");
+    const busca = document.getElementById("buscaUsuariosFornecedores");
     if (!div) return;
 
-    const aberto = div.style.display === "block";
+    const aberto = div.style.display === "block" || div.style.display === "flex";
 
     // fecha
     if (aberto) {
       div.style.display = "none";
+      if (busca) busca.style.display = "none";
       return;
     }
 
     // abre
-    div.style.display = "block";
+    div.style.display = "flex";
+    if (busca) {
+      busca.style.display = "block";
+      busca.value = "";
+    }
     carregarUsuarios();
   }
+
+  window.filtrarUsuariosLista = function(listaId, termo) {
+    const divLista = document.getElementById(listaId);
+    if (!divLista) return;
+    
+    // Supondo que carregarUsuarios / listarUsuarios crie divs com a classe 'linha-cotacao'
+    const items = divLista.getElementsByClassName("linha-cotacao");
+    const q = termo.toLowerCase().trim();
+    
+    for(let i = 0; i < items.length; i++) {
+        const txt = items[i].innerText.toLowerCase();
+        items[i].style.display = txt.includes(q) ? "flex" : "none";
+    }
+  };
 
   /* 🔑 escopo global */
   let respostaEmEdicao = null;
@@ -6038,6 +6161,183 @@
     localStorage.setItem("contadorCotacao", contadorCotacoes);
     return `COT-${data}-${String(contadorCotacoes).padStart(2, "0")}`;
   }
+
+
+  /* ======================================================
+     COMPRA WEB (PESQUISA ONLINE B2C)
+  ====================================================== */
+  function abrirCompraWeb() {
+    fecharModal();
+    fecharTodasAsSecoes();
+    document.getElementById("compraWeb").style.display = "block";
+    
+    // Resetar formulário
+    document.getElementById("cwNomeItem").value = "";
+    document.getElementById("cwQtdItem").value = "1";
+    document.getElementById("cwLoja1").value = "";
+    document.getElementById("cwPreco1").value = "";
+    document.getElementById("cwLink1").value = "";
+    document.getElementById("cwLoja2").value = "";
+    document.getElementById("cwPreco2").value = "";
+    document.getElementById("cwLink2").value = "";
+    document.getElementById("cwLoja3").value = "";
+    document.getElementById("cwPreco3").value = "";
+    document.getElementById("cwLink3").value = "";
+    document.getElementById("cwLabelAnexo1").innerText = "Nenhum arquivo escolhido";
+    document.getElementById("cwLabelAnexo1").style.color = "#aaa";
+    document.getElementById("cwAnexo1").value = "";
+  }
+
+  window.abrirCompraWeb = abrirCompraWeb; // Exportar para o DOM
+
+  function parseBrPrice(valStr) {
+      if (!valStr) return 0;
+      let s = valStr.toString().replace(/\./g, '').replace(',', '.');
+      return Number(s) || 0;
+  }
+
+  function lerArquivoBase64(file) {
+      return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(file);
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = error => reject(error);
+      });
+  }
+
+  async function salvarCompraWeb() {
+    const usuarioLogado = JSON.parse(localStorage.getItem("usuarioLogado")) || { email: "desconhecido", nome: "Usuário" };
+    const nomeItem = document.getElementById("cwNomeItem").value.trim();
+    const qtd = Number(document.getElementById("cwQtdItem").value) || 1;
+    const loja1 = document.getElementById("cwLoja1").value.trim();
+    const preco1 = parseBrPrice(document.getElementById("cwPreco1").value);
+    const link1 = document.getElementById("cwLink1").value.trim();
+    
+    const loja2 = document.getElementById("cwLoja2").value.trim();
+    const preco2 = parseBrPrice(document.getElementById("cwPreco2").value);
+    const link2 = document.getElementById("cwLink2").value.trim();
+    
+    const loja3 = document.getElementById("cwLoja3").value.trim();
+    const preco3 = parseBrPrice(document.getElementById("cwPreco3").value);
+    const link3 = document.getElementById("cwLink3").value.trim();
+
+    if (!nomeItem || !loja1 || preco1 <= 0) {
+        alert("Preencha ao menos o nome do item e os dados da Opção 1 (Vencedora).");
+        return;
+    }
+
+    const btnSalvar = document.getElementById("btnSalvarCompraWeb");
+    btnSalvar.disabled = true;
+    btnSalvar.innerText = "⏳ Processando...";
+
+    try {
+        let base64Anexo = "";
+        let nomeAnexo = "";
+        const anexoInput = document.getElementById("cwAnexo1");
+        if (anexoInput.files.length > 0) {
+            const file = anexoInput.files[0];
+            nomeAnexo = file.name;
+            base64Anexo = await lerArquivoBase64(file);
+        }
+
+        const numeroFormatado = `COT-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${String(new Date().getHours()).padStart(2, '0')}${String(new Date().getMinutes()).padStart(2, '0')}`;
+
+        // Construindo a estrutura de cotação artificial
+        const cotacaoWeb = {
+            id: numeroFormatado,
+            numero: numeroFormatado,
+            tipo: "web",
+            status: "aprovacao", // Vai direto para aprovação
+            criadoEm: new Date().toLocaleString(),
+            descricao: `Compra Direta: ${nomeItem}`,
+            requisitante: usuarioLogado.email,
+            produtos: [{
+                nome: nomeItem,
+                quantidade: qtd,
+                embalagem: "Unidade"
+            }],
+            respostasFornecedores: [
+                {
+                    fornecedor: loja1,
+                    email: loja1.toLowerCase().replace(/\\s/g, '') + "@web.com",
+                    itens: [{ nome: nomeItem, preco: preco1, quantidade: qtd, total: preco1 * qtd, url: link1 }],
+                    anexo: base64Anexo ? { nome: nomeAnexo, base64: base64Anexo, url: link1 } : null
+                }
+            ],
+            adjudicacao: [
+                {
+                    fornecedor: loja1,
+                    emailFornecedor: loja1.toLowerCase().replace(/\\s/g, '') + "@web.com",
+                    produto: nomeItem,
+                    quantidade: qtd,
+                    preco: preco1,
+                    total: preco1 * qtd,
+                    motivo: "Menor preço encontrado online"
+                }
+            ]
+        };
+
+        // Adiciona concorrentes (para o economômetro)
+        if (loja2 && preco2 > 0) {
+            cotacaoWeb.respostasFornecedores.push({
+                fornecedor: loja2,
+                email: loja2.toLowerCase().replace(/\\s/g, '') + "@web.com",
+                itens: [{ nome: nomeItem, preco: preco2, quantidade: qtd, total: preco2 * qtd, url: link2 }]
+            });
+        }
+        if (loja3 && preco3 > 0) {
+            cotacaoWeb.respostasFornecedores.push({
+                fornecedor: loja3,
+                email: loja3.toLowerCase().replace(/\\s/g, '') + "@web.com",
+                itens: [{ nome: nomeItem, preco: preco3, quantidade: qtd, total: preco3 * qtd, url: link3 }]
+            });
+        }
+
+        // Salvar localmente
+        let cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
+        cotacoes.push(cotacaoWeb);
+        localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
+
+        // Salva Anexo para o Modal "Ver Anexos" funcionar
+        if (base64Anexo) {
+            const docObj = {
+                id: Date.now(),
+                cotacaoId: numeroFormatado,
+                usuario: loja1,
+                email: loja1.toLowerCase().replace(/\s/g, '') + "@web.com",
+                tipo: "cotacao",
+                data: new Date().toISOString(),
+                base64: base64Anexo,
+                nome: nomeAnexo
+            };
+            let docsCot = JSON.parse(localStorage.getItem("docs_" + numeroFormatado)) || [];
+            docsCot.push(docObj);
+            localStorage.setItem("docs_" + numeroFormatado, JSON.stringify(docsCot));
+            
+            if (typeof db !== "undefined") {
+                await db.collection("documentos_cotacao").add(docObj);
+            }
+        }
+
+        // Salvar Firebase (opcional)
+        if (typeof db !== "undefined") {
+            await db.collection("cotacoes").doc(numeroFormatado).set(cotacaoWeb);
+        }
+
+        alert("✅ Pesquisa enviada! A cotação está agora Aguardando Aprovação.");
+        voltarMenu();
+        if (typeof window.carregarCotacoes === 'function') window.carregarCotacoes();
+
+    } catch (e) {
+        console.error("Erro ao salvar Compra Web:", e);
+        alert("Erro ao salvar. Verifique os dados.");
+    } finally {
+        btnSalvar.disabled = false;
+        btnSalvar.innerText = "🚀 Enviar para Aprovação";
+    }
+  }
+
+  window.salvarCompraWeb = salvarCompraWeb;
 
 
   /* ======================================================
@@ -10164,7 +10464,7 @@
         iconAnexo = `<i class="fa-solid fa-paperclip" 
             style="font-size:12px; cursor:pointer; margin-left:6px; color:#3ab9b6;" 
             title="Ver anexo deste fornecedor"
-            onclick="visualizarDocumentos('${cotacao.numero}', '${i.fornecedor}')"></i>`;
+            onclick="visualizarDocumentos('${cotacao.numero}', '${i.emailFornecedor || i.fornecedor}')"></i>`;
       }
 
       html += `
@@ -10562,6 +10862,72 @@
     doc.save(`Mapa_Comparativo_${c.numero}.pdf`);
   };
 
+  window.exportarMapaExcel = function() {
+    try {
+      const el = document.getElementById("cabecalhoMapa");
+      if (!el) return alert("Erro ao obter cotação.");
+      
+      const matches = el.innerText.match(/Cotação:\s*(\S+)/);
+      const numero = matches ? matches[1].trim() : "";
+      if (!numero) return alert("Erro ao identificar número da cotação.");
+
+      const cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
+      const c = cotacoes.find(x => String(x.numero) === String(numero) || String(x.id) === String(numero));
+      if (!c) return alert("Cotação não encontrada no sistema.");
+
+      let respostas = c.respostasFornecedores || [];
+      if(!Array.isArray(respostas)) respostas = Object.values(respostas);
+      
+      const colunasFixas = ["#", "Item", "Marca", "Embalagem", "Qtd"];
+      const fornecedores = respostas.map(r => r.fornecedor || "Fornecedor");
+      const headers = [...colunasFixas, ...fornecedores, "Vencedor (Aprovado)"];
+      
+      const rows = [];
+      const produtos = c.produtos || [];
+      
+      produtos.forEach((prod, pIdx) => {
+        const nomeProd = prod.nome || prod.descricao || "";
+        const rowData = [
+          pIdx + 1,
+          nomeProd,
+          prod.marca || "-",
+          prod.embalagem || "Unidade",
+          prod.quantidade || 0
+        ];
+        
+        respostas.forEach(r => {
+          const itemResp = (r.itens || []).find(it => (it.produto === nomeProd) || (it.nome === nomeProd));
+          const preco = itemResp ? (Number(itemResp.preco) || Number(itemResp.valor) || 0) : 0;
+          rowData.push(preco > 0 ? `R$ ${preco.toFixed(2)}` : "Não cotado");
+        });
+
+        // Verifica vencedor
+        let vencedor = "-";
+        if (c.adjudicacao && Array.isArray(c.adjudicacao)) {
+            const adj = c.adjudicacao.find(a => a.produto === nomeProd || a.nomeItem === nomeProd);
+            if (adj) vencedor = adj.fornecedor;
+        }
+        rowData.push(vencedor);
+        
+        rows.push(rowData);
+      });
+      
+      if (typeof XLSX === "undefined") {
+          return alert("Biblioteca do Excel não carregada! Verifique sua conexão com a internet.");
+      }
+      
+      const ws_data = [headers, ...rows];
+      const ws = XLSX.utils.aoa_to_sheet(ws_data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Mapa de Preços");
+      XLSX.writeFile(wb, `Mapa_Precos_COT-${c.numero}.xlsx`);
+      
+    } catch (err) {
+      console.error("Erro ao exportar mapa para excel:", err);
+      alert("Erro ao exportar planilha: " + err.message);
+    }
+  };
+
   function abrirMapaPrecos(numero) {
     console.log("🗺️ abrirMapaPrecos chamado com:", numero);
 
@@ -10587,15 +10953,10 @@
     }
 
     // Preenche Cabeçalho
-    // Preenche Cabeçalho - Usando Flex para alinhar o botão à direita
     cabecalho.innerHTML = `
        <div> <strong>Cotação:</strong> ${cotacao.numero}</div>
      <div><strong>Descrição:</strong> ${cotacao.descricao || "Sem descrição"}</div>
      <div><strong>Status:</strong> <span style="color:#00ff99;">${(cotacao.status || "aberta").toUpperCase()}</span></div>
-     
-     <div style="margin-left:auto; cursor:pointer;" onclick="fecharMapaPrecos()">
-        <i class="fa-solid fa-times" style="font-size:28px; color:#ff4444;"></i>
-     </div>
      `;
 
     /* ======================================================
@@ -10635,7 +10996,7 @@
     const temVencedor = Array.isArray(cotacao.adjudicacao) && cotacao.adjudicacao.length > 0;
 
     let html = `
-       <div class="wrapper-matriz modo-foco" style="margin-top:0;">
+       <div class="wrapper-matriz" style="margin-top:0; padding: 0 25px; box-sizing: border-box; max-width: 100vw;">
          <table class="matriz-cotacao">
            <thead>
              <tr>
@@ -10682,7 +11043,9 @@
                  <span class="badge-idx">#${idx + 1}</span>
                </td>
                <td class="col-fixa item">${nomeProd}</td>
-               <td class="col-fixa-2 qtd" style="text-align:center;">${qtd}</td>
+               <td class="col-fixa-2 marca" style="text-align:center;">${prod.marca || "-"}</td>
+               <td class="col-fixa-emb emb" style="text-align:center;">${prod.embalagem || "-"}</td>
+               <td class="col-fixa-3 qtd" style="text-align:center;">${qtd}</td>
                `;
 
       // Preços e Ranking por Item
@@ -10746,15 +11109,7 @@
     conteudo.innerHTML = html;
     modal.style.display = "flex";
 
-    // 🔥 BOTÃO DE FECHAR REDUNDANTE NO RODAPÉ
-    const btnFecharBottom = document.createElement("div");
-    btnFecharBottom.innerHTML = `
-       <div style="text-align:center; padding:20px; border-top:1px solid #333; background:#111;">
-         <button onclick="fecharMapaPrecos()" style="background:#dc3545; color:white; border:none; padding:15px 40px; border-radius:8px; font-size:16px; cursor:pointer; font-weight:bold;">
-           ❌ Fechar Mapa
-         </button>
-     </div>`;
-    conteudo.appendChild(btnFecharBottom);
+
 
     modal.style.zIndex = "2147483647";
     document.body.style.overflow = "hidden"; // trava scroll
@@ -13156,7 +13511,9 @@ linhas.forEach((tr, index) => {
   /* ======================================================
      🔗 HELPER: ABRIR ARQUIVO BASE64 DIRETAMENTE
      ====================================================== */
-  window.abrirArquivoDireto = function (base64, nome = "Anexo") {
+  window.tempAnexosBase64 = window.tempAnexosBase64 || {};
+  window.abrirArquivoDireto = function (idAnexo, nome = "Anexo") {
+    const base64 = window.tempAnexosBase64[idAnexo];
     if (!base64) return alert("Erro: Dados do arquivo não encontrados.");
     try {
       const win = window.open('', '_blank');
@@ -13223,6 +13580,7 @@ linhas.forEach((tr, index) => {
     const container = document.getElementById("listaDocumentosAnexados");
     container.innerHTML = "<div style='text-align:center; padding:60px; color:#3ab9b6;'><i class='fa-solid fa-circle-notch fa-spin fa-2x'></i><br><br><span style='font-weight:700; letter-spacing:1px; font-size:12px;'>SINCRONIZANDO DADOS...</span></div>";
     modal.style.display = "flex";
+    modal.style.zIndex = "2147483647"; // Ficar por cima do Mapa de Preços
     document.body.style.overflow = "hidden";
 
     // --- COLETA DE DADOS (MERGE AGRESSIVO) ---
@@ -13230,6 +13588,13 @@ linhas.forEach((tr, index) => {
 
     const addResposta = (r) => {
       if (!r) return;
+      
+      // Ignorar anexos do módulo financeiro na tela de documentos da cotação
+      if ((r.fornecedor && String(r.fornecedor).toUpperCase().includes("GESTÃO FINANCEIRA")) || 
+          (r.email && String(r.email).toLowerCase().includes("financeiro@"))) {
+          return;
+      }
+
       const email = (r.email || r.fornecedor || r.nome || "Outros").toLowerCase().trim();
 
       const temAnexo = r.anexo || (Array.isArray(r.anexos) && r.anexos.length > 0) || r.base64 || r.url || r.link;
@@ -13382,17 +13747,23 @@ linhas.forEach((tr, index) => {
          </div>`;
       });
 
-      tableHTML += `</td><td style="padding:18px 25px; text-align:right; vertical-align: middle;">`;
+      tableHTML += `</td><td style="padding:18px 25px; vertical-align: middle;">
+        <div style="display:flex; flex-direction:column; gap:10px; align-items:flex-end;">`;
 
       validAnexos.forEach(anexo => {
         if (anexo.url || anexo.link) {
           const url = anexo.url || anexo.link;
-          tableHTML += `<a href="${url}" target="_blank" style="background:#3ab9b6; color:#000; padding:8px 16px; border-radius:6px; font-size:11px; text-decoration:none; margin-left:10px; display:inline-flex; align-items:center; gap:8px; font-weight:900; text-transform:uppercase; box-shadow: 0 4px 0 #2a8f8c;"><i class="fa-solid fa-cloud-arrow-down"></i> ABRIR</a>`;
-        } else if (anexo.base64) {
-          tableHTML += `<button onclick="window.abrirArquivoDireto('${anexo.base64}', '${anexo.nome || 'Anexo'}')" style="background:#fbbf24; color:#000; padding:8px 16px; border-radius:6px; border:none; cursor:pointer; font-size:11px; margin-left:10px; display:inline-flex; align-items:center; gap:8px; font-weight:900; text-transform:uppercase; box-shadow: 0 4px 0 #b4891b;"><i class="fa-solid fa-eye"></i> VER</button>`;
+          tableHTML += `<a href="${url}" target="_blank" style="background:#3ab9b6; color:#000; padding:10px 16px; border-radius:6px; font-size:11px; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; gap:8px; font-weight:900; text-transform:uppercase; box-shadow: 0 4px 0 #2a8f8c; width: 140px; box-sizing: border-box;"><i class="fa-solid fa-cloud-arrow-down"></i> LINK</a>`;
+        }  
+        if (anexo.base64) {
+          const idAnexoTemp = "anexo_" + Math.random().toString(36).substr(2, 9);
+          if(!window.tempAnexosBase64) window.tempAnexosBase64 = {};
+          window.tempAnexosBase64[idAnexoTemp] = anexo.base64;
+          const safeNome = (anexo.nome || 'Anexo').replace(/'/g, "");
+          tableHTML += `<button onclick="window.abrirArquivoDireto('${idAnexoTemp}', '${safeNome}')" style="background:#fbbf24; color:#000; padding:10px 16px; border-radius:6px; border:none; cursor:pointer; font-size:11px; display:inline-flex; align-items:center; justify-content:center; gap:8px; font-weight:900; text-transform:uppercase; box-shadow: 0 4px 0 #b4891b; width: 140px; box-sizing: border-box;"><i class="fa-solid fa-eye"></i> VER ANEXO</button>`;
         }
       });
-      tableHTML += `</td></tr>`;
+      tableHTML += `</div></td></tr>`;
     });
 
     tableHTML += "</tbody></table>";
@@ -15067,7 +15438,7 @@ linhas.forEach((tr, index) => {
        }
        
        let tipoReal = (c.tipo || "").toLowerCase();
-       if (tipoReal === "materiais" || tipoReal === "materiais_excel" || tipoReal === "manual" || tipoReal === "excel") matVsServ.mat++;
+       if (tipoReal === "materiais" || tipoReal === "materiais_excel" || tipoReal === "manual" || tipoReal === "excel" || tipoReal === "web") matVsServ.mat++;
        else if (tipoReal === "servicos") matVsServ.serv++;
        
        let economiaCotacao = 0;
