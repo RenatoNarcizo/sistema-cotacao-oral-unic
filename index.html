@@ -6698,9 +6698,23 @@
   // abre o modal
   function abrirSelecaoFornecedores(btn) {
     origemCotacao = btn.dataset.origem;
+    window.estadoCheckboxesFornecedores = new Map();
     document.getElementById("modalFornecedores").style.display = "flex";
     carregarFornecedoresModal();
   }
+
+  window.atualizarEstadoCheckboxFornecedor = function(el) {
+    const key = el.dataset.nome + el.dataset.email;
+    if (el.checked) {
+      window.estadoCheckboxesFornecedores.set(key, {
+        nome: el.dataset.nome || "",
+        email: (el.dataset.email || "").trim().toLowerCase(),
+        whats: el.dataset.whats || ""
+      });
+    } else {
+      window.estadoCheckboxesFornecedores.delete(key);
+    }
+  };
 
   // fecha o modal
   function fecharModalFornecedores() {
@@ -6737,6 +6751,8 @@
        data-email="${emailFinal}"
        data-whats="${f.whats || f.telefone || ''}"
        style="margin-right:6px;"
+       ${window.estadoCheckboxesFornecedores && window.estadoCheckboxesFornecedores.has(f.nome + emailFinal) ? 'checked' : ''}
+       onchange="window.atualizarEstadoCheckboxFornecedor(this)"
      >
      <strong>${f.nome}</strong> — ${f.tipo || "Sem tipo"}<br>
      <small>${f.endereco || "-"}</small><br>
@@ -6789,18 +6805,18 @@
 
   // confirma seleção
   function confirmarFornecedoresCotacao() {
-    const selecionados = [...document.querySelectorAll(".checkFornecedor:checked")];
+    document.querySelectorAll(".checkFornecedor").forEach(el => {
+      if (typeof window.atualizarEstadoCheckboxFornecedor === "function") {
+        window.atualizarEstadoCheckboxFornecedor(el);
+      }
+    });
 
-    if (selecionados.length === 0) {
+    const fornecedoresSelecionados = Array.from((window.estadoCheckboxesFornecedores || new Map()).values());
+
+    if (fornecedoresSelecionados.length === 0) {
       alert("Selecione ao menos um fornecedor");
       return;
     }
-
-    const fornecedoresSelecionados = selecionados.map(el => ({
-      nome: el.dataset.nome || "",
-      email: (el.dataset.email || "").trim().toLowerCase(),
-      whats: el.dataset.whats || ""
-    }));
 
     // salva temporariamente no botão/origem
     window.fornecedoresSelecionadosTemp = fornecedoresSelecionados;
@@ -12698,16 +12714,20 @@
         return {
           nome: nomeFornecedor,
           email: f.email || "",
-          whatsapp: whatsLimpo,
+          whatsapp: (() => {
+            let w = whatsLimpo;
+            if (w.length === 10 || w.length === 11) w = "55" + w;
+            return w;
+          })(),
           corpo_email_html: corpo_email_html,
           mensagem_whatsapp: mensagem_whatsapp
         };
       });
 
-      const fornecedoresValidos = fornecedores.filter(f => f.email && f.email.includes('@'));
+      const fornecedoresValidos = fornecedores.filter(f => (f.email && f.email.includes('@')) || (f.whatsapp && f.whatsapp.length >= 10));
 
       if (fornecedoresValidos.length === 0) {
-        console.warn("⚠️ Nenhum fornecedor com e-mail válido encontrado para notificar.");
+        console.warn("⚠️ Nenhum fornecedor com e-mail ou WhatsApp válido encontrado para notificar.");
         return false;
       }
 
@@ -15756,7 +15776,54 @@ linhas.forEach((tr, index) => {
       }
   };
 
-</script>
+  // ======================================================
+  // 🎭 MÁSCARAS DE ENTRADA (CNPJ E WHATSAPP/TELEFONE)
+  // ======================================================
+  function maskCNPJ(v) {
+    v = v.replace(/\D/g, "");
+    v = v.replace(/^(\d{2})(\d)/, "$1.$2");
+    v = v.replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3");
+    v = v.replace(/\.(\d{3})(\d)/, ".$1/$2");
+    v = v.replace(/(\d{4})(\d)/, "$1-$2");
+    return v.substring(0, 18);
+  }
+
+  function maskPhone(v) {
+    v = v.replace(/\D/g, "");
+    if (v.length <= 2) {
+      return v ? `(${v}` : v;
+    }
+    if (v.length <= 6) {
+      return `(${v.substring(0,2)}) ${v.substring(2)}`;
+    }
+    if (v.length <= 10) {
+      return `(${v.substring(0,2)}) ${v.substring(2,6)}-${v.substring(6)}`;
+    }
+    return `(${v.substring(0,2)}) ${v.substring(2,7)}-${v.substring(7,11)}`;
+  }
+
+  document.addEventListener("input", function (e) {
+    const target = e.target;
+    if (!target.tagName || target.tagName.toLowerCase() !== "input") return;
+
+    const id = target.id ? target.id.toLowerCase() : "";
+
+    if (id.includes("cnpj")) {
+      let oldVal = target.value;
+      let newVal = maskCNPJ(oldVal);
+      if (oldVal !== newVal) {
+        target.value = newVal;
+      }
+    } else if (id.includes("whats") || id.includes("telefone")) {
+      let oldVal = target.value;
+      let newVal = maskPhone(oldVal);
+      if (newVal === "(") newVal = "";
+      if (oldVal !== newVal) {
+        target.value = newVal;
+      }
+    }
+  });
+
 </script>
 
 </body>
