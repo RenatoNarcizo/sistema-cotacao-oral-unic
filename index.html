@@ -14074,7 +14074,7 @@ linhas.forEach((tr, index) => {
 
     // 🔍 Helper Local
     const normalizarEmail = (e) => (e || "").toLowerCase().trim();
-    const normalizarTexto = (t) => (t || "").toLowerCase().trim();
+    const normalizarTexto = (t) => (t || "").toLowerCase().replace(/\s+/g, " ").trim();
 
     const cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
     let cotacao = cotacoes.find(c => c.id === textoOuId);
