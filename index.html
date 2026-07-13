@@ -4274,14 +4274,15 @@
 
       <div id="listaItensSolicitacao">
         <div style="
-       display:grid;
-       grid-template-columns:2fr 1.5fr 1.5fr 1fr auto;
+       display:flex;
+       flex-wrap:wrap;
+       align-items:center;
        gap:10px;
        margin-bottom:10px;
      ">
-          <input class="item-nome" placeholder="Nome do item">
-          <input class="item-marca" placeholder="Marca (opcional)">
-          <select class="item-embalagem" style="background:#1a1a1a; color:white; border:1px solid #661155; border-radius:5px; padding:4px;">
+          <input class="item-nome" placeholder="Nome do item" style="flex: 2 1 120px;">
+          <input class="item-marca" placeholder="Marca (opcional)" style="flex: 1.5 1 100px;">
+          <select class="item-embalagem" style="flex: 1.5 1 100px; background:#1a1a1a; color:white; border:1px solid #661155; border-radius:5px; padding:4px;">
             <option value="Balde">Balde</option>
             <option value="Caixa">Caixa</option>
             <option value="Fardo">Fardo</option>
@@ -4296,8 +4297,8 @@
             <option value="Unidade" selected>Unidade</option>
             <option value="Ampola">Ampola</option>
           </select>
-          <input class="item-qtd" type="number" min="1" placeholder="Qtd">
-          <button onclick="this.parentElement.remove()">🗑️</button>
+          <input class="item-qtd" type="number" min="1" placeholder="Qtd" style="flex: 1 1 60px;">
+          <button onclick="this.parentElement.remove()" style="flex: 0 0 auto;">🗑️</button>
         </div>
       </div>
 
@@ -11475,14 +11476,15 @@
     const container = document.getElementById("listaItensSolicitacao");
 
     const div = document.createElement("div");
-    div.style.display = "grid";
-    div.style.gridTemplateColumns = "2fr 1.5fr 1.5fr 1fr auto";
+    div.style.display = "flex";
+    div.style.flexWrap = "wrap";
+    div.style.alignItems = "center";
     div.style.gap = "10px";
     div.style.marginBottom = "10px";
     div.innerHTML = `
-     <input class="item-nome" placeholder="Nome do item">
-     <input class="item-marca" placeholder="Marca (opcional)">
-     <select class="item-unidade" style="background:#1a1a1a; color:white; border:1px solid #661155; border-radius:5px; padding:4px;">
+     <input class="item-nome" placeholder="Nome do item" style="flex: 2 1 120px;">
+     <input class="item-marca" placeholder="Marca (opcional)" style="flex: 1.5 1 100px;">
+     <select class="item-unidade" style="flex: 1.5 1 100px; background:#1a1a1a; color:white; border:1px solid #661155; border-radius:5px; padding:4px;">
        <option value="Balde">Balde</option>
        <option value="Caixa">Caixa</option>
        <option value="Fardo">Fardo</option>
@@ -11497,8 +11499,8 @@
        <option value="Unidade" selected>Unidade</option>
        <option value="Ampola">Ampola</option>
      </select>
-     <input class="item-qtd" type="number" min="1" placeholder="Qtd">
-     <button onclick="this.parentElement.remove()">🗑️</button>
+     <input class="item-qtd" type="number" min="1" placeholder="Qtd" style="flex: 1 1 60px;">
+     <button onclick="this.parentElement.remove()" style="flex: 0 0 auto;">🗑️</button>
    `;
 
     container.appendChild(div);
@@ -15406,17 +15408,38 @@ linhas.forEach((tr, index) => {
 
   window.recalcularMediaFornecedor = async function(email) {
     try {
-      if (typeof db === "undefined") return;
-      const snap = await db.collection("scorecards").where("idFornecedor", "==", email).get();
-      const docs = snap.docs.map(d => d.data());
-      if (docs.length === 0) return;
-      const mediaFinal = docs.reduce((acc, c) => acc + c.media, 0) / docs.length;
-      await db.collection("fornecedores").doc(email).update({ mediaScorecard: mediaFinal, totalAvaliacoes: docs.length });
+      email = (email || "").toLowerCase().trim();
+      let mediaFinal = 0;
+      let totalAval = 0;
+
+      // 1. Prioridade: Calcular usando LocalStorage (sempre funciona)
+      let scs = JSON.parse(localStorage.getItem('scorecards')) || [];
+      let docsLocal = scs.filter(s => (s.idFornecedor || "").toLowerCase().trim() === email);
+      
+      if (docsLocal.length > 0) {
+        mediaFinal = docsLocal.reduce((acc, c) => acc + c.media, 0) / docsLocal.length;
+        totalAval = docsLocal.length;
+      }
+
+      // 2. Atualizar no Firebase se existir
+      if (typeof db !== "undefined" && navigator.onLine) {
+        try {
+          const snap = await db.collection("scorecards").where("idFornecedor", "==", email).get();
+          const docs = snap.docs.map(d => d.data());
+          if (docs.length > 0) {
+             mediaFinal = docs.reduce((acc, c) => acc + c.media, 0) / docs.length;
+             totalAval = docs.length;
+             await db.collection("fornecedores").doc(email).update({ mediaScorecard: mediaFinal, totalAvaliacoes: totalAval });
+          }
+        } catch (errFb) { console.warn("Erro ao buscar scorecards do Firestore:", errFb); }
+      }
+
+      // 3. Atualizar SEMPRE no LocalStorage
       let fornLocal = JSON.parse(localStorage.getItem('fornecedores')) || [];
       const idx = fornLocal.findIndex(f => (f.email || "").toLowerCase().trim() === email);
       if (idx !== -1) { 
           fornLocal[idx].mediaScorecard = mediaFinal; 
-          fornLocal[idx].totalAvaliacoes = docs.length; 
+          fornLocal[idx].totalAvaliacoes = totalAval; 
           localStorage.setItem('fornecedores', JSON.stringify(fornLocal)); 
       }
     } catch (e) { console.warn("Erro Recalcular:", e); }
@@ -15424,6 +15447,19 @@ linhas.forEach((tr, index) => {
 
   window.renderizarRanking = function() {
     const fornecedores = JSON.parse(localStorage.getItem('fornecedores')) || [];
+    
+    // Auto-recuperação: varre scorecards locais e atualiza o fornecedor caso falte
+    const scs = JSON.parse(localStorage.getItem('scorecards')) || [];
+    let needsUpdate = false;
+    fornecedores.forEach(f => {
+      const docsLocal = scs.filter(s => (s.idFornecedor || "").toLowerCase().trim() === (f.email || "").toLowerCase().trim());
+      if (docsLocal.length > 0) {
+        let media = docsLocal.reduce((acc, c) => acc + c.media, 0) / docsLocal.length;
+        if (f.mediaScorecard !== media) { f.mediaScorecard = media; f.totalAvaliacoes = docsLocal.length; needsUpdate = true; }
+      }
+    });
+    if (needsUpdate) localStorage.setItem('fornecedores', JSON.stringify(fornecedores));
+
     const corpo = document.getElementById('listaRankingCorpo');
     if (!corpo) return;
 
