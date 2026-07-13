@@ -484,7 +484,7 @@
       position: fixed;
       bottom: 20px;
       right: 20px;
-      text-align: right;
+      text-align: center;
       color: rgba(255, 255, 255, 0.95);
       z-index: 100000;
       pointer-events: none;
@@ -495,14 +495,14 @@
 
     .branding-footer b {
       display: block;
-      font-size: 18px;
+      font-size: 24px;
       font-weight: 800;
       letter-spacing: 0.5px;
     }
 
     .branding-footer span {
       display: block;
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 400;
       opacity: 0.9;
     }
@@ -2199,8 +2199,8 @@
 
       <!-- BRANDING DA EMPRESA (APARECE APENAS NA TELA DE LOGIN) -->
       <div class="branding-footer">
-        <b>AtendeTudo</b>
-        <span>Suprimentos & Serviços</span>
+        <b>KairósCot</b>
+        <span>Compras inteligentes, no instante certo.</span>
       </div>
     </div>
   </section>
@@ -2247,26 +2247,26 @@
       <h2 style="color:#661155;">📋 Proposta de Parceria</h2>
       <p style="opacity: 0.8; margin-bottom: 25px;">Preencha seus dados para análise da nossa equipe de suprimentos.</p>
 
-      <div style="display:grid; grid-template-columns:1fr 1fr; column-gap:15px; row-gap:20px;">
+      <div style="display:flex; flex-direction:column; gap:20px;">
         <div>
           <label>Nome da Empresa</label>
-          <input id="autoFornNome" type="text" placeholder="Razão Social">
+          <input id="autoFornNome" type="text" placeholder="Razão Social" style="width:100%; box-sizing:border-box;">
         </div>
         <div>
           <label>CNPJ</label>
-          <input id="autoFornCnpj" type="text" placeholder="00.000.000/0000-00">
+          <input id="autoFornCnpj" type="text" placeholder="00.000.000/0000-00" style="width:100%; box-sizing:border-box;">
         </div>
-        <div style="grid-column: 1 / span 2;">
+        <div>
           <label>E-mail Corporativo</label>
-          <input id="autoFornEmail" type="email" placeholder="contato@empresa.com.br">
+          <input id="autoFornEmail" type="email" placeholder="contato@empresa.com.br" style="width:100%; box-sizing:border-box;">
         </div>
         <div>
           <label>WhatsApp</label>
-          <input id="autoFornWhats" type="text" placeholder="(00) 00000-0000">
+          <input id="autoFornWhats" type="text" placeholder="(00) 00000-0000" style="width:100%; box-sizing:border-box;">
         </div>
         <div>
           <label>Categoria principal</label>
-          <select id="autoFornTipo">
+          <select id="autoFornTipo" style="width:100%; box-sizing:border-box;">
             <option value="">Selecione...</option>
             <option>Brindes Corporativos</option>
             <option>Casa de embalagem / Produto de limpeza</option>
@@ -2295,13 +2295,26 @@
             <option>Outros</option>
           </select>
         </div>
-        <div style="grid-column: 1 / span 2;">
-          <label>Dados Bancários (Banco, Agência, Conta)</label>
-          <textarea id="autoFornBanco" style="height: 60px;" placeholder="Banco: X - Agência: Y - Conta: Z"></textarea>
+        <div>
+          <label>Dados Bancários</label>
+          <div style="display:flex; flex-direction:column; gap:10px;">
+            <div>
+              <label style="font-size: 0.9em; opacity: 0.8;">Banco</label>
+              <input id="autoFornBancoNome" type="text" placeholder="Ex: Itaú, Bradesco..." style="width:100%; box-sizing:border-box;">
+            </div>
+            <div>
+              <label style="font-size: 0.9em; opacity: 0.8;">Agência</label>
+              <input id="autoFornAgencia" type="text" placeholder="Ex: 0000-0" style="width:100%; box-sizing:border-box;">
+            </div>
+            <div>
+              <label style="font-size: 0.9em; opacity: 0.8;">Conta Corrente</label>
+              <input id="autoFornConta" type="text" placeholder="Ex: 00000-0" style="width:100%; box-sizing:border-box;">
+            </div>
+          </div>
         </div>
-        <div style="grid-column: 1 / span 2;">
+        <div>
           <label>Anexar Documentação (Contrato Social / CND)</label>
-          <input type="file" id="autoFornDoc" multiple style="border-style: dashed; padding: 20px;">
+          <input type="file" id="autoFornDoc" multiple style="border-style: dashed; padding: 20px; width:100%; box-sizing:border-box;">
         </div>
       </div>
 
@@ -2891,8 +2904,13 @@
                 <option value="Frasco">Frasco</option>
                 <option value="Garrafa">Garrafa</option>
                 <option value="Litro">Litro</option>
+                <option value="Pacote">Pacote</option>
                 <option value="Pote">Pote</option>
+                <option value="Peça">Peça</option>
+                <option value="Quilogramas (KG)">Quilogramas (KG)</option>
+                <option value="Saco">Saco</option>
                 <option value="Unidade" selected>Unidade</option>
+                <option value="Ampola">Ampola</option>
               </select>
             </td>
             <td style="padding-left: 15px;"><input type="number"
@@ -4257,13 +4275,28 @@
       <div id="listaItensSolicitacao">
         <div style="
        display:grid;
-       grid-template-columns:2fr 2fr 1fr auto;
+       grid-template-columns:2fr 1.5fr 1.5fr 1fr auto;
        gap:10px;
        margin-bottom:10px;
      ">
-          <input placeholder="Nome do item">
-          <input placeholder="Marca (opcional)">
-          <input type="number" min="1" placeholder="Qtd">
+          <input class="item-nome" placeholder="Nome do item">
+          <input class="item-marca" placeholder="Marca (opcional)">
+          <select class="item-embalagem" style="background:#1a1a1a; color:white; border:1px solid #661155; border-radius:5px; padding:4px;">
+            <option value="Balde">Balde</option>
+            <option value="Caixa">Caixa</option>
+            <option value="Fardo">Fardo</option>
+            <option value="Frasco">Frasco</option>
+            <option value="Garrafa">Garrafa</option>
+            <option value="Litro">Litro</option>
+            <option value="Pacote">Pacote</option>
+            <option value="Pote">Pote</option>
+            <option value="Peça">Peça</option>
+            <option value="Quilogramas (KG)">Quilogramas (KG)</option>
+            <option value="Saco">Saco</option>
+            <option value="Unidade" selected>Unidade</option>
+            <option value="Ampola">Ampola</option>
+          </select>
+          <input class="item-qtd" type="number" min="1" placeholder="Qtd">
           <button onclick="this.parentElement.remove()">🗑️</button>
         </div>
       </div>
@@ -4902,7 +4935,10 @@
     const email = document.getElementById("autoFornEmail").value.trim();
     const whats = document.getElementById("autoFornWhats").value.trim();
     const tipo = document.getElementById("autoFornTipo").value;
-    const banco = document.getElementById("autoFornBanco").value;
+    const bancoNome = document.getElementById("autoFornBancoNome").value.trim();
+    const bancoAgencia = document.getElementById("autoFornAgencia").value.trim();
+    const bancoConta = document.getElementById("autoFornConta").value.trim();
+    const banco = `Banco: ${bancoNome} - Agência: ${bancoAgencia} - Conta: ${bancoConta}`;
 
     if (!nome || !cnpj || !email) {
       alert("⚠️ Preencha os campos obrigatórios: Nome, CNPJ e E-mail.");
@@ -4941,7 +4977,9 @@
     document.getElementById("autoFornCnpj").value = "";
     document.getElementById("autoFornEmail").value = "";
     document.getElementById("autoFornWhats").value = "";
-    document.getElementById("autoFornBanco").value = "";
+    document.getElementById("autoFornBancoNome").value = "";
+    document.getElementById("autoFornAgencia").value = "";
+    document.getElementById("autoFornConta").value = "";
     document.getElementById("autoFornTipo").value = "";
 
     voltarParaLogin();
@@ -6461,7 +6499,7 @@
 
     const index = tabela.children.length + 1;
 
-    const optionsHtml = ["Balde", "Caixa", "Fardo", "Frasco", "Garrafa", "Litro", "Pote", "Unidade"].map(opt =>
+    const optionsHtml = ["Balde", "Caixa", "Fardo", "Frasco", "Garrafa", "Litro", "Pacote", "Pote", "Peça", "Quilogramas (KG)", "Saco", "Unidade", "Ampola"].map(opt =>
       `<option value="${opt}" ${opt.toLowerCase() === embalagem.trim().toLowerCase() ? 'selected' : ''}>${opt}</option>`
     ).join("");
 
@@ -11416,8 +11454,13 @@
            <option value="Frasco">Frasco</option>
            <option value="Garrafa">Garrafa</option>
            <option value="Litro">Litro</option>
+           <option value="Pacote">Pacote</option>
            <option value="Pote">Pote</option>
+           <option value="Peça">Peça</option>
+           <option value="Quilogramas (KG)">Quilogramas (KG)</option>
+           <option value="Saco">Saco</option>
            <option value="Unidade" selected>Unidade</option>
+           <option value="Ampola">Ampola</option>
          </select>
          <input type="number" min="1" placeholder="Qtd">
          <button onclick="this.parentElement.remove()">🗑️</button>
@@ -11446,8 +11489,13 @@
        <option value="Frasco">Frasco</option>
        <option value="Garrafa">Garrafa</option>
        <option value="Litro">Litro</option>
+       <option value="Pacote">Pacote</option>
        <option value="Pote">Pote</option>
+       <option value="Peça">Peça</option>
+       <option value="Quilogramas (KG)">Quilogramas (KG)</option>
+       <option value="Saco">Saco</option>
        <option value="Unidade" selected>Unidade</option>
+       <option value="Ampola">Ampola</option>
      </select>
      <input class="item-qtd" type="number" min="1" placeholder="Qtd">
      <button onclick="this.parentElement.remove()">🗑️</button>
@@ -11489,7 +11537,7 @@
         div.style.marginBottom = "10px";
         
         const emb = item.embalagem || item.embalagens || "Unidade";
-        const optionsHtml = ["Balde", "Caixa", "Fardo", "Frasco", "Garrafa", "Litro", "Pote", "Unidade"].map(opt =>
+        const optionsHtml = ["Balde", "Caixa", "Fardo", "Frasco", "Garrafa", "Litro", "Pacote", "Pote", "Peça", "Quilogramas (KG)", "Saco", "Unidade", "Ampola"].map(opt =>
           `<option value="${opt}" ${opt.toLowerCase() === emb.trim().toLowerCase() ? 'selected' : ''}>${opt}</option>`
         ).join("");
 
@@ -12270,7 +12318,7 @@
       nome, cnpj, email,
       whats: document.getElementById("autoFornWhats").value,
       tipo: document.getElementById("autoFornTipo").value,
-      banco: document.getElementById("autoFornBanco").value,
+      banco: `Banco: ${document.getElementById("autoFornBancoNome")?.value || ""} - Agência: ${document.getElementById("autoFornAgencia")?.value || ""} - Conta: ${document.getElementById("autoFornConta")?.value || ""}`,
       data: new Date().toLocaleString(),
       status: "pendente"
     });
@@ -15228,6 +15276,13 @@ linhas.forEach((tr, index) => {
   };
 
   window.atualizarContadorScorecard = async function() {
+    try {
+      if (typeof db !== "undefined") {
+        const snap = await db.collection("scorecards").get();
+        const scs = snap.docs.map(d => d.data());
+        localStorage.setItem('scorecards', JSON.stringify(scs));
+      }
+    } catch(e) { console.warn("Erro ao sincronizar scorecards:", e); }
     const cotacoes = JSON.parse(localStorage.getItem('cotacoes')) || [];
     const scorecards = JSON.parse(localStorage.getItem('scorecards')) || [];
     const pendentes = cotacoes.filter(c => c.status === "finalizada" && !scorecards.find(s => s.idCotacao === c.numero));
