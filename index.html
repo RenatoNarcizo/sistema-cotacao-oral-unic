@@ -5600,7 +5600,7 @@
               const subScore = document.getElementById("scoreFornecedorSub");
               const cardAvaliacoes = document.getElementById("cardAvaliacoesFornecedor");
               
-              if (ficha && Number(ficha.totalAvaliacoes || 0) > 0) {
+              if (ficha && (Number(ficha.totalAvaliacoes || 0) > 0 || Number(ficha.mediaScorecard || 0) > 0)) {
                   let nota = Number(ficha.mediaScorecard || 0);
                   let estrelas = "";
                   for (let i=1; i<=5; i++) {
@@ -15455,7 +15455,11 @@ linhas.forEach((tr, index) => {
       const docsLocal = scs.filter(s => (s.idFornecedor || "").toLowerCase().trim() === (f.email || "").toLowerCase().trim());
       if (docsLocal.length > 0) {
         let media = docsLocal.reduce((acc, c) => acc + c.media, 0) / docsLocal.length;
-        if (f.mediaScorecard !== media) { f.mediaScorecard = media; f.totalAvaliacoes = docsLocal.length; needsUpdate = true; }
+        if (f.mediaScorecard !== media || f.totalAvaliacoes !== docsLocal.length) { 
+            f.mediaScorecard = media; 
+            f.totalAvaliacoes = docsLocal.length; 
+            needsUpdate = true; 
+        }
       }
     });
     if (needsUpdate) localStorage.setItem('fornecedores', JSON.stringify(fornecedores));
@@ -15628,13 +15632,17 @@ linhas.forEach((tr, index) => {
        }
        
        let dataCriacaoStr = c.criadoEm || c.dataCriacao;
-       if (dataCriacaoStr && c.dataFechamento) {
+       let dataFim = c.dataEnviadoAprovacao || c.dataFechamento;
+       if (dataCriacaoStr && dataFim) {
            let partsCriacao = dataCriacaoStr.replace(',', '').split(' ')[0].split('/');
            let d1 = new Date();
            if (partsCriacao.length === 3) d1 = new Date(partsCriacao[2], partsCriacao[1]-1, partsCriacao[0]);
            else d1 = new Date(dataCriacaoStr);
            
-           let d2 = dataObj; // dataObj already parsed dataFechamento above safely
+           let d2 = new Date();
+           let partsFim = dataFim.replace(',', '').split(' ')[0].split('/');
+           if (partsFim.length === 3) d2 = new Date(partsFim[2], partsFim[1]-1, partsFim[0]);
+           else d2 = new Date(dataFim);
            
            if (!isNaN(d1.getTime()) && !isNaN(d2.getTime())) {
                let diffTime = Math.abs(d2 - d1);
@@ -15751,63 +15759,150 @@ linhas.forEach((tr, index) => {
     document.getElementById("modalDetalhesReputacao").style.display = "flex";
   };
 
+  window.toggleGrupoEconomia = function(groupId, iconId) {
+     const rows = document.querySelectorAll('.' + groupId);
+     const icon = document.getElementById(iconId);
+     let isHidden = false;
+     if (rows.length > 0) {
+         isHidden = rows[0].style.display === 'none';
+     }
+     
+     rows.forEach(row => {
+         row.style.display = isHidden ? 'table-row' : 'none';
+     });
+     
+     if (icon) {
+         if (isHidden) {
+             icon.classList.remove('fa-chevron-right');
+             icon.classList.add('fa-chevron-down');
+         } else {
+             icon.classList.remove('fa-chevron-down');
+             icon.classList.add('fa-chevron-right');
+         }
+     }
+  };
+
   window.abrirEconomiaPorCotacao = function() {
     let localCotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
     let fechadas = localCotacoes.filter(c => c.status === "fechada" || c.status === "finalizada");
     
     let html = "";
     
-    fechadas.sort((a,b) => {
-        let d1 = a.criadoEm ? new Date(a.criadoEm) : new Date(0);
-        let d2 = b.criadoEm ? new Date(b.criadoEm) : new Date(0);
-        return d2 - d1;
-    });
-    
+    // Agrupa as cotações fechadas por mês
+    const gruposMes = {};
     fechadas.forEach(c => {
-       let economiaCotacao = 0;
-       const respostas = Array.isArray(c.respostasFornecedores) ? c.respostasFornecedores : Object.values(c.respostasFornecedores || {});
-       
-       let itensList = c.itens || c.produtos || [];
-       if (itensList.length > 0 && respostas.length > 1) {
-           itensList.forEach(item => {
-               let precos = [];
-               respostas.forEach(r => {
-                   let rItem = (r.itens || []).find(i => (i.nome||"").trim().toLowerCase() === (item.nome||"").trim().toLowerCase());
-                   if (rItem && rItem.preco && Number(rItem.preco) > 0) precos.push(Number(rItem.preco));
-               });
-               if (precos.length > 1) {
-                   precos.sort((a,b) => a - b);
-                   let menor = precos[0];
-                   
-                   let precosValidos = precos.filter(p => p <= menor * 3);
-                   if (precosValidos.length > 1) {
-                       let somaOutros = precosValidos.slice(1).reduce((a,b)=>a+b, 0);
-                       let mediaOutros = somaOutros / (precosValidos.length - 1);
-                       economiaCotacao += (mediaOutros - menor) * (Number(item.quantidade) || 1);
+        let dataFim = c.dataFechamento || c.criadoEm;
+        let dataRef = new Date();
+        if (dataFim) {
+           let parts = dataFim.replace(',', '').split(' ')[0].split('/');
+           if (parts.length === 3) dataRef = new Date(parts[2], parts[1]-1, parts[0]);
+           else dataRef = new Date(dataFim);
+        }
+        if (isNaN(dataRef.getTime())) dataRef = new Date();
+
+        const mesAno = dataRef.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+        const mesFormatado = mesAno.charAt(0).toUpperCase() + mesAno.slice(1);
+        if (!gruposMes[mesFormatado]) gruposMes[mesFormatado] = [];
+        gruposMes[mesFormatado].push(c);
+    });
+
+    const mesesMap = {
+      "janeiro": 0, "fevereiro": 1, "março": 2, "abril": 3,
+      "maio": 4, "junho": 5, "julho": 6, "agosto": 7,
+      "setembro": 8, "outubro": 9, "novembro": 10, "dezembro": 11
+    };
+    const agora = new Date();
+    const mesAnoAtual = agora.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+    const mesAtualFormatado = mesAnoAtual.charAt(0).toUpperCase() + mesAnoAtual.slice(1);
+
+    const chavesOrdenadas = Object.keys(gruposMes).sort((a, b) => {
+      if (a === mesAtualFormatado) return -1;
+      if (b === mesAtualFormatado) return 1;
+      const parseKey = (k) => {
+        const parts = k.toLowerCase().split(/\s+de\s+|\s+/);
+        const mIdx = mesesMap[parts[0]] !== undefined ? mesesMap[parts[0]] : 0;
+        const aVal = parseInt(parts[parts.length - 1]) || agora.getFullYear();
+        return new Date(aVal, mIdx, 1).getTime();
+      };
+      return parseKey(b) - parseKey(a);
+    });
+
+    chavesOrdenadas.forEach((mes, idx) => {
+        const grupo = gruposMes[mes];
+        grupo.sort((a,b) => {
+            let d1 = a.criadoEm ? new Date(a.criadoEm) : new Date(0);
+            let d2 = b.criadoEm ? new Date(b.criadoEm) : new Date(0);
+            return d2 - d1;
+        });
+
+        const groupId = `eco-group-${idx}`;
+        const iconId = `eco-icon-${idx}`;
+        
+        html += `
+          <tr style="background: rgba(30, 30, 30, 0.8); cursor: pointer; border-bottom: 2px solid #661155;" 
+              onclick="toggleGrupoEconomia('${groupId}', '${iconId}')"
+              onmouseover="this.style.background='rgba(50, 50, 50, 0.8)';"
+              onmouseout="this.style.background='rgba(30, 30, 30, 0.8)';">
+            <td colspan="3" style="padding: 15px 20px;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="color: white; margin: 0; font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 10px;">
+                  <i id="${iconId}" class="fa-solid fa-chevron-right" style="font-size: 12px; color: #661155; transition: 0.3s;"></i>
+                  <span style="font-size: 14px;">🗓️</span> Cotações de ${mes}
+                </h3>
+                <span style="background: #661155; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 800;">
+                  ${grupo.length}
+                </span>
+              </div>
+            </td>
+          </tr>
+        `;
+
+        grupo.forEach(c => {
+           let economiaCotacao = 0;
+           const respostas = Array.isArray(c.respostasFornecedores) ? c.respostasFornecedores : Object.values(c.respostasFornecedores || {});
+           
+           let itensList = c.itens || c.produtos || [];
+           if (itensList.length > 0 && respostas.length > 1) {
+               itensList.forEach(item => {
+                   let precos = [];
+                   respostas.forEach(r => {
+                       let rItem = (r.itens || []).find(i => (i.nome||"").trim().toLowerCase() === (item.nome||"").trim().toLowerCase());
+                       if (rItem && rItem.preco && Number(rItem.preco) > 0) precos.push(Number(rItem.preco));
+                   });
+                   if (precos.length > 1) {
+                       precos.sort((a,b) => a - b);
+                       let menor = precos[0];
+                       
+                       let precosValidos = precos.filter(p => p <= menor * 3);
+                       if (precosValidos.length > 1) {
+                           let somaOutros = precosValidos.slice(1).reduce((a,b)=>a+b, 0);
+                           let mediaOutros = somaOutros / (precosValidos.length - 1);
+                           economiaCotacao += (mediaOutros - menor) * (Number(item.quantidade) || 1);
+                       }
                    }
-               }
-           });
-       }
-       
-       let dateStr = "-";
-       if (c.dataFechamento) {
-           dateStr = c.dataFechamento.replace(',', '').split(' ')[0];
-       } else if (c.criadoEm) {
-           dateStr = new Date(c.criadoEm).toLocaleDateString('pt-BR');
-       }
-       
-       html += `
-         <tr style="border-bottom: 1px solid #333; background: #1a1a1a;">
-           <td style="padding:12px; color:#fff;">
-             <strong>${c.numero || c.id}</strong><br>
-             <span style="font-size:11px; color:#888;">${c.descricao || 'Sem descrição'}</span>
-           </td>
-           <td style="padding:12px; text-align:center; color:#ccc;">${dateStr}</td>
-           <td style="padding:12px; text-align:right; font-weight:bold; color:${economiaCotacao > 0 ? '#00ff99' : '#888'};">
-             R$ ${economiaCotacao.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}
-           </td>
-         </tr>
-       `;
+               });
+           }
+           
+           let dateStr = "-";
+           if (c.dataFechamento) {
+               dateStr = c.dataFechamento.replace(',', '').split(' ')[0];
+           } else if (c.criadoEm) {
+               dateStr = new Date(c.criadoEm).toLocaleDateString('pt-BR');
+           }
+           
+           html += `
+             <tr class="${groupId}" style="border-bottom: 1px solid #333; background: #1a1a1a; display: none;">
+               <td style="padding:12px; color:#fff;">
+                 <strong>${c.numero || c.id}</strong><br>
+                 <span style="font-size:11px; color:#888;">${c.descricao || 'Sem descrição'}</span>
+               </td>
+               <td style="padding:12px; text-align:center; color:#ccc;">${dateStr}</td>
+               <td style="padding:12px; text-align:right; font-weight:bold; color:${economiaCotacao > 0 ? '#00ff99' : '#888'};">
+                 R$ ${economiaCotacao.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}
+               </td>
+             </tr>
+           `;
+        });
     });
     
     if (html === "") {
