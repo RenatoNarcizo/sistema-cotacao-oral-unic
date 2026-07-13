@@ -5589,8 +5589,26 @@
       if (bannerScore) {
           bannerScore.style.display = "block";
           
-          setTimeout(() => {
+          setTimeout(async () => {
               const u = getUsuarioLogado();
+              if (!u) return;
+              
+              // Busca as avaliações em tempo real do fornecedor
+              let docsLocal = [];
+              if (typeof db !== "undefined") {
+                  try {
+                      const snap = await db.collection("scorecards").where("idFornecedor", "==", u.email).get();
+                      docsLocal = snap.docs.map(d => d.data());
+                  } catch(e) { console.warn(e); }
+              }
+              if (docsLocal.length === 0) {
+                  const scs = JSON.parse(localStorage.getItem("scorecards")) || [];
+                  docsLocal = scs.filter(s => (s.idFornecedor||"").toLowerCase() === (u.email||"").toLowerCase());
+              }
+              
+              let totalAv = docsLocal.length;
+              let mediaCalc = totalAv > 0 ? (docsLocal.reduce((acc, c) => acc + (Number(c.media)||0), 0) / totalAv) : 0;
+              
               const fornecedoresCad = JSON.parse(localStorage.getItem("fornecedores")) || [];
               const ficha = fornecedoresCad.find(f => (f.email || "").toLowerCase() === (u.email || "").toLowerCase());
               
@@ -5600,8 +5618,8 @@
               const subScore = document.getElementById("scoreFornecedorSub");
               const cardAvaliacoes = document.getElementById("cardAvaliacoesFornecedor");
               
-              if (ficha && (Number(ficha.totalAvaliacoes || 0) > 0 || Number(ficha.mediaScorecard || 0) > 0)) {
-                  let nota = Number(ficha.mediaScorecard || 0);
+              if (totalAv > 0 || (ficha && (Number(ficha.totalAvaliacoes || 0) > 0 || Number(ficha.mediaScorecard || 0) > 0))) {
+                  let nota = totalAv > 0 ? mediaCalc : Number(ficha.mediaScorecard || 0);
                   let estrelas = "";
                   for (let i=1; i<=5; i++) {
                       if (nota >= i) estrelas += "★";
@@ -5610,7 +5628,8 @@
                   }
                   txtScore.innerText = `${nota.toFixed(1)} ${estrelas}`;
                   txtScore.style.color = nota >= 4 ? '#00ff99' : (nota >= 3 ? '#fbbf24' : '#ff5555');
-                  subScore.innerText = `Você possui ${ficha.totalAvaliacoes} avaliações. Aqui você encontra a pontuação referente ao serviço prestado ou material vendido. Sua nota e desempenho ficam visíveis aos compradores.`;
+                  let qtdStr = totalAv > 0 ? totalAv : (ficha.totalAvaliacoes || 0);
+                  subScore.innerText = `Você possui ${qtdStr} avaliações. Aqui você encontra a pontuação referente ao serviço prestado ou material vendido. Sua nota e desempenho ficam visíveis aos compradores.`;
                   if (cardAvaliacoes) cardAvaliacoes.style.display = 'block';
               } else {
                   txtScore.innerText = nomeEmpresa;
