@@ -2,6 +2,13 @@
 <html lang="pt-BR">
 
 <head>
+
+
+
+
+
+
+
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Sistema de Cotação e Orçamentos</title>
@@ -2498,15 +2505,18 @@
           <h3 style="color:#aaa; font-size:14px; margin:0 0 10px 0;">Tempo Médio de Fechamento</h3>
           <div id="ecoTempo" style="font-size:28px; font-weight:bold; color:#0dcaf0;">0 dias</div>
         </div>
-        <div style="flex:1; min-width:200px; background:#1a1a1a; padding:20px; border-radius:8px; border-left:4px solid #661155; text-align:center; cursor:pointer; transition:0.3s;" onclick="abrirEconomiaPorCotacao()" onmouseover="this.style.background='#2a2a2a'" onmouseout="this.style.background='#1a1a1a'">
-          <h3 style="color:#aaa; font-size:14px; margin:0 0 10px 0;">Economia por Cotação</h3>
-          <div style="font-size:28px; font-weight:bold; color:#661155;"><i class="fa-solid fa-list-check"></i></div>
+        
+        <div style="flex-basis: 100%; height: 0;"></div>
+        
+        <div style="flex:1; min-width:200px; background:#1a1a1a; padding:20px; border-radius:8px; border-left:4px solid var(--secundaria); text-align:center; cursor:pointer; transition:0.3s;" onclick="abrirEconomiaPorCotacao()" onmouseover="this.style.background='#2a2a2a'" onmouseout="this.style.background='#1a1a1a'">
+          <h3 style="color:var(--secundaria); font-size:14px; margin:0 0 10px 0;">Economia por Cotação</h3>
+          <div style="font-size:28px; font-weight:bold; color:var(--secundaria);"><i class="fa-solid fa-list-check"></i></div>
           <div style="color:#888; font-size:12px; margin-top:5px;">Ver detalhes</div>
         </div>
       </div>
 
       <!-- Área de Gráficos -->
-      <div style="display:flex; gap:20px; flex-wrap:wrap;">
+      <div style="display:flex; gap:20px; flex-wrap:nowrap;">
         <div style="flex:2; min-width:300px; background:#1a1a1a; padding:20px; border-radius:8px;">
           <h3 style="color:var(--primaria); margin-top:0;">Economia Mensal (Últimos 6 meses)</h3>
           <canvas id="graficoEconomia"></canvas>
@@ -2630,7 +2640,7 @@
             style="width: 100%; max-width: 400px; padding: 12px; border-radius: 5px; border: 1px solid #661155; background: #1a1a1a; color: white; text-align: center; font-size: 16px;">
         </div>
 
-        <div style="display: flex; gap: 15px; justify-content: center; flex-wrap:wrap;">
+        <div style="display: flex; gap: 15px; justify-content: center; flex-wrap:nowrap;">
           <button onclick="uploadManual('Nota Fiscal')"
             style="padding: 15px 30px; background: #661155; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; display: flex; align-items: center; gap: 10px;">
             📄 Sel. Nota
@@ -3777,7 +3787,7 @@
           <span style="color:#666;">Aguardando seleção...</span>
         </div>
 
-        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <div style="display:flex; gap:10px; flex-wrap:nowrap;">
           <input type="file" id="inputLogo" accept="image/*" style="display:none;" onchange="previewLogo(this)">
           <button onclick="document.getElementById('inputLogo').click()" style="flex:1; background:var(--primaria);">
             <i class="fa-solid fa-upload"></i> Selecionar Imagem
@@ -3840,18 +3850,21 @@
       <div id="listaProdutosResponder" style="max-height:60vh; overflow:auto;">
         <table class="tabela-responder" style="width:100%; border-collapse: separate; border-spacing: 0 10px;">
           <colgroup>
-            <col style="width:35%"> <!-- Produto -->
+            <col style="width:25%"> <!-- Produto -->
             <col style="width:20%"> <!-- Marca -->
-            <col style="width:15%"> <!-- Preço -->
-            <col style="width:30%"> <!-- Quantidade -->
+            <col style="width:20%"> <!-- Embalagem -->
+            <col style="width:15%"> <!-- Quantidade -->
+            <col style="width:20%"> <!-- Preço -->
           </colgroup>
 
           <thead>
             <tr>
               <th style="text-align: left; padding-left: 15px;">Produto</th>
               <th style="text-align: center;">Marca</th>
+              <th style="text-align: center;">Embalagem</th>
               <th style="text-align: center;">Quantidade</th>
               <th style="text-align: center;">Preço Unitário (R$)</th>
+            </tr>
           </thead>
           <tbody id="tabelaResponderCorpo" style="background:#1a1a1a;"></tbody>
         </table>
@@ -4274,14 +4287,14 @@
       <div id="listaItensSolicitacao">
         <div style="
        display:flex;
-       flex-wrap:wrap;
+       flex-wrap:nowrap;
        align-items:center;
        gap:10px;
        margin-bottom:10px;
      ">
-          <input class="item-nome" placeholder="Nome do item" style="flex: 2 1 120px;">
-          <input class="item-marca" placeholder="Marca (opcional)" style="flex: 1.5 1 100px;">
-          <select class="item-embalagem" style="flex: 1.5 1 100px; background:#1a1a1a; color:white; border:1px solid #661155; border-radius:5px; padding:4px;">
+          <input class="item-nome" placeholder="Nome do item" style="flex: 2 1 120px; background:#1a1a1a; color:white; border:1px solid #661155; border-radius:5px; padding:6px; outline:none;">
+          <input class="item-marca" placeholder="Marca (opcional)" style="flex: 1.5 1 100px; background:#1a1a1a; color:white; border:1px solid #661155; border-radius:5px; padding:6px; outline:none;">
+          <select class="item-unidade" style="flex: 1 1 80px; background:#1a1a1a; color:white; border:1px solid #661155; border-radius:5px; padding:6px; outline:none;">
             <option value="Balde">Balde</option>
             <option value="Caixa">Caixa</option>
             <option value="Fardo">Fardo</option>
@@ -4296,8 +4309,8 @@
             <option value="Unidade" selected>Unidade</option>
             <option value="Ampola">Ampola</option>
           </select>
-          <input class="item-qtd" type="number" min="1" placeholder="Qtd" style="flex: 1 1 60px;">
-          <button onclick="this.parentElement.remove()" style="flex: 0 0 auto;">🗑️</button>
+          <input class="item-qtd" type="number" min="1" placeholder="Qtd" style="flex: 0 1 50px; max-width: 60px; background:#1a1a1a; color:white; border:1px solid #661155; border-radius:5px; padding:6px; outline:none;">
+          <button type="button" onclick="this.parentElement.remove()" style="flex: 0 0 35px; width: 35px; height: 35px; min-width: 35px; background:#661155; color:white; border:none; border-radius:4px; display:flex; align-items:center; justify-content:center; padding:0; cursor:pointer;" title="Remover item">🗑️</button>
         </div>
       </div>
 
@@ -4608,7 +4621,7 @@
       </div>
 
       <!-- aqui entra SOMENTE a matriz -->
-      <div id="conteudoMapaPrecos" style="padding:0;">
+      <div id="conteudoMapaPrecos" style="padding:0; flex:1; overflow:auto; overflow-y:auto; max-height: calc(100vh - 80px);">
         <!-- JS injeta a tabela -->
       </div>
 
@@ -5443,15 +5456,25 @@
       const div = document.createElement("div");
       div.className = "linha-cotacao";
       div.innerHTML = `
-     <div class="info">
-       <strong>${u.nome}</strong><br>
-       ${u.email}<br>
-       <small>${u.tipo}</small>
-     </div>
-     <div class="acoes" style="display:flex; flex-direction:column; gap:6px;">
-       <button onclick="editarUsuario(${u.id})">✏️</button>
-       <button onclick="excluirUsuario(${u.id})">🗑️</button>
-     </div>
+     <input class="item-nome" placeholder="Nome do item" style="flex: 2 1 120px;">
+     <input class="item-marca" placeholder="Marca (opcional)" style="flex: 1.5 1 100px;">
+     <select class="item-unidade" style="flex: 1 1 80px; background:#1a1a1a; color:white; border:1px solid #661155; border-radius:5px; padding:4px;">
+       <option value="Balde">Balde</option>
+       <option value="Caixa">Caixa</option>
+       <option value="Fardo">Fardo</option>
+       <option value="Frasco">Frasco</option>
+       <option value="Garrafa">Garrafa</option>
+       <option value="Litro">Litro</option>
+       <option value="Pacote">Pacote</option>
+       <option value="Pote">Pote</option>
+       <option value="Pea">Pea</option>
+       <option value="Quilogramas (KG)">Quilogramas (KG)</option>
+       <option value="Saco">Saco</option>
+       <option value="Unidade" selected>Unidade</option>
+       <option value="Ampola">Ampola</option>
+     </select>
+     <input class="item-qtd" type="number" min="1" placeholder="Qtd" style="flex: 0 1 50px; max-width: 60px;">
+     <button onclick="this.parentElement.remove()" style="flex: 0 0 35px; width: 35px; height: 35px; min-width: 35px; background:rgba(255,0,0,0.2); color:#ff4d4d; border:none; border-radius:4px; display:flex; align-items:center; justify-content:center; padding:0;"></button>
    `;
 
       if (u.tipo === "fornecedor") {
@@ -6029,6 +6052,7 @@
       tr.innerHTML = `
            <td>${prod.nome}</td>
            <td style="text-align: center;">${prod.marca || '-'}</td>
+           <td style="text-align: center;">${prod.embalagem || '-'}</td>
            <td style="text-align: center;">${prod.quantidade}</td>
            <td style="padding-left: 15px;"><input type="number" step="0.01" class="preco-input" data-produto="${prod.nome}" value=""></td>
        `;
@@ -6645,6 +6669,7 @@
      <input type="number" id="qtd_mat_${i}"
        data-nome="${m.nome}"
        data-marca="${m.marca || "-"}"
+       data-embalagem="${m.embalagem || "-"}"
        placeholder="Qtd"
        style="margin-top:6px;width:100px;
               background:#1a1a1a;color:white;
@@ -7193,6 +7218,18 @@
   /**
    * 📄 Helper para abrir arquivos Base64 diretamente (sem busca em listas)
    */
+  
+  window.abrirArquivoIndexedDB = async function(fileKey, nome) {
+      if (typeof dbDocs === 'undefined') { alert('IndexedDB indisponvel'); return; }
+      try {
+          const b64 = await dbDocs.buscar(fileKey);
+          if (b64) window.abrirArquivoDireto(b64, nome);
+          else alert('Arquivo no encontrado no cache local. Foi limpo ou nunca salvo.');
+      } catch(e) {
+          alert('Erro ao buscar arquivo.');
+      }
+  };
+
   window.abrirArquivoDireto = function (base64, nome) {
     if (!base64 || base64.trim() === "") return alert("Conteúdo do arquivo não encontrado.");
     const win = window.open();
@@ -8414,14 +8451,14 @@
                <span style="color:${diffMs > 0 ? '#3ab9b6' : '#ff5555'};">⏳ Tempo restante: <b>${tempoRestante}</b></span>
              </div>
            </div>
-           <div class="acoes" style="display:flex; flex-wrap:wrap; gap:8px;">
+           <div class="acoes" style="display:flex; flex-direction:column; gap:8px; min-width: 250px;">
               ${usuario.tipo === 'fornecedor'
-              ? `<button onclick="abrirResponderCotacao('${c.numero}', 'novo')" style="background:#00ff99; color:#000; border:none; padding:8px 15px; border-radius:5px; cursor:pointer; font-weight:bold;">✍️ Responder Cotação</button>`
+              ? `<button onclick="abrirResponderCotacao('${c.numero}', 'novo')" style="background:#00ff99; color:#000; border:none; padding:8px 15px; border-radius:5px; cursor:pointer; font-weight:bold; width:100%;">✍️ Responder Cotação</button>`
               : `
-                  <button onclick="encerrarCotacaoManualmente('${c.numero}')" style="background:#cc0000; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer;" title="Encerrar cotação agora">🔒 Encerrar</button>
-                  <button onclick="reabrirCotacao('${c.numero}')" style="background:#e0a800; color:#000; border:none; padding:8px 12px; border-radius:5px; cursor:pointer; font-weight:bold;" title="Estender prazo por 3 dias">🔄 Reabrir / Estender</button>
-                  <button onclick="abrirSelecaoFornecedoresAtiva('${c.numero}')" style="background:#17a2b8; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer;" title="Convidar mais fornecedores para esta cotação">➕ Adicionar Fornecedor</button>
-                  <button onclick="excluirCotacao('${c.numero}')" style="background:transparent; border:1px solid #ff4444; color:#ff4444; padding:8px 12px; border-radius:5px; cursor:pointer;" title="Excluir Cotação"><i class="fa-solid fa-trash"></i></button>
+                  <button onclick="encerrarCotacaoManualmente('${c.numero}')" style="background:#cc0000; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer; width:100%;" title="Encerrar cotação agora">🔒 Encerrar</button>
+                  <button onclick="reabrirCotacao('${c.numero}')" style="background:#e0a800; color:#000; border:none; padding:8px 12px; border-radius:5px; cursor:pointer; font-weight:bold; width:100%;" title="Estender prazo por 3 dias">🔄 Reabrir / Estender</button>
+                  <button onclick="abrirSelecaoFornecedoresAtiva('${c.numero}')" style="background:#17a2b8; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer; width:100%;" title="Convidar mais fornecedores para esta cotação">➕ Adicionar Fornecedor</button>
+                  <button onclick="excluirCotacao('${c.numero}')" style="background:transparent; border:1px solid #ff4444; color:#ff4444; padding:8px 12px; border-radius:5px; cursor:pointer; width:100%;" title="Excluir Cotação"><i class="fa-solid fa-trash"></i></button>
                 `
             }
            </div>
@@ -8555,8 +8592,25 @@
 
   window.fecharModalAnalise = function () {
     document.getElementById("modalAnaliseCotacao").style.display = "none";
-    document.body.style.overflow = "auto"; // 🔓 Unlock background scroll
+    if (window.returnToEconomiaModal) {
+        window.returnToEconomiaModal = false;
+        document.getElementById("modalEconomiaCotacao").style.display = "flex";
+    }
+    document.body.style.overflow = "auto";
   };
+  
+  window.abrirPremiumDaEconomia = function(idCotacao) {
+    document.getElementById("modalEconomiaCotacao").style.display = "none";
+    window.returnToEconomiaModal = true;
+    
+    if (typeof window.abrirAnaliseCotacao === "function") {
+        window.abrirAnaliseCotacao(idCotacao);
+    } else {
+        document.getElementById("modalAnaliseCotacao").style.display = "flex";
+        document.body.style.overflow = "hidden";
+        if (typeof renderizarTabelaAnalise === "function") renderizarTabelaAnalise(idCotacao);
+    }
+  };;
 
 
 
@@ -10202,6 +10256,7 @@
      📤 SALVAR ANÁLISE E ENVIAR PARA APROVAÇÃO (CORRIGIDO V2)
      ====================================================== */
   async function salvarAnaliseAdjudicacao(numeroCotacao) {
+    // Fix: Garante puxar a marca e embalagem corretas da origem
     const cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
     const cotacaoIndex = cotacoes.findIndex(c => c.numero === numeroCotacao);
     const cotacao = cotacoes[cotacaoIndex];
@@ -10246,9 +10301,20 @@
         const prodOriginal = (cotacao.produtos || []).find(p => (p.nome || p.descricao) === prodNome);
         const qtd = prodOriginal ? (Number(prodOriginal.quantidade) || 0) : 0;
 
+        let embalagem = (prodOriginal && prodOriginal.embalagem && prodOriginal.embalagem !== "-") ? prodOriginal.embalagem : "-";
+        if (itemDados && itemDados.embalagem && itemDados.embalagem !== "-") {
+            embalagem = itemDados.embalagem;
+        }
+
+        let marca = (prodOriginal && prodOriginal.marca && prodOriginal.marca !== "-") ? prodOriginal.marca : "-";
+        if (itemDados && itemDados.marca && itemDados.marca !== "-") {
+            marca = itemDados.marca;
+        }
+        
         novaAdjudicacao.push({
           produto: prodNome,
-          marca: prodOriginal ? (prodOriginal.marca || "-") : "-",
+          marca: marca,
+          embalagem: embalagem,
           quantidade: qtd,
           fornecedor: respForn.fornecedor || respForn.fornecedorNome,
           email: respForn.email,
@@ -10480,6 +10546,7 @@
          <tr>
            <th>Item</th>
            <th>Marca</th>
+           <th>Embalagem</th>
            <th>Qtd</th>
            <th>Fornecedor</th>
            <th>Preço</th>
@@ -10507,7 +10574,8 @@
        <tr style="background:#1a1a1a; border-bottom: 1px solid #333;">
          <td>${i.produto}</td>
          <td>${i.marca || "-"}</td>
-         <td>${i.quantidade}</td>
+       <td style="padding:8px; text-align:center; color:#888;">${i.embalagem || "-"}</td>
+       <td>${i.quantidade}</td>
          <td>${i.fornecedor} ${iconAnexo}</td>
          <td>R$ ${Number(i.preco).toFixed(2)}</td>
          <td>R$ ${t.toFixed(2)}</td>
@@ -10632,6 +10700,7 @@
          </th>
          <th style="text-align:left; padding:8px;">Item</th>
          <th style="text-align:center; padding:8px;">Marca</th>
+         <th style="text-align:center; padding:8px;">Embalagem</th>
          <th style="text-align:center; padding:8px;">Qtd</th>
          <th style="text-align:left; padding:8px;">Fornecedor</th>
          <th style="text-align:right; padding:8px;">Preço</th>
@@ -10662,6 +10731,7 @@
        </td>
        <td style="padding:8px; text-align:left;">${i.produto}</td>
        <td style="padding:8px; text-align:center;">${i.marca || "-"}</td>
+       <td style="padding:8px; text-align:center; color:#888;">${i.embalagem || "-"}</td>
        <td style="padding:8px; text-align:center;">${i.quantidade}</td>
        <td style="padding:8px; text-align:left;">
           <div style="font-weight:bold; color:#00ff99; display:flex; align-items:center; gap:5px;">
@@ -11171,10 +11241,9 @@
       }
     }
 
+        let emptyAlertHtml = "";
     if (respostas.length === 0) {
-      conteudo.innerHTML = `<div style="text-align:center;color:#aaa;margin-top:40px;">🗺️ Nenhuma resposta enviada.</div>`;
-      modal.style.display = "flex";
-      return;
+        emptyAlertHtml = "<div style='text-align:center; padding:15px; background:rgba(255,0,0,0.1); border:1px solid #661155; border-radius:8px; margin-bottom:20px;'><p style='color:#ccc; font-weight:bold; font-size:14px; margin:0;'><i class='fa-solid fa-triangle-exclamation' style='color:#f59e0b; margin-right:8px;'></i> Nenhuma resposta recebida para esta cotação ainda. Exibindo apenas a lista de itens.</p></div>";
     }
 
     /* ======================================================
@@ -11578,10 +11647,10 @@
     const lista = document.getElementById("listaItensSolicitacao");
     if (lista) {
       lista.innerHTML = `
-       <div style="display:grid; grid-template-columns:2fr 1.5fr 1.5fr 1fr auto; gap:10px; margin-bottom:10px;">
-         <input placeholder="Nome do item">
-         <input placeholder="Marca (opcional)">
-         <select style="background:#1a1a1a; color:white; border:1px solid #661155; border-radius:5px; padding:4px;">
+       <div style="display:flex; flex-wrap:nowrap; align-items:center; gap:10px; margin-bottom:10px;">
+         <input class="item-nome" placeholder="Nome do item" style="flex: 2 1 120px; background:#1a1a1a; color:white; border:1px solid #661155; border-radius:5px; padding:6px; outline:none;">
+         <input class="item-marca" placeholder="Marca (opcional)" style="flex: 1.5 1 100px; background:#1a1a1a; color:white; border:1px solid #661155; border-radius:5px; padding:6px; outline:none;">
+         <select class="item-unidade" style="flex: 1 1 80px; background:#1a1a1a; color:white; border:1px solid #661155; border-radius:5px; padding:6px; outline:none;">
            <option value="Balde">Balde</option>
            <option value="Caixa">Caixa</option>
            <option value="Fardo">Fardo</option>
@@ -11596,8 +11665,8 @@
            <option value="Unidade" selected>Unidade</option>
            <option value="Ampola">Ampola</option>
          </select>
-         <input type="number" min="1" placeholder="Qtd">
-         <button onclick="this.parentElement.remove()">🗑️</button>
+         <input class="item-qtd" type="number" min="1" placeholder="Qtd" style="flex: 0 1 50px; max-width: 60px; background:#1a1a1a; color:white; border:1px solid #661155; border-radius:5px; padding:6px; outline:none;">
+         <button type="button" onclick="this.parentElement.remove()" style="flex: 0 0 35px; width: 35px; height: 35px; min-width: 35px; background:#661155; color:white; border:none; border-radius:4px; display:flex; align-items:center; justify-content:center; padding:0; cursor:pointer;" title="Remover item">🗑️</button>
        </div>
      `;
     }
@@ -11610,14 +11679,14 @@
 
     const div = document.createElement("div");
     div.style.display = "flex";
-    div.style.flexWrap = "wrap";
+    div.style.flexWrap = "nowrap";
     div.style.alignItems = "center";
     div.style.gap = "10px";
     div.style.marginBottom = "10px";
     div.innerHTML = `
-     <input class="item-nome" placeholder="Nome do item" style="flex: 2 1 120px;">
-     <input class="item-marca" placeholder="Marca (opcional)" style="flex: 1.5 1 100px;">
-     <select class="item-unidade" style="flex: 1.5 1 100px; background:#1a1a1a; color:white; border:1px solid #661155; border-radius:5px; padding:4px;">
+<input class="item-nome" placeholder="Nome do item" style="flex: 2 1 120px; background:#1a1a1a; color:white; border:1px solid #661155; border-radius:5px; padding:6px; outline:none;">
+     <input class="item-marca" placeholder="Marca (opcional)" style="flex: 1.5 1 100px; background:#1a1a1a; color:white; border:1px solid #661155; border-radius:5px; padding:6px; outline:none;">
+     <select class="item-unidade" style="flex: 1 1 80px; background:#1a1a1a; color:white; border:1px solid #661155; border-radius:5px; padding:6px; outline:none;">
        <option value="Balde">Balde</option>
        <option value="Caixa">Caixa</option>
        <option value="Fardo">Fardo</option>
@@ -11632,8 +11701,8 @@
        <option value="Unidade" selected>Unidade</option>
        <option value="Ampola">Ampola</option>
      </select>
-     <input class="item-qtd" type="number" min="1" placeholder="Qtd" style="flex: 1 1 60px;">
-     <button onclick="this.parentElement.remove()" style="flex: 0 0 auto;">🗑️</button>
+     <input class="item-qtd" type="number" min="1" placeholder="Qtd" style="flex: 0 1 50px; max-width: 60px; background:#1a1a1a; color:white; border:1px solid #661155; border-radius:5px; padding:6px; outline:none;">
+     <button type="button" onclick="this.parentElement.remove()" style="flex: 0 0 35px; width: 35px; height: 35px; min-width: 35px; background:#661155; color:white; border:none; border-radius:4px; display:flex; align-items:center; justify-content:center; padding:0; cursor:pointer;" title="Remover item">🗑️</button>
    `;
 
     container.appendChild(div);
@@ -12335,8 +12404,25 @@
 
   window.fecharModalAnalise = function () {
     document.getElementById("modalAnaliseCotacao").style.display = "none";
-    document.body.style.overflow = "auto"; // Restore scrolling
+    if (window.returnToEconomiaModal) {
+        window.returnToEconomiaModal = false;
+        document.getElementById("modalEconomiaCotacao").style.display = "flex";
+    }
+    document.body.style.overflow = "auto";
   };
+  
+  window.abrirPremiumDaEconomia = function(idCotacao) {
+    document.getElementById("modalEconomiaCotacao").style.display = "none";
+    window.returnToEconomiaModal = true;
+    
+    if (typeof window.abrirAnaliseCotacao === "function") {
+        window.abrirAnaliseCotacao(idCotacao);
+    } else {
+        document.getElementById("modalAnaliseCotacao").style.display = "flex";
+        document.body.style.overflow = "hidden";
+        if (typeof renderizarTabelaAnalise === "function") renderizarTabelaAnalise(idCotacao);
+    }
+  };;
 
   /* ======================================================
      ⚙️ CONFIGURAÇÕES (LOGO, ETC)
@@ -13011,7 +13097,12 @@
       descricao = document.getElementById("descricaoCotacaoMateriais")?.value.trim();
       document.querySelectorAll("#listaMateriaisCotacao input[type='number']").forEach(inp => {
         if (Number(inp.value) > 0) {
-          produtos.push({ nome: inp.dataset.nome, marca: inp.dataset.marca || "-", quantidade: Number(inp.value) });
+          produtos.push({ 
+            nome: inp.dataset.nome, 
+            marca: inp.dataset.marca || "-", 
+            embalagem: inp.dataset.embalagem && inp.dataset.embalagem !== "-" && inp.dataset.embalagem !== "undefined" ? inp.dataset.embalagem : "-", 
+            quantidade: Number(inp.value) 
+          });
         }
       });
     } else if (tipo === "servicos") {
@@ -13595,6 +13686,7 @@ linhas.forEach((tr, index) => {
       tr.innerHTML = `
        <td style="text-align: left; padding-left: 12px;">${p.nome}</td>
        <td style="text-align: center;">${p.marca || "-"}</td>
+       <td style="text-align: center;">${p.embalagem || "-"}</td>
        <td style="text-align: center;">${p.quantidade}</td>
        <td style="text-align: center;">
          <div style="display:flex; align-items:center; background:#1a1a1a; border:1px solid #444; border-radius:4px; padding:0 12px; width:140px; margin:0 auto;">
@@ -13758,6 +13850,18 @@ linhas.forEach((tr, index) => {
      🔗 HELPER: ABRIR ARQUIVO BASE64 DIRETAMENTE
      ====================================================== */
   window.tempAnexosBase64 = window.tempAnexosBase64 || {};
+  
+  window.abrirArquivoIndexedDB = async function(fileKey, nome) {
+      if (typeof dbDocs === 'undefined') { alert('IndexedDB indisponvel'); return; }
+      try {
+          const b64 = await dbDocs.buscar(fileKey);
+          if (b64) window.abrirArquivoDireto(b64, nome);
+          else alert('Arquivo no encontrado no cache local. Foi limpo ou nunca salvo.');
+      } catch(e) {
+          alert('Erro ao buscar arquivo.');
+      }
+  };
+
   window.abrirArquivoDireto = function (idAnexo, nome = "Anexo") {
     const base64 = window.tempAnexosBase64[idAnexo];
     if (!base64) return alert("Erro: Dados do arquivo não encontrados.");
@@ -13884,6 +13988,20 @@ linhas.forEach((tr, index) => {
       }
     }
 
+    // B2. Fonte Local (Chaves docs_...) - Anexos inseridos avulsos
+    try {
+      const docsCot = JSON.parse(localStorage.getItem(`docs_${idLimpo}`)) || [];
+      const docsCot2 = JSON.parse(localStorage.getItem(`docs_${idCotacao}`)) || [];
+      const allDocs = [...docsCot, ...docsCot2];
+      allDocs.forEach(d => {
+         addResposta({
+            fornecedor: d.usuario || d.fornecedor || "Fornecedor Local",
+            email: d.email || ((d.usuario || "local") + "@web.com"),
+            anexo: { nome: d.nome || "Anexo", base64: d.base64, url: d.url }
+         });
+      });
+    } catch(e) {}
+
     // C. Fonte Nuvem (Firestore)
     if (typeof db !== "undefined") {
       try {
@@ -13937,8 +14055,12 @@ linhas.forEach((tr, index) => {
     }
 
     let todasRespostas = Array.from(todasRespostasMap.values());
-    if (emailFornecedor) {
-      todasRespostas = todasRespostas.filter(r => (r.email || "").toLowerCase().trim() === emailFornecedor.toLowerCase().trim());
+    if (emailFornecedor && String(emailFornecedor) !== "undefined") {
+      todasRespostas = todasRespostas.filter(r => {
+          const iden = (r.email || r.fornecedor || r.nome || "Outros").toLowerCase().trim();
+          return iden === emailFornecedor.toLowerCase().trim() || 
+                 (r.email || "").toLowerCase().trim() === emailFornecedor.toLowerCase().trim();
+      });
     }
 
     if (todasRespostas.length === 0) {
@@ -13962,14 +14084,21 @@ linhas.forEach((tr, index) => {
     todasRespostas.forEach((r) => {
       let validAnexos = [];
       if (Array.isArray(r.anexos)) {
-        r.anexos.forEach(a => { if (a && (a.url || a.base64 || a.link)) validAnexos.push(a); });
+        r.anexos.forEach(a => { if (a) validAnexos.push(a); });
       }
-      if (r.anexo && (r.anexo.url || r.anexo.base64 || r.anexo.link)) {
-        const jaExiste = validAnexos.some(a => (a.url && a.url === r.anexo.url) || (a.base64 && a.base64 === r.anexo.base64));
-        if (!jaExiste) validAnexos.push(r.anexo);
+      if (r.anexo) {
+        if (typeof r.anexo === 'string') {
+           validAnexos.push({ nome: "Documento", url: r.anexo.startsWith('http') ? r.anexo : null, base64: r.anexo.startsWith('data:') ? r.anexo : null });
+        } else {
+           const jaExiste = validAnexos.some(a => (a.url && a.url === r.anexo.url) || (a.base64 && a.base64 === r.anexo.base64));
+           if (!jaExiste) validAnexos.push(r.anexo);
+        }
       }
       if (r.base64 && !validAnexos.some(a => a.base64 === r.base64)) {
         validAnexos.push({ nome: r.anexoNome || r.nomeAnexo || "Documento Local", base64: r.base64 });
+      }
+      if (r.url && !validAnexos.some(a => a.url === r.url)) {
+        validAnexos.push({ nome: r.anexoNome || r.nomeAnexo || "Documento", url: r.url });
       }
 
       if (validAnexos.length === 0) return;
@@ -14000,13 +14129,14 @@ linhas.forEach((tr, index) => {
         if (anexo.url || anexo.link) {
           const url = anexo.url || anexo.link;
           tableHTML += `<a href="${url}" target="_blank" style="background:#3ab9b6; color:#000; padding:10px 16px; border-radius:6px; font-size:11px; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; gap:8px; font-weight:900; text-transform:uppercase; box-shadow: 0 4px 0 #2a8f8c; width: 140px; box-sizing: border-box;"><i class="fa-solid fa-cloud-arrow-down"></i> LINK</a>`;
-        }  
-        if (anexo.base64) {
+        } else if (anexo.base64) {
           const idAnexoTemp = "anexo_" + Math.random().toString(36).substr(2, 9);
           if(!window.tempAnexosBase64) window.tempAnexosBase64 = {};
           window.tempAnexosBase64[idAnexoTemp] = anexo.base64;
           const safeNome = (anexo.nome || 'Anexo').replace(/'/g, "");
           tableHTML += `<button onclick="window.abrirArquivoDireto('${idAnexoTemp}', '${safeNome}')" style="background:#fbbf24; color:#000; padding:10px 16px; border-radius:6px; border:none; cursor:pointer; font-size:11px; display:inline-flex; align-items:center; justify-content:center; gap:8px; font-weight:900; text-transform:uppercase; box-shadow: 0 4px 0 #b4891b; width: 140px; box-sizing: border-box;"><i class="fa-solid fa-eye"></i> VER ANEXO</button>`;
+      } else {
+          tableHTML += `<span style="background:#444; color:#aaa; padding:10px 16px; border-radius:6px; font-size:10px; display:inline-flex; align-items:center; justify-content:center; gap:5px; font-weight:800; text-transform:uppercase; text-align:center;"><i class="fa-solid fa-triangle-exclamation" style="color:#f59e0b;"></i> ARQUIVO AUSENTE OU MUITO GRANDE</span>`;
         }
       });
       tableHTML += `</div></td></tr>`;
@@ -14426,18 +14556,9 @@ linhas.forEach((tr, index) => {
       respostas = Object.values(cotacao.respostasFornecedores);
     }
 
+            let emptyAlertHtml = "";
     if (respostas.length === 0) {
-      container.innerHTML = "<p style='color:#ccc; padding:20px;'>Nenhuma resposta recebida para esta cotação ainda.</p>";
-      if (isAnalise && cotacao.status !== "aprovacao") {
-        container.innerHTML += `
-              <div style="margin-top:20px;">
-                 <button onclick="excluirCotacao('${cotacao.numero}')" 
-                       style="background:#b93a3a; color:white; border:none; padding:10px 20px; border-radius:6px; cursor:pointer;">
-                    <i class="fa-solid fa-trash"></i> Excluir Cotação
-                 </button>
-              </div>`;
-      }
-      return;
+        emptyAlertHtml = "<div style='text-align:center; padding:15px; background:rgba(255,0,0,0.1); border:1px solid #661155; border-radius:8px; margin-bottom:20px;'><p style='color:#ccc; font-weight:bold; font-size:14px; margin:0;'><i class='fa-solid fa-triangle-exclamation' style='color:#f59e0b; margin-right:8px;'></i> Nenhuma resposta recebida para esta cotação ainda. Exibindo apenas a lista de itens.</p></div>";
     }
 
     const produtos = cotacao.produtos || cotacao.itens || [];
@@ -14455,12 +14576,12 @@ linhas.forEach((tr, index) => {
     ========================== */
     const emailsParticipantes = [...new Set(respostas.map(r => normalizarEmail(r.email)))];
     let resumoPerformanceHtml = `
-      <div id="painelPerformanceScorecard" style="background:#111; border:1px solid #661155; border-radius:12px; padding:15px; margin-bottom:20px; display:flex; flex-wrap:wrap; gap:20px; align-items:center;">
+      <div id="painelPerformanceScorecard" style="background:#111; border:1px solid #661155; border-radius:12px; padding:15px; margin-bottom:20px; display:flex; flex-wrap:nowrap; gap:20px; align-items:center;">
         <div style="color:#661155; font-weight:bold; font-size:12px; text-transform:uppercase; border-right:1px solid #333; padding-right:15px; display:flex; align-items:center; gap:8px;">
            <i class="fa-solid fa-ranking-star" style="font-size:20px;"></i>
            PERFORMANCE DOS<br>PARTICIPANTES
         </div>
-        <div style="display:flex; flex-wrap:wrap; gap:15px;">
+        <div style="display:flex; flex-wrap:nowrap; gap:15px;">
     `;
 
     emailsParticipantes.forEach(email => {
@@ -14574,7 +14695,12 @@ linhas.forEach((tr, index) => {
           valorGanhando[winRes.rIdx] += (winRes.val * qtd);
         }
       }
-      if (melhorPreco) {
+      if (emailEscolhido) {
+        const winRes2 = precosRow.find(p => normalizarEmail(p.email) === normalizarEmail(emailEscolhido));
+        if (winRes2) {
+          totalMenorPrecoGeral += (winRes2.val * qtd);
+        }
+      } else if (melhorPreco) {
         totalMenorPrecoGeral += (melhorPreco.val * qtd);
       }
 
@@ -14673,7 +14799,7 @@ linhas.forEach((tr, index) => {
                     </td>
                 `).join('')}
                 <td style="text-align: center; color: #00ff99; font-size: 16px; background: rgba(0, 255, 153, 0.05); border-left: 1px solid #333;">
-                    <div style="font-size: 9px; color: #10b981; font-weight: normal; margin-bottom: 2px;">VALOR TOTAL DA COMPRA (1ºs)</div>
+                    <div style="font-size: 9px; color: #10b981; font-weight: normal; margin-bottom: 2px;">VALOR TOTAL DA COMPRA</div>
                     R$ ${totalMenorPrecoGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </td>
             </tr>
@@ -15154,6 +15280,8 @@ linhas.forEach((tr, index) => {
       if (vencedorEmail) {
         adjudicacao.push({
           produto: prod.nome,
+          marca: prod.marca || "-",
+          embalagem: prod.embalagem || "-",
           quantidade: prod.quantidade,
           fornecedor: vencedorNome,
           emailFornecedor: vencedorEmail,
@@ -15735,29 +15863,78 @@ linhas.forEach((tr, index) => {
        let economiaCotacao = 0;
        const respostas = Array.isArray(c.respostasFornecedores) ? c.respostasFornecedores : Object.values(c.respostasFornecedores || {});
        
+       let totaisBrutosFornecedores = {};
+       let totalMenorPrecoGeral = 0;
+       
        let itensList = c.itens || c.produtos || [];
-       if (itensList.length > 0 && respostas.length > 1) {
-           itensList.forEach(item => {
-               let precos = [];
-               respostas.forEach(r => {
-                   let rItem = (r.itens || []).find(i => (i.nome||"").trim().toLowerCase() === (item.nome||"").trim().toLowerCase());
-                   if (rItem && rItem.preco && Number(rItem.preco) > 0) precos.push(Number(rItem.preco));
+                             if (itensList.length > 0 && respostas.length > 1) {
+               itensList.forEach(item => {
+                   let precosItem = [];
+                   respostas.forEach(r => {
+                       if (!totaisBrutosFornecedores[r.email]) totaisBrutosFornecedores[r.email] = 0;
+                       let rItem = (r.itens || []).find(i => (i.produto || i.nome || "").trim().toLowerCase() === (item.nome || item.produto || "").trim().toLowerCase());
+                       if (rItem && rItem.preco && Number(rItem.preco) > 0) {
+                           let preco = Number(rItem.preco);
+                           precosItem.push(preco);
+                           totaisBrutosFornecedores[r.email] += preco * (Number(item.quantidade) || 1);
+                       }
+                   });
                });
-               if (precos.length > 1) {
-                   precos.sort((a,b) => a - b);
-                   let menor = precos[0];
+               
+               // Se a cotação já está fechada e tem adjudicação, o total comprado é a soma da adjudicação!
+               // Se não tiver, cai pro cálculo padrão (menor preço de cada item).
+               if (c.adjudicacao && Array.isArray(c.adjudicacao) && c.adjudicacao.length > 0) {
+                   totalMenorPrecoGeral = c.adjudicacao.reduce((acc, adj) => acc + (Number(adj.total) || 0), 0);
+               } else {
+                   itensList.forEach((item, idx) => {
+                       let precosItem2 = [];
+                       respostas.forEach(r => {
+                           let rItem = (r.itens || []).find(i => (i.produto || i.nome || "").trim().toLowerCase() === (item.nome || item.produto || "").trim().toLowerCase());
+                           if (rItem && rItem.preco && Number(rItem.preco) > 0) {
+                               precosItem2.push(Number(rItem.preco));
+                           }
+                       });
+                       if (precosItem2.length > 0) {
+                           precosItem2.sort((a,b) => a - b);
+                           let emailEscolhido = c.decisoes ? c.decisoes[`item_${idx}`] : null;
+                           if (emailEscolhido) {
+                               let rWin = respostas.find(r => r.email === emailEscolhido);
+                               if (rWin) {
+                                   let rItemWin = (rWin.itens || []).find(i => (i.produto || i.nome || "").trim().toLowerCase() === (item.nome || item.produto || "").trim().toLowerCase());
+                                   if (rItemWin && rItemWin.preco && Number(rItemWin.preco) > 0) {
+                                       totalMenorPrecoGeral += Number(rItemWin.preco) * (Number(item.quantidade) || 1);
+                                   } else {
+                                       totalMenorPrecoGeral += precosItem2[0] * (Number(item.quantidade) || 1);
+                                   }
+                               } else {
+                                   totalMenorPrecoGeral += precosItem2[0] * (Number(item.quantidade) || 1);
+                               }
+                           } else {
+                               totalMenorPrecoGeral += precosItem2[0] * (Number(item.quantidade) || 1);
+                           }
+                       }
+                   });
+               }
+               
+               let arrayTotais = Object.values(totaisBrutosFornecedores).filter(v => v > 0).sort((a,b) => a - b);
+               if (arrayTotais.length > 0) {
+                   let baseParaEconomia = arrayTotais[0];
                    
-                   let precosValidos = precos.filter(p => p <= menor * 3);
-                   if (precosValidos.length > 1) {
-                       let somaOutros = precosValidos.slice(1).reduce((a,b)=>a+b, 0);
-                       let mediaOutros = somaOutros / (precosValidos.length - 1);
-                       economiaCotacao += (mediaOutros - menor) * (Number(item.quantidade) || 1);
+                   if (arrayTotais.length > 1) {
+                       let primeiro = arrayTotais[0];
+                       let segundo = arrayTotais[1];
+                       if (primeiro < (segundo * 0.90)) {
+                           baseParaEconomia = segundo;
+                       }
+                   }
+                   
+                   if (baseParaEconomia >= totalMenorPrecoGeral) {
+                       economiaCotacao = baseParaEconomia - totalMenorPrecoGeral;
                    }
                }
-           });
-       }
-       
-       if (isMesAtual) ecoMes += economiaCotacao;
+           }
+           
+           if (isMesAtual) ecoMes += economiaCotacao;
        if (isAnoAtual) ecoAno += economiaCotacao;
        
        if (diffMeses >= 0 && diffMeses <= 5) {
@@ -15767,19 +15944,29 @@ linhas.forEach((tr, index) => {
        let dataCriacaoStr = c.criadoEm || c.dataCriacao;
        let dataFim = c.dataEnviadoAprovacao || c.dataFechamento;
        if (dataCriacaoStr && dataFim) {
-           let partsCriacao = dataCriacaoStr.replace(',', '').split(' ')[0].split('/');
-           let d1 = new Date();
-           if (partsCriacao.length === 3) d1 = new Date(partsCriacao[2], partsCriacao[1]-1, partsCriacao[0]);
-           else d1 = new Date(dataCriacaoStr);
-           
-           let d2 = new Date();
-           let partsFim = dataFim.replace(',', '').split(' ')[0].split('/');
-           if (partsFim.length === 3) d2 = new Date(partsFim[2], partsFim[1]-1, partsFim[0]);
-           else d2 = new Date(dataFim);
+           function parseDataBR(str) {
+               if(!str) return new Date(NaN);
+               let partes = str.replace(',', '').split(' ');
+               let pData = partes[0].split('/');
+               if (pData.length === 3) {
+                   let h = 0, m = 0, s = 0;
+                   if (partes[1]) {
+                       let pHora = partes[1].split(':');
+                       h = parseInt(pHora[0]) || 0;
+                       m = parseInt(pHora[1]) || 0;
+                       s = parseInt(pHora[2]) || 0;
+                   }
+                   return new Date(parseInt(pData[2]), parseInt(pData[1])-1, parseInt(pData[0]), h, m, s);
+               }
+               return new Date(str);
+           }
+           let d1 = parseDataBR(dataCriacaoStr);
+           let d2 = parseDataBR(dataFim);
            
            if (!isNaN(d1.getTime()) && !isNaN(d2.getTime())) {
                let diffTime = Math.abs(d2 - d1);
-               let diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+               let diffDays = diffTime / (1000 * 60 * 60 * 24);
+               console.log(`[Econommetro] Cotao ${c.numero || c.id}: Publicada em ${d1.toLocaleString('pt-BR')} | Aprovada em ${d2.toLocaleString('pt-BR')} -> Demorou ${diffDays.toFixed(2)} dias reais.`);
                tempoSoma += diffDays;
                qtdTempos++;
            }
@@ -15789,7 +15976,11 @@ linhas.forEach((tr, index) => {
     document.getElementById("ecoMes").innerText = `R$ ${ecoMes.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
     document.getElementById("ecoAno").innerText = `R$ ${ecoAno.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
     document.getElementById("ecoQtd").innerText = fechadas.length;
-    document.getElementById("ecoTempo").innerText = qtdTempos > 0 ? `${Math.round(tempoSoma/qtdTempos)} dias` : '0 dias';
+    let mediaTempo = qtdTempos > 0 ? tempoSoma / qtdTempos : 0;
+    // Arredonda para cima: se deu 0.2 dias (algumas horas), conta como 1 dia de esforo.
+    let diasExibicao = Math.ceil(mediaTempo);
+    document.getElementById("ecoTempo").innerText = `${diasExibicao} dias`;
+    console.log(`[Econommetro] MDIA GERAL: ${mediaTempo.toFixed(2)} dias reais -> Exibindo: ${diasExibicao} dias.`);
     
     const ctxEco = document.getElementById('graficoEconomia').getContext('2d');
     if (window.chartEco) window.chartEco.destroy();
@@ -15994,26 +16185,75 @@ linhas.forEach((tr, index) => {
            let economiaCotacao = 0;
            const respostas = Array.isArray(c.respostasFornecedores) ? c.respostasFornecedores : Object.values(c.respostasFornecedores || {});
            
+           let totaisBrutosFornecedores = {};
+           let totalMenorPrecoGeral = 0;
+           
            let itensList = c.itens || c.produtos || [];
-           if (itensList.length > 0 && respostas.length > 1) {
+                                 if (itensList.length > 0 && respostas.length > 1) {
                itensList.forEach(item => {
-                   let precos = [];
+                   let precosItem = [];
                    respostas.forEach(r => {
-                       let rItem = (r.itens || []).find(i => (i.nome||"").trim().toLowerCase() === (item.nome||"").trim().toLowerCase());
-                       if (rItem && rItem.preco && Number(rItem.preco) > 0) precos.push(Number(rItem.preco));
+                       if (!totaisBrutosFornecedores[r.email]) totaisBrutosFornecedores[r.email] = 0;
+                       let rItem = (r.itens || []).find(i => (i.produto || i.nome || "").trim().toLowerCase() === (item.nome || item.produto || "").trim().toLowerCase());
+                       if (rItem && rItem.preco && Number(rItem.preco) > 0) {
+                           let preco = Number(rItem.preco);
+                           precosItem.push(preco);
+                           totaisBrutosFornecedores[r.email] += preco * (Number(item.quantidade) || 1);
+                       }
                    });
-                   if (precos.length > 1) {
-                       precos.sort((a,b) => a - b);
-                       let menor = precos[0];
-                       
-                       let precosValidos = precos.filter(p => p <= menor * 3);
-                       if (precosValidos.length > 1) {
-                           let somaOutros = precosValidos.slice(1).reduce((a,b)=>a+b, 0);
-                           let mediaOutros = somaOutros / (precosValidos.length - 1);
-                           economiaCotacao += (mediaOutros - menor) * (Number(item.quantidade) || 1);
+               });
+               
+               // Se a cotação já está fechada e tem adjudicação, o total comprado é a soma da adjudicação!
+               // Se não tiver, cai pro cálculo padrão (menor preço de cada item).
+               if (c.adjudicacao && Array.isArray(c.adjudicacao) && c.adjudicacao.length > 0) {
+                   totalMenorPrecoGeral = c.adjudicacao.reduce((acc, adj) => acc + (Number(adj.total) || 0), 0);
+               } else {
+                   itensList.forEach((item, idx) => {
+                       let precosItem2 = [];
+                       respostas.forEach(r => {
+                           let rItem = (r.itens || []).find(i => (i.produto || i.nome || "").trim().toLowerCase() === (item.nome || item.produto || "").trim().toLowerCase());
+                           if (rItem && rItem.preco && Number(rItem.preco) > 0) {
+                               precosItem2.push(Number(rItem.preco));
+                           }
+                       });
+                       if (precosItem2.length > 0) {
+                           precosItem2.sort((a,b) => a - b);
+                           let emailEscolhido = c.decisoes ? c.decisoes[`item_${idx}`] : null;
+                           if (emailEscolhido) {
+                               let rWin = respostas.find(r => r.email === emailEscolhido);
+                               if (rWin) {
+                                   let rItemWin = (rWin.itens || []).find(i => (i.produto || i.nome || "").trim().toLowerCase() === (item.nome || item.produto || "").trim().toLowerCase());
+                                   if (rItemWin && rItemWin.preco && Number(rItemWin.preco) > 0) {
+                                       totalMenorPrecoGeral += Number(rItemWin.preco) * (Number(item.quantidade) || 1);
+                                   } else {
+                                       totalMenorPrecoGeral += precosItem2[0] * (Number(item.quantidade) || 1);
+                                   }
+                               } else {
+                                   totalMenorPrecoGeral += precosItem2[0] * (Number(item.quantidade) || 1);
+                               }
+                           } else {
+                               totalMenorPrecoGeral += precosItem2[0] * (Number(item.quantidade) || 1);
+                           }
+                       }
+                   });
+               }
+               
+               let arrayTotais = Object.values(totaisBrutosFornecedores).filter(v => v > 0).sort((a,b) => a - b);
+               if (arrayTotais.length > 0) {
+                   let baseParaEconomia = arrayTotais[0];
+                   
+                   if (arrayTotais.length > 1) {
+                       let primeiro = arrayTotais[0];
+                       let segundo = arrayTotais[1];
+                       if (primeiro < (segundo * 0.90)) {
+                           baseParaEconomia = segundo;
                        }
                    }
-               });
+                   
+                   if (baseParaEconomia >= totalMenorPrecoGeral) {
+                       economiaCotacao = baseParaEconomia - totalMenorPrecoGeral;
+                   }
+               }
            }
            
            let dateStr = "-";
@@ -16024,7 +16264,10 @@ linhas.forEach((tr, index) => {
            }
            
            html += `
-             <tr class="${groupId}" style="border-bottom: 1px solid #333; background: #1a1a1a; display: none;">
+             <tr class="${groupId}" style="border-bottom: 1px solid #333; background: #1a1a1a; display: none; cursor: pointer;"
+                 onclick="abrirPremiumDaEconomia('${c.numero || c.id}')"
+                 onmouseover="this.style.background='#2a2a2a';"
+                 onmouseout="this.style.background='#1a1a1a';">
                <td style="padding:12px; color:#fff;">
                  <strong>${c.numero || c.id}</strong><br>
                  <span style="font-size:11px; color:#888;">${c.descricao || 'Sem descrição'}</span>
