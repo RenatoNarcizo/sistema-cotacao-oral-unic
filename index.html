@@ -10617,9 +10617,35 @@
      📥 CARREGAR COTAÇÕES PENDENTES DE APROVAÇÃO
   ====================================================== */
 
-  function carregarPendentesAprovacao() {
+  window.carregarPendentesAprovacao = async function() {
     const div = document.getElementById("listaPendentesAprovacao");
     if (!div) return;
+
+    div.innerHTML = `<div style="text-align:center; padding:20px; color:#aaa;">
+        <i class="fa-solid fa-cloud-arrow-down fa-bounce"></i><br>
+        Buscando cotações na nuvem...
+      </div>`;
+
+    if (typeof db !== "undefined") {
+      try {
+        console.log("☁️ Buscando pendentes diretamente do Firestore...");
+        const snapshot = await db.collection("cotacoes").where("status", "==", "aprovacao").get();
+        let cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
+        
+        snapshot.forEach(doc => {
+          const data = { ...doc.data(), id: doc.id };
+          const idx = cotacoes.findIndex(c => String(c.numero) === String(data.numero));
+          if (idx >= 0) {
+            cotacoes[idx] = { ...cotacoes[idx], ...data };
+          } else {
+            cotacoes.push(data);
+          }
+        });
+        localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
+      } catch (err) {
+        console.error("Erro ao buscar da nuvem:", err);
+      }
+    }
 
     const cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
     const pendentes = cotacoes.filter(c =>
