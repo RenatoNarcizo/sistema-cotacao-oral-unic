@@ -2721,11 +2721,19 @@
       <p style="color:#aaa;">Registre aqui os orçamentos que você pesquisou na internet. A cotação irá direto para aprovação.</p>
 
       <div style="display:flex; gap:15px; margin-top:20px;">
-          <div style="flex:1;">
+          <div style="flex:2;">
               <label>O que você está comprando? (Item/Produto)</label>
               <input type="text" id="cwNomeItem" placeholder="Ex: Monitor Dell 24..." style="width:100%;box-sizing:border-box;margin-bottom:15px;background:#1a1a1a;color:white;border:1px solid #661155;border-radius:5px;padding:8px;">
           </div>
-          <div style="width:100px;">
+          <div style="flex:1;">
+              <label>Marca</label>
+              <input type="text" id="cwMarcaItem" placeholder="Opcional" style="width:100%;box-sizing:border-box;margin-bottom:15px;background:#1a1a1a;color:white;border:1px solid #661155;border-radius:5px;padding:8px;">
+          </div>
+          <div style="flex:1;">
+              <label>Embalagem</label>
+              <input type="text" id="cwEmbalagemItem" placeholder="Ex: Caixa, Unid..." style="width:100%;box-sizing:border-box;margin-bottom:15px;background:#1a1a1a;color:white;border:1px solid #661155;border-radius:5px;padding:8px;">
+          </div>
+          <div style="width:80px;">
               <label>Qtd</label>
               <input type="number" id="cwQtdItem" value="1" min="1" style="width:100%;box-sizing:border-box;margin-bottom:15px;background:#1a1a1a;color:white;border:1px solid #661155;border-radius:5px;padding:8px;">
           </div>
@@ -6334,14 +6342,15 @@
             requisitante: usuarioLogado.email,
             produtos: [{
                 nome: nomeItem,
-                quantidade: qtd,
-                embalagem: "Unidade"
+                marca: marcaItem,
+                embalagem: embalagemItem,
+                quantidade: qtd
             }],
             respostasFornecedores: [
                 {
                     fornecedor: loja1,
                     email: loja1.toLowerCase().replace(/\\s/g, '') + "@web.com",
-                    itens: [{ nome: nomeItem, preco: preco1, quantidade: qtd, total: preco1 * qtd, url: link1 }],
+                    itens: [{ nome: nomeItem, marca: marcaItem, embalagem: embalagemItem, preco: preco1, quantidade: qtd, total: preco1 * qtd, url: link1 }],
                     anexo: base64Anexo ? { nome: nomeAnexo, base64: base64Anexo, url: link1 } : null
                 }
             ],
@@ -6350,6 +6359,8 @@
                     fornecedor: loja1,
                     emailFornecedor: loja1.toLowerCase().replace(/\\s/g, '') + "@web.com",
                     produto: nomeItem,
+                    marca: marcaItem,
+                    embalagem: embalagemItem,
                     quantidade: qtd,
                     preco: preco1,
                     total: preco1 * qtd,
@@ -8627,6 +8638,50 @@
       return;
     }
 
+    // 🧠 INTELIGÊNCIA: Capturar Marca e Embalagem digitadas na tela e salvar na cotação!
+    let sofreuAlteracao = false;
+    document.querySelectorAll('.input-edit-marca').forEach(inp => {
+        const idx = inp.getAttribute('data-idx');
+        const nomeProd = inp.getAttribute('data-nome');
+        const val = inp.value.trim() || "-";
+        
+        if (c.produtos && c.produtos[idx] && c.produtos[idx].marca !== val) {
+            c.produtos[idx].marca = val;
+            sofreuAlteracao = true;
+        }
+        if (c.adjudicacao) {
+            const adj = c.adjudicacao.find(a => a.produto === nomeProd);
+            if (adj && adj.marca !== val) { adj.marca = val; sofreuAlteracao = true; }
+        }
+    });
+    
+    document.querySelectorAll('.input-edit-emb').forEach(inp => {
+        const idx = inp.getAttribute('data-idx');
+        const nomeProd = inp.getAttribute('data-nome');
+        const val = inp.value.trim() || "-";
+        
+        if (c.produtos && c.produtos[idx] && c.produtos[idx].embalagem !== val) {
+            c.produtos[idx].embalagem = val;
+            sofreuAlteracao = true;
+        }
+        if (c.adjudicacao) {
+            const adj = c.adjudicacao.find(a => a.produto === nomeProd);
+            if (adj && adj.embalagem !== val) { adj.embalagem = val; sofreuAlteracao = true; }
+        }
+    });
+    
+    if (sofreuAlteracao) {
+        const cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
+        const index = cotacoes.findIndex(x => x.id === c.id);
+        if (index !== -1) {
+            cotacoes[index] = c;
+            localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
+        }
+        if (typeof db !== "undefined" && db.collection) {
+            db.collection("cotacoes").doc(c.id).set(c).catch(console.error);
+        }
+    }
+
     if (!Array.isArray(c.adjudicacao) || c.adjudicacao.length === 0) {
       alert("⚠️ Esta cotação não possui itens adjudicados.");
       return;
@@ -8712,13 +8767,15 @@
             y = Math.max(leftY, rightY) + 5;
           };
 
-          const colWidths = { index: 10, desc: 100, qtd: 15, preco: 25, total: 30 };
+          const colWidths = { index: 10, desc: 50, marca: 25, emb: 25, qtd: 15, preco: 25, total: 30 };
           const colX = { 
             index: m, 
             desc: m + colWidths.index, 
-            qtd: m + colWidths.index + colWidths.desc, 
-            preco: m + colWidths.index + colWidths.desc + colWidths.qtd, 
-            total: m + colWidths.index + colWidths.desc + colWidths.qtd + colWidths.preco 
+            marca: m + colWidths.index + colWidths.desc,
+            emb: m + colWidths.index + colWidths.desc + colWidths.marca,
+            qtd: m + colWidths.index + colWidths.desc + colWidths.marca + colWidths.emb, 
+            preco: m + colWidths.index + colWidths.desc + colWidths.marca + colWidths.emb + colWidths.qtd, 
+            total: m + colWidths.index + colWidths.desc + colWidths.marca + colWidths.emb + colWidths.qtd + colWidths.preco 
           };
 
           const desenharCabecalhoTabela = (posY) => {
@@ -8730,6 +8787,8 @@
             
             doc.text("Nº", colX.index + 3, posY + 5);
             doc.text("DESCRIÇÃO DO PRODUTO", colX.desc + 2, posY + 5);
+            doc.text("MARCA", colX.marca + 2, posY + 5);
+            doc.text("EMBALAGEM", colX.emb + 2, posY + 5);
             doc.text("QTDE", colX.qtd + 2, posY + 5);
             doc.text("PREÇO UNIT.", colX.preco + 2, posY + 5);
             doc.text("TOTAL", colX.total + 2, posY + 5);
@@ -8761,8 +8820,30 @@
             doc.setFont("helvetica", "normal");
             doc.setFontSize(9);
             
-            const descLines = doc.splitTextToSize(item.produto, colWidths.desc - 4);
-            const rowHeight = Math.max(8, descLines.length * 4.5 + 3);
+            let finalMarca = item.marca && item.marca !== "-" ? item.marca : null;
+            let finalEmbalagem = item.embalagem && item.embalagem !== "-" ? item.embalagem : null;
+            
+            if ((!finalMarca || !finalEmbalagem) && c.respostasFornecedores) {
+                try {
+                    const n = (s) => (s || "").toString().trim().toLowerCase();
+                    const resps = Array.isArray(c.respostasFornecedores) ? c.respostasFornecedores : Object.values(c.respostasFornecedores);
+                    const respForn = resps.find(r => r && n(r.email || r.emailFornecedor) === n(item.emailFornecedor));
+                    if (respForn && respForn.itens) {
+                        const itensForn = Array.isArray(respForn.itens) ? respForn.itens : Object.values(respForn.itens);
+                        const itemNaResposta = itensForn.find(i => i && n(i.produto || i.descricao) === n(item.produto));
+                        if (itemNaResposta) {
+                            if (!finalMarca && itemNaResposta.marca && itemNaResposta.marca !== "-") finalMarca = itemNaResposta.marca;
+                            if (!finalEmbalagem && itemNaResposta.embalagem && itemNaResposta.embalagem !== "-") finalEmbalagem = itemNaResposta.embalagem;
+                        }
+                    }
+                } catch(e) { console.error("Erro ao buscar dados na resposta do fornecedor", e); }
+            }
+            
+            const descLines = doc.splitTextToSize(item.produto || "-", colWidths.desc - 4);
+            const marcaLines = doc.splitTextToSize(finalMarca || "-", colWidths.marca - 4);
+            const embLines = doc.splitTextToSize(finalEmbalagem || "-", colWidths.emb - 4);
+            const maxLines = Math.max(descLines.length, marcaLines.length, embLines.length);
+            const rowHeight = Math.max(8, maxLines * 4.5 + 3);
 
             // Quebra de página
             if (y + rowHeight > pageHeight - 25) {
@@ -8789,6 +8870,8 @@
             doc.setDrawColor(221, 221, 221);
             doc.rect(colX.index, y, colWidths.index, rowHeight);
             doc.rect(colX.desc, y, colWidths.desc, rowHeight);
+            doc.rect(colX.marca, y, colWidths.marca, rowHeight);
+            doc.rect(colX.emb, y, colWidths.emb, rowHeight);
             doc.rect(colX.qtd, y, colWidths.qtd, rowHeight);
             doc.rect(colX.preco, y, colWidths.preco, rowHeight);
             doc.rect(colX.total, y, colWidths.total, rowHeight);
@@ -8801,6 +8884,8 @@
             doc.setTextColor(0, 0, 0);
             doc.setFont("helvetica", "normal");
             doc.text(descLines, colX.desc + 2, y + 5);
+            doc.text(marcaLines, colX.marca + 2, y + 5);
+            doc.text(embLines, colX.emb + 2, y + 5);
             doc.text(String(item.quantidade), colX.qtd + 2, y + rowHeight/2 + 1.5);
             doc.text(`R$ ${Number(item.preco).toFixed(2)}`, colX.preco + 2, y + rowHeight/2 + 1.5);
             doc.text(`R$ ${totalItem.toFixed(2)}`, colX.total + 2, y + rowHeight/2 + 1.5);
@@ -11326,8 +11411,12 @@
                  <span class="badge-idx">#${idx + 1}</span>
                </td>
                <td class="col-fixa item">${nomeProd}</td>
-               <td class="col-fixa-2 marca" style="text-align:center;">${prod.marca || "-"}</td>
-               <td class="col-fixa-emb emb" style="text-align:center;">${prod.embalagem || "-"}</td>
+               <td class="col-fixa-2 marca" style="text-align:center;">
+                 <input type="text" class="input-edit-marca" data-idx="${idx}" data-nome="${nomeProd}" value="${prod.marca && prod.marca !== '-' ? prod.marca : ''}" placeholder="-" style="width:90%; background:#1a1a1a; color:#fff; border:1px solid #444; border-radius:3px; padding:4px; text-align:center;">
+               </td>
+               <td class="col-fixa-emb emb" style="text-align:center;">
+                 <input type="text" class="input-edit-emb" data-idx="${idx}" data-nome="${nomeProd}" value="${prod.embalagem && prod.embalagem !== '-' ? prod.embalagem : ''}" placeholder="-" style="width:90%; background:#1a1a1a; color:#fff; border:1px solid #444; border-radius:3px; padding:4px; text-align:center;">
+               </td>
                <td class="col-fixa-3 qtd" style="text-align:center;">${qtd}</td>
                `;
 
@@ -15251,6 +15340,7 @@ linhas.forEach((tr, index) => {
       let vencedorNome = "Sem Oferta";
       let menorPreco = Infinity;
       let precoFinal = 0;
+      let winningItem = null;
 
       const keyItem = `item_${idx}`;
 
@@ -15276,6 +15366,7 @@ linhas.forEach((tr, index) => {
             const fornLocal = listaFornecedoresLocal.find(f => norm(f.email) === vencedorEmail);
             vencedorNome = fornLocal ? fornLocal.nome : (resp.fornecedor || resp.fornecedorNome || vencedorEmail);
             precoFinal = preco;
+            winningItem = itemResp;
           } else {
             // ⚠️ Fornecedor manual sem preço para este item — usa automático
             vencedorEmail = null;
@@ -15298,6 +15389,7 @@ linhas.forEach((tr, index) => {
               const fornLocal = listaFornecedoresLocal.find(f => norm(f.email) === vencedorEmail);
               vencedorNome = fornLocal ? fornLocal.nome : (r.fornecedor || r.fornecedorNome || vencedorEmail);
               precoFinal = val;
+              winningItem = item;
             }
           }
         });
@@ -15306,8 +15398,8 @@ linhas.forEach((tr, index) => {
       if (vencedorEmail) {
         adjudicacao.push({
           produto: prod.nome,
-          marca: prod.marca || "-",
-          embalagem: prod.embalagem || "-",
+          marca: (winningItem && winningItem.marca) ? winningItem.marca : (prod.marca || "-"),
+          embalagem: (winningItem && winningItem.embalagem) ? winningItem.embalagem : (prod.embalagem || "-"),
           quantidade: prod.quantidade,
           fornecedor: vencedorNome,
           emailFornecedor: vencedorEmail,
