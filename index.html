@@ -5125,12 +5125,12 @@
   // 🔄 HELPER GLOBAL DE SYNC
   // 🔄 HELPER GLOBAL DE SYNC (RTDB + FIRESTORE MERGE)
   window.sincronizarCotacoesAgora = async function () {
-    console.log("🔄 Iniciando Sincronização Unificada (RTDB + Firestore)...");
+    console.log("🔄 Iniciando Sincronização Unificada (Foco RTDB)...");
 
     let cotacoesRTDB = [];
-    let cotacoesFirestore = [];
+    let rtdbSucesso = false;
 
-    // 1. Busca RTDB (Recente/Rápido)
+    // 1. Busca RTDB (Recente/Rápido - Fonte da Verdade)
     if (typeof rtdb !== "undefined") {
       try {
         const snapshot = await rtdb.ref("cotacoes").once("value");
@@ -5138,27 +5138,19 @@
         if (data) {
           cotacoesRTDB = Object.values(data);
         }
+        rtdbSucesso = true; // Mesmo se vazio, foi um sucesso de leitura
       } catch (e) { console.warn("Erro RTDB Sync:", e); }
     }
 
-    // 2. Firestore: usa cache local (persistência offline já ativada)
-    // ⚡ REMOVIDO: await de 5s ao Firestore no login — causa lentidão.
-    // O RTDB é a fonte primária e rápida. Firestore sincroniza em background.
     const localCache = JSON.parse(localStorage.getItem("cotacoes")) || [];
-    cotacoesFirestore = localCache; // usa cache local sem esperar rede
-
-    // 3. Merge e Deduplicação (Prioridade: RTDB > Firestore)
-    const mapaUnificado = new Map();
     const blacklist = JSON.parse(localStorage.getItem("cotacoes_deletadas_local")) || [];
+    const mapaUnificado = new Map();
 
-    // Adiciona Firestore primeiro
-    cotacoesFirestore.forEach(c => {
-      const id = String(c.numero || c.id || "");
-      if (id && !blacklist.includes(id)) mapaUnificado.set(id, c);
-    });
+    // 2. Decide a Fonte de Dados
+    // Se o RTDB respondeu, ele é a verdade absoluta. O cache local só é usado como fallback (offline).
+    const fonteDados = rtdbSucesso ? cotacoesRTDB : localCache;
 
-    // Sobrescreve com RTDB (mais recente)
-    cotacoesRTDB.forEach(c => {
+    fonteDados.forEach(c => {
       const id = String(c.numero || c.id || "");
       if (id && !blacklist.includes(id)) mapaUnificado.set(id, c);
     });
