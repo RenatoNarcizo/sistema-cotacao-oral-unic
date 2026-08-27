@@ -3145,30 +3145,7 @@
     </div>
   </div>
 
-  <!-- MODAL DE REJEIÇÃO (APROVAÇÃO) - ADICIONADO PARA CORRIGIR ERRO -->
-  <div id="modalRejeicaoAprovacao" class="modal"
-    style="display:none; align-items:center; justify-content:center; z-index: 200000;">
-    <div class="modal-content"
-      style="max-width:500px; background:#111; border:1px solid #dc3545; box-shadow:0 0 20px rgba(220, 53, 69, 0.4); position:relative;">
 
-      <button class="close-btn" onclick="window.fecharRejeicaoV2()"
-        style="position:absolute; top:10px; right:15px; background:transparent; border:none; color:white; font-size:20px; cursor:pointer;">&times;</button>
-
-      <h2 style="color:#dc3545; margin-top:0;">❌ Rejeitar Cotação</h2>
-      <p style="color:#ccc;">Informe o motivo da rejeição para o comprador:</p>
-
-      <textarea id="motivoRejeicaoAprovacao" rows="4"
-        style="width:100%; padding:10px; background:#222; color:white; border:1px solid #444; border-radius:5px; resize:vertical;"
-        placeholder="Descreva o motivo..."></textarea>
-
-      <div style="margin-top:20px; text-align:right;">
-        <button onclick="window.confirmarRejeicaoV2()"
-          style="background:#dc3545; border:none; color:white; padding:8px 20px; border-radius:4px; font-weight:bold; cursor:pointer;">
-          Confirmar Rejeição
-        </button>
-      </div>
-    </div>
-  </div>
 
   <section id="cadastroFornecedor" style="display:none;">
     <header>
@@ -4288,6 +4265,32 @@
           <option value="servico">Serviço</option>
         </select>
       </div>
+      <!-- PRIORIDADE -->
+      <div class="input-group">
+        <label>Nível de Prioridade</label>
+        <select id="solPrioridade" onchange="verificarPrioridade()">
+          <option value="">Selecione...</option>
+          <option value="🔵 Planejado (Projetos / Futuro)">🔵 Planejado (Projetos / Futuro)</option>
+          <option value="🟢 Normal (Rotina / Reposição)">🟢 Normal (Rotina / Reposição)</option>
+          <option value="🟡 Urgente (Risco de paragem em < 48h)">🟡 Urgente (Risco de parar)</option>
+          <option value="🔴 Emergencial (Falta total / Operação parada)">🔴 Emergencial (Falta total / Operação parada)</option>
+        </select>
+      </div>
+      <script>
+        function verificarPrioridade() {
+            var val = document.getElementById("solPrioridade").value;
+            var label = document.getElementById("labelDescricao");
+            if (val.includes("Emergencial")) {
+                label.innerHTML = "Justificativa Obrigatória";
+                label.style.color = "red";
+                label.style.fontWeight = "bold";
+            } else {
+                label.innerHTML = "Observações";
+                label.style.color = "white";
+                label.style.fontWeight = "normal";
+            }
+        }
+      </script>
 
       <!-- 🧾 ITENS MANUAIS (SIMPLES) -->
       <h3 style="color:#661155; margin-top:20px;">📦 Itens (opcional)</h3>
@@ -4352,7 +4355,7 @@
 
       <!-- OBSERVAÇÕES -->
       <div class="input-group">
-        <label>Observações</label>
+        <label id="labelDescricao">Observações</label>
         <textarea id="solDescricao" placeholder="Descreva a necessidade, finalidade ou urgência..."
           style="min-height:100px;"></textarea>
       </div>
@@ -5163,7 +5166,7 @@
       } catch (e) {
         console.warn("⚠️ LocalStorage cheio ao salvar lista de cotações. Operando sem cache persistente.", e);
       }
-      console.log(`✅ Sync Completo: ${listaFinal.length} cotações recuperadas.`);
+      console.log(`OK: Sync Completo: ${listaFinal.length} cotações recuperadas.`);
 
       // Atualiza UI
       if (typeof renderizarListaFornecedor === "function") {
@@ -5729,7 +5732,7 @@
         batch.delete(db.collection("fornecedores").doc(email.trim()));
 
         await batch.commit();
-        console.log(`✅ Fornecedores vinculados removidos via busca multivariada.`);
+        console.log(`OK: Fornecedores vinculados removidos via busca multivariada.`);
 
       } catch (fErr) {
         console.warn("Aviso ao buscar/remover fornecedor vinculado:", fErr);
@@ -6289,6 +6292,8 @@
   async function salvarCompraWeb() {
     const usuarioLogado = JSON.parse(localStorage.getItem("usuarioLogado")) || { email: "desconhecido", nome: "Usuário" };
     const nomeItem = document.getElementById("cwNomeItem").value.trim();
+    const marcaItem = document.getElementById("cwMarcaItem") ? document.getElementById("cwMarcaItem").value.trim() : "";
+    const embalagemItem = document.getElementById("cwEmbalagemItem") ? document.getElementById("cwEmbalagemItem").value.trim() : "";
     const qtd = Number(document.getElementById("cwQtdItem").value) || 1;
     const loja1 = document.getElementById("cwLoja1").value.trim();
     const preco1 = parseBrPrice(document.getElementById("cwPreco1").value);
@@ -6379,8 +6384,19 @@
 
         // Salvar localmente
         let cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
-        cotacoes.push(cotacaoWeb);
-        localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
+                let cotacaoLeve = JSON.parse(JSON.stringify(cotacaoWeb));
+        if (cotacaoLeve.respostasFornecedores && cotacaoLeve.respostasFornecedores[0] && cotacaoLeve.respostasFornecedores[0].anexo) {
+            delete cotacaoLeve.respostasFornecedores[0].anexo.base64;
+        }
+        cotacoes.push(cotacaoLeve);
+                try {
+            localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
+        } catch (err) {
+            if (err.name === 'QuotaExceededError') {
+                cotacoes = cotacoes.slice(-20); // limpa as mais antigas
+                localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
+            }
+        }
 
         // Salva Anexo para o Modal "Ver Anexos" funcionar
         if (base64Anexo) {
@@ -6396,16 +6412,29 @@
             };
             let docsCot = JSON.parse(localStorage.getItem("docs_" + numeroFormatado)) || [];
             docsCot.push(docObj);
-            localStorage.setItem("docs_" + numeroFormatado, JSON.stringify(docsCot));
+                        try {
+                localStorage.setItem("docs_" + numeroFormatado, JSON.stringify(docsCot));
+            } catch (err) {
+                console.warn("Storage local cheio para anexos, mas vai continuar para nuvem...");
+            }
             
             if (typeof db !== "undefined") {
                 await db.collection("documentos_cotacao").add(docObj);
             }
         }
 
-        // Salvar Firebase (opcional)
+                // Salvar Firebase (opcional)
         if (typeof db !== "undefined") {
             await db.collection("cotacoes").doc(numeroFormatado).set(cotacaoWeb);
+        }
+
+        // Salvar no RTDB (ESSENCIAL PARA A TELA DO COMPRADOR)
+        if (typeof rtdb !== "undefined") {
+            try {
+                await rtdb.ref("cotacoes/" + numeroFormatado).set(cotacaoWeb);
+            } catch (err) {
+                console.error("Erro RTDB Compra Web:", err);
+            }
         }
 
         alert("✅ Pesquisa enviada! A cotação está agora Aguardando Aprovação.");
@@ -6577,16 +6606,7 @@
      <input
        type="number"
        value="${quantidade}"
-       placeholder="Qtd"
-       style="width:80px;background:#1a1a1a;color:white;border:1px solid #661155;border-radius:5px;padding:4px;"
-     >
-   </td>
-   <td>
-     <button
-       onclick="this.closest('tr').remove(); renumerarLinhasManual();"
-       style="background:#661155;color:white;border:none;border-radius:4px;padding:5px 10px;"
-     >🗑️</button>
-   </td>
+
   `;
 
     tabela.appendChild(tr);
@@ -6632,7 +6652,7 @@
         if (data) {
           materiais = Object.values(data).filter(m => m && m.nome);
           localStorage.setItem("materiais", JSON.stringify(materiais));
-          console.log(`✅ ${materiais.length} materiais carregados do RTDB.`);
+          console.log("OK: " + materiais.length + " materiais carregados do RTDB.");
         }
       } catch (e) { console.warn("RTDB materiais:", e); }
     }
@@ -6725,7 +6745,7 @@
         if (data) {
           servicos = Object.values(data).filter(s => s && s.nome);
           localStorage.setItem("servicos", JSON.stringify(servicos));
-          console.log(`✅ ${servicos.length} serviços carregados do RTDB.`);
+          console.log(`OK: ${servicos.length} serviços carregados do RTDB.`);
         }
       } catch (e) { console.warn("RTDB serviços:", e); }
     }
@@ -6810,6 +6830,16 @@
   function renderizarFornecedoresModal(lista) {
     const listaDiv = document.getElementById("listaFornecedoresModal");
     if (!listaDiv) return;
+
+    let fornecedoresAtuais = [];
+    if (origemCotacao.startsWith("ativa_")) {
+       const numCot = origemCotacao.replace("ativa_", "");
+       const cots = JSON.parse(localStorage.getItem("cotacoes")) || [];
+       const c = cots.find(cot => cot.numero === numCot || cot.id === numCot);
+       if (c && Array.isArray(c.fornecedores)) {
+           fornecedoresAtuais = c.fornecedores.map(f => normalizarEmail(f.email));
+       }
+    }
 
     if (!lista || lista.length === 0) {
       listaDiv.innerHTML = `<p style="text-align:center;">Nenhum fornecedor encontrado.</p>`;
@@ -6935,6 +6965,7 @@
   // NOVA FUNÇÃO: Adiciona fornecedores a uma cotação já publicada
   window.abrirSelecaoFornecedoresAtiva = function(numeroCotacao) {
     origemCotacao = "ativa_" + numeroCotacao;
+    window.estadoCheckboxesFornecedores = new Map();
     document.getElementById("modalFornecedores").style.display = "flex";
     carregarFornecedoresModal();
   };
@@ -7726,7 +7757,7 @@
               const downloadURL = await comTimeout(snapshot.ref.getDownloadURL(), 10000, `URL de ${file.name}`);
 
               resultAnexo.url = downloadURL;
-              console.log(`✅ URL gerada: ${downloadURL}`);
+              console.log(`OK: URL gerada: ${downloadURL}`);
             } catch (storageErr) {
               console.warn(`⚠️ Falha no Storage para ${file.name}:`, storageErr.message);
 
@@ -7754,7 +7785,7 @@
         throw new Error("Nenhum arquivo pôde ser carregado para o servidor. Verifique sua conexão ou o tamanho dos arquivos.");
       }
 
-      console.log(`✅ ${novosArquivos.length} arquivos prontos. Atualizando Firestore...`);
+      console.log(`OK: ${novosArquivos.length} arquivos prontos. Atualizando Firestore...`);
 
       const idDoc = `docs_${numeroCotacao}`;
       const docRef = db.collection("documentos_cotacao").doc(idDoc);
@@ -8667,7 +8698,14 @@
         const index = cotacoes.findIndex(x => x.id === c.id);
         if (index !== -1) {
             cotacoes[index] = c;
+                    try {
             localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
+        } catch (err) {
+            if (err.name === 'QuotaExceededError') {
+                cotacoes = cotacoes.slice(-20); // limpa as mais antigas
+                localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
+            }
+        }
         }
         if (typeof db !== "undefined" && db.collection) {
             db.collection("cotacoes").doc(c.id).set(c).catch(console.error);
@@ -9645,6 +9683,10 @@
 
     // Ordena as categorias
     const categoriasOrdenadas = Object.keys(grupos).sort((a, b) => {
+      if (a === "Emergenciais 🚨") return -1;
+      if (b === "Emergenciais 🚨") return 1;
+      if (a === "⚠️ Solicitações em Aberto") return -1;
+      if (b === "⚠️ Solicitações em Aberto") return 1;
       if (a === "Sem Categoria") return 1;
       if (b === "Sem Categoria") return -1;
       return a.localeCompare(b);
@@ -10412,7 +10454,14 @@
 
     // Salva no Array Principal
     cotacoes[cotacaoIndex] = cotacao;
-    localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
+            try {
+            localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
+        } catch (err) {
+            if (err.name === 'QuotaExceededError') {
+                cotacoes = cotacoes.slice(-20); // limpa as mais antigas
+                localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
+            }
+        }
 
     console.log("✅ Status atualizado localmente para 'aprovacao'");
 
@@ -10518,7 +10567,14 @@
     cotacao.status = "fechada";
     cotacao.dataAprovacao = new Date().toLocaleString();
 
-    localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
+            try {
+            localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
+        } catch (err) {
+            if (err.name === 'QuotaExceededError') {
+                cotacoes = cotacoes.slice(-20); // limpa as mais antigas
+                localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
+            }
+        }
 
     // 2. SYNC FIRESTORE
     if (typeof db !== "undefined") {
@@ -10718,7 +10774,14 @@
             cotacoes.push(data);
           }
         });
-        localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
+                try {
+            localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
+        } catch (err) {
+            if (err.name === 'QuotaExceededError') {
+                cotacoes = cotacoes.slice(-20); // limpa as mais antigas
+                localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
+            }
+        }
       } catch (err) {
         console.error("Erro ao buscar da nuvem:", err);
       }
@@ -11030,7 +11093,14 @@
       cotacoes[index].motivoRejeicao = motivo;
       cotacoes[index].dataRejeicao = new Date().toLocaleString(); // Adicionado data
 
-      localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
+              try {
+            localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
+        } catch (err) {
+            if (err.name === 'QuotaExceededError') {
+                cotacoes = cotacoes.slice(-20); // limpa as mais antigas
+                localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
+            }
+        }
 
       // 🔥 SYNC FIRESTORE (CRÍTICO - garante persistência na nuvem)
       if (typeof db !== "undefined") {
@@ -11330,7 +11400,7 @@
 
     for (let i = 0; i < localStorage.length; i++) {
       const chave = localStorage.key(i);
-      if (chave.startsWith(`resposta_${cotacao.numero} _`)) {
+      if (chave.startsWith(`res_${cotacao.numero}_`) || chave.startsWith(`resposta_${cotacao.numero}_`)) {
         try {
           const r = JSON.parse(localStorage.getItem(chave));
           if (!respostas.some(x => x.email === r.email)) {
@@ -11627,8 +11697,20 @@
     const solicitante = document.getElementById("solSolicitante").value.trim();
     const setor = document.getElementById("solSetor").value.trim();
     const tipo = document.getElementById("solTipo").value;
+    const solPrioridadeElem = document.getElementById("solPrioridade");
+    const prioridade = solPrioridadeElem ? solPrioridadeElem.value : "";
     const descricao = document.getElementById("solDescricao").value.trim();
     const anexosInput = document.getElementById("solAnexos");
+
+    if (!prioridade || prioridade === "") {
+      alert("⚠️ Selecione um Nível de Prioridade.");
+      return;
+    }
+    if (prioridade.includes("Emergencial") && !descricao) {
+      alert("⚠️ A justificativa é obrigatória para prioridade Emergencial!");
+      return;
+    }
+    const justificativa = prioridade.includes("Emergencial") ? descricao : "";
 
     if (!solicitante || !setor || !tipo) {
       alert("⚠️ Preencha os dados principais (Solicitante, Setor e Tipo).");
@@ -11652,6 +11734,10 @@
     });
 
     // ⏳ EXIBIR LOADING
+    if (itens.length === 0 && (!anexosInput || anexosInput.files.length === 0)) {
+      alert("⚠️ Adicione ao menos um item ou um anexo à solicitação.");
+      return;
+    }
     const overlay = document.getElementById("loadingOverlay");
     const label = document.getElementById("loadingText");
     if (overlay) {
@@ -11662,6 +11748,8 @@
     /* 📎 ANEXOS */
     const anexos = [];
     const novaSolicitacao = {
+      prioridade,
+      justificativa,
       id: "SC-" + Date.now(),
       solicitante,
       setor,
@@ -11693,7 +11781,7 @@
             url: downloadURL
           });
 
-          console.log(`✅ Upload concluído: ${file.name}`);
+          console.log(`OK: Upload concluído: ${file.name}`);
         } catch (err) {
           console.error("❌ Erro no upload:", err);
           alert(`⚠️ Falha ao enviar o arquivo: ${file.name}. Ele não ficará disponível na nuvem.`);
@@ -11716,7 +11804,9 @@
       // 1. SALVA NO LOCALSTORAGE (Sempre faz, para redundância rápida)
       const solicitacoes = JSON.parse(localStorage.getItem("solicitacoes_compra")) || [];
       solicitacoes.push(novaSolicitacao);
-      localStorage.setItem("solicitacoes_compra", JSON.stringify(solicitacoes));
+        try {
+          localStorage.setItem("solicitacoes_compra", JSON.stringify(solicitacoes));
+        } catch(quotaErr) { console.warn("Cache excedido, ignorando..."); }
 
       // 2. SALVA NO FIRESTORE (A nuvem que todos veem)
       if (typeof db !== "undefined") {
@@ -11745,7 +11835,11 @@
 
   function limparFormularioSolicitacao() {
     console.log("🧹 Limpando formulário de solicitação de compra...");
-    const ids = ["solSolicitante", "solSetor", "solTipo", "solDescricao", "solAnexos"];
+    const ids = ["solSolicitante", "solSetor", "solTipo", "solDescricao", "solAnexos", "solPrioridade"];
+    const prioElem = document.getElementById("solPrioridade");
+    if (prioElem) prioElem.value = "🟢 Normal (Rotina / Reposição)";
+    const lbl = document.getElementById("labelDescricao");
+    if (lbl) { lbl.innerHTML = "Observações (opcional)"; lbl.style.color = "#ccc"; }
     ids.forEach(id => {
       const el = document.getElementById(id);
       if (el) el.value = "";
@@ -11889,7 +11983,9 @@
       if (typeof db !== "undefined") {
         const snapshot = await db.collection("solicitacoes_compra").get();
         solicitacoes = snapshot.docs.map(doc => doc.data());
-        localStorage.setItem("solicitacoes_compra", JSON.stringify(solicitacoes));
+        try {
+          localStorage.setItem("solicitacoes_compra", JSON.stringify(solicitacoes));
+        } catch(quotaErr) { console.warn("Cache excedido, ignorando..."); }
       }
     } catch (e) {
       console.warn("Erro ao buscar solicitações do Firebase, usando local:", e);
@@ -11902,16 +11998,19 @@
     }
 
     // 🔥 Agrupar e Renderizar
+    window.todasAsSolicitacoesMemoria = solicitacoes;
     renderizarListaAgrupada(lista, solicitacoes, (s) => {
       const badge = typeof obterBadgeWorkflow === "function" ? obterBadgeWorkflow(s.status) : s.status;
+      const badgePrio = typeof obterBadgePrioridade === "function" ? obterBadgePrioridade(s.prioridade) : "";
       return `
        <div class="info">
          <div style="display:flex; align-items:center; gap:10px; margin-bottom:5px;">
            <strong>${s.solicitante}</strong>
+           ${badgePrio}
            ${badge}
          </div>
          <small>Setor: ${s.setor}</small><br>
-         <small>Tipo: ${s.tipo.toUpperCase()}</small><br>
+         <small>Tipo: ${(s.tipo ? s.tipo.toUpperCase() : "N/I")}</small><br>
          <small>Data: ${s.data}</small>
        </div>
        <div class="acoes">
@@ -11925,6 +12024,10 @@
 
   function agruparSolicitacoesPorMes(lista) {
     const grupos = {};
+    const emergenciais = lista.filter(s => s.prioridade && s.prioridade.includes("Emergencial"));
+    if (emergenciais.length > 0) grupos["Emergenciais 🚨"] = emergenciais;
+    const emAberto = lista.filter(s => s.status === "pendente" || s.status === "em_cotacao" || s.status === "em cotação");
+    if (emAberto.length > 0) grupos["⚠️ Solicitações em Aberto"] = emAberto;
     const mesesExtenso = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
     lista.sort((a, b) => {
@@ -11970,6 +12073,10 @@
     const mesAtualFormatado = `${mesesExtenso[agora.getMonth()]} ${agora.getFullYear()}`;
 
     const chavesOrdenadas = Object.keys(grupos).sort((a, b) => {
+      if (a === "Emergenciais 🚨") return -1;
+      if (b === "Emergenciais 🚨") return 1;
+      if (a === "⚠️ Solicitações em Aberto") return -1;
+      if (b === "⚠️ Solicitações em Aberto") return 1;
       if (a === mesAtualFormatado) return -1;
       if (b === mesAtualFormatado) return 1;
       const parseKey = (k) => {
@@ -12002,7 +12109,7 @@
        transition: 0.3s;
       `;
       header.innerHTML = `
-       <span style="font-weight:bold; color:white; font-size:16px;">📅 Solicitações de ${mesAno}</span>
+       <span style="font-weight:bold; color:white; font-size:16px;">${mesAno.includes("Emergenciais") || mesAno.includes("Solicitações") ? mesAno : "📅 Solicitações de " + mesAno}</span>
        <span style="background:#661155; color:white; padding:2px 10px; border-radius:12px; font-size:12px;">${solicitacoes.length}</span>
       `;
 
@@ -12033,8 +12140,10 @@
   }
 
   function verDetalhesSolicitacao(id, isReadOnly = false) {
-    const solicitacoes =
-      JSON.parse(localStorage.getItem("solicitacoes_compra")) || [];
+    let solicitacoes = window.todasAsSolicitacoesMemoria || [];
+    if (!solicitacoes.find(s => s.id === id)) solicitacoes = solicitacoes.concat(window.minhasSolicitacoesMemoria || []);
+    if (!solicitacoes.find(s => s.id === id)) solicitacoes = solicitacoes.concat(JSON.parse(localStorage.getItem("solicitacoes_compra")) || []);
+
 
     const sol = solicitacoes.find(s => s.id === id);
     if (!sol) return;
@@ -12046,6 +12155,7 @@
 
 
     const badge = typeof obterBadgeWorkflow === "function" ? obterBadgeWorkflow(sol.status) : sol.status;
+      const badgePrio = typeof obterBadgePrioridade === "function" ? obterBadgePrioridade(sol.prioridade) : "";
 
     div.innerHTML = `
                      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
@@ -12054,13 +12164,14 @@
                          <p><strong>Solicitante:</strong> ${sol.solicitante}</p>
                        </div>
                        <div style="text-align:right;">
-                         ${badge}
+           ${badge} ${badgePrio}
                        </div>
                      </div>
                      
                      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
                        <p><strong>Setor:</strong> ${sol.setor}</p>
-                       <p><strong>Tipo:</strong> ${sol.tipo.toUpperCase()}</p>
+                       <p><strong>Tipo:</strong> ${(sol.tipo ? sol.tipo.toUpperCase() : "N/I")}</p>
+         
                        <p><strong>Data:</strong> ${sol.data}</p>
                        <div id="containerAlterarStatus">
                          <!-- Será preenchido apenas para compradores -->
@@ -12069,7 +12180,7 @@
 
                      <hr style="border-color:#661155;margin:15px 0;">
 
-                       <h3 style="color:#661155;">📝 Observações do Requisitante</h3>
+                       <h3 style="color:#661155;">${(sol.prioridade && sol.prioridade.includes("Emergencial")) ? "🚨 Justificativa da Emergência" : "📝 Observações do Requisitante"}</h3>
                        <div style="
    background:#1a1a1a;
    border:1px solid #661155;
@@ -12079,9 +12190,9 @@
    white-space:pre-wrap;
    color:white;
  ">
-                         ${sol.descricao && sol.descricao.trim()
-        ? sol.descricao
-        : "— Nenhuma observação informada —"}
+                         ${(sol.descricao || sol.justificativa) ? (sol.descricao || sol.justificativa) : "- Nenhuma observação informada -"}
+
+
                        </div>
 
                        <hr style="border-color:#661155;margin:15px 0;">
@@ -12159,7 +12270,9 @@
         solicitacoes[idx].autorCancelamento = autorCancelamento;
         solicitacoes[idx].dataCancelamento = new Date().toLocaleString();
 
-        localStorage.setItem("solicitacoes_compra", JSON.stringify(solicitacoes));
+        try {
+          localStorage.setItem("solicitacoes_compra", JSON.stringify(solicitacoes));
+        } catch(quotaErr) { console.warn("Cache excedido, ignorando..."); }
 
         // ☁️ SYNC FIREBASE
         if (typeof db !== "undefined") {
@@ -12189,7 +12302,9 @@
 
     if (idx !== -1) {
       solicitacoes[idx].status = novoStatus;
-      localStorage.setItem("solicitacoes_compra", JSON.stringify(solicitacoes));
+        try {
+          localStorage.setItem("solicitacoes_compra", JSON.stringify(solicitacoes));
+        } catch(quotaErr) { console.warn("Cache excedido, ignorando..."); }
 
       // ☁️ SYNC FIREBASE
       if (typeof db !== "undefined") {
@@ -12201,7 +12316,7 @@
         }
       }
 
-      console.log(`✅ Status da solicitação ${id} alterado para ${novoStatus}`);
+      console.log(`OK: Status da solicitação ${id} alterado para ${novoStatus}`);
 
       // Recarrega a lista se estiver aberta
       if (typeof carregarSolicitacoesCompra === "function") carregarSolicitacoesCompra();
@@ -12250,15 +12365,17 @@
     }
 
     // 🔥 Agrupar e Renderizar para o Requisitante
+    window.minhasSolicitacoesMemoria = minhas;
     renderizarListaAgrupada(lista, minhas, (s) => {
       const badge = typeof obterBadgeWorkflow === "function" ? obterBadgeWorkflow(s.status) : s.status;
+      const badgePrio = typeof obterBadgePrioridade === "function" ? obterBadgePrioridade(s.prioridade) : "";
       return `
        <div style="text-align:left; flex:1;">
          <strong>${s.data}</strong><br>
-         <small>${s.tipo.toUpperCase()} - ${s.itens ? s.itens.length : 0} itens</small>
+         <small>${(s.tipo ? s.tipo.toUpperCase() : "N/I")} - ${s.itens ? s.itens.length : 0} itens</small>
        </div>
        <div style="text-align:right;">
-         ${badge}
+         ${badgePrio} ${badge}
        </div>
        <div style="margin-left:15px;">
           <button onclick="verDetalhesSolicitacao('${s.id}', true)" style="background:transparent; border:1px solid #661155; border-radius:4px; color:white; padding:5px 10px; cursor:pointer;">👁️</button>
@@ -12693,6 +12810,14 @@
 
 
   /* 4. HELPER PARA STATUS DO WORKFLOW */
+  window.obterBadgePrioridade = function(prioridade) {
+    if (!prioridade) return "";
+    if (prioridade.includes("Emergencial")) return '<span class="status-pulsante" style="background:#ff4444; color:white; border:1px solid #cc0000; animation:none; margin-right:5px;">🔴 Emergencial</span>';
+    if (prioridade.includes("Urgente")) return '<span class="status-pulsante" style="background:#ffbb33; color:white; border:1px solid #ff8800; animation:none; margin-right:5px;">🟡 Urgente</span>';
+    if (prioridade.includes("Planejado")) return '<span class="status-pulsante" style="background:#33b5e5; color:white; border:1px solid #0099cc; animation:none; margin-right:5px;">🔵 Planejado</span>';
+    return '<span class="status-pulsante" style="background:#00C851; color:white; border:1px solid #007E33; animation:none; margin-right:5px;">🟢 Normal</span>';
+  };
+
   window.obterBadgeWorkflow = function (status) {
     if (status === "pendente") return '<span class="status-pulsante status-pendente">📝 Pendente</span>';
     if (status === "em_cotacao") return '<span class="status-pulsante status-cotacao">🔍 Em Cotação</span>';
@@ -12838,7 +12963,14 @@
     cot.motivoRejeicao = motivo;
     cot.dataRejeicao = new Date().toLocaleString();
 
-    localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
+            try {
+            localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
+        } catch (err) {
+            if (err.name === 'QuotaExceededError') {
+                cotacoes = cotacoes.slice(-20); // limpa as mais antigas
+                localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
+            }
+        }
 
     // 2. SINCRONIZAÇÃO CLOUD (FIRESTORE)
     if (typeof db !== "undefined") {
@@ -12995,7 +13127,7 @@
             await db.collection(col).doc(docId).set(item);
           }
           localStorage.setItem(lsKey, JSON.stringify(dados)); // Salva com as novas URLs
-          console.log(`✅ Coleção ${col} sincronizada.`);
+          console.log(`OK: Coleção ${col} sincronizada.`);
         }
       } catch (e) {
         console.warn(`Erro ao sincronizar ${col}:`, e);
@@ -13263,7 +13395,14 @@
       // ✅ 1. LOCAL (Imediato - Backup)
       const cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
       cotacoes.push(novaCotacao);
-      localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
+              try {
+            localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
+        } catch (err) {
+            if (err.name === 'QuotaExceededError') {
+                cotacoes = cotacoes.slice(-20); // limpa as mais antigas
+                localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
+            }
+        }
       console.log("✅ V2: Backup local salvo.");
 
       // ☁️ 2. REALTIME DATABASE (Rápido e confiável)
@@ -13278,7 +13417,7 @@
           // 🔥 ATUALIZA STATUS DA SOLICITAÇÃO DE ORIGEM (SE HOUVER)
           if (novaCotacao.idSolicitacao && typeof mudarStatusSolicitacao === "function") {
             await mudarStatusSolicitacao(novaCotacao.idSolicitacao, "em_cotacao");
-            console.log(`✅ Solicitação ${novaCotacao.idSolicitacao} marcada como "em_cotacao" automaticamente.`);
+            console.log(`OK: Solicitação ${novaCotacao.idSolicitacao} marcada como "em_cotacao" automaticamente.`);
           }
 
           alert("✅ Cotação publicada com sucesso!\n\nOs fornecedores podem visualizar agora.");
@@ -13405,7 +13544,7 @@
     for (const cot of local) {
       try {
         await rtdb.ref("cotacoes/" + cot.numero).set(cot);
-        console.log(`✅ ${cot.numero} enviado`);
+        console.log(`OK: ${cot.numero} enviado`);
         ok++;
       } catch (e) {
         console.error(`❌ ${cot.numero} falhou:`, e.code, e.message);
@@ -13571,7 +13710,7 @@ linhas.forEach((tr, index) => {
                 "Upload de Arquivo"
               );
               anexoIndividual.url = url;
-              console.log(`✅ Upload concluído (${file.name}):`, url);
+              console.log(`OK: Upload concluído (${file.name}):`, url);
               anexosArray.push(anexoIndividual);
             } catch (e) {
               console.warn(`⚠️ Falha no Storage, usando fallback base64 para ${file.name}:`, e.message);
@@ -13582,7 +13721,7 @@ linhas.forEach((tr, index) => {
                   const base64Data = await fileToBase64(file);
                   anexoIndividual.base64 = base64Data;
                   anexosArray.push(anexoIndividual);
-                  console.log(`✅ Fallback base64 aplicado: ${file.name}`);
+                  console.log(`OK: Fallback base64 aplicado: ${file.name}`);
                 } catch (e2) {
                   console.warn(`⚠️ Falha no fallback base64: ${file.name}`, e2);
                 }
@@ -14370,6 +14509,12 @@ linhas.forEach((tr, index) => {
   /* 🛠️ HELPERS GLOBAIS (USANDO DEFINIÇÕES DO CABEÇALHO) */
 
   window.reabrirCotacao = async function (id) {
+    let _cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
+    let _cot = _cotacoes.find(c => String(c.numero) === String(id) || String(c.id) === String(id));
+    if (_cot && _cot.tipo === "web") {
+        alert("Você não tem permissão para reabrir uma Compra Web. Exclua e crie uma nova se necessário.");
+        return;
+    }
     if (!confirm("⚠️ Deseja REABRIR esta cotação?\n\nIsso estenderá o prazo de fechamento em 3 dias para tentar atrair novos fornecedores.")) return;
 
     try {
@@ -14387,7 +14532,14 @@ linhas.forEach((tr, index) => {
       cot.reaberta = true; // 🟢 FLAG REABERTA
       cot.dataFechamento = agora.toLocaleString();
 
-      localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
+              try {
+            localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
+        } catch (err) {
+            if (err.name === 'QuotaExceededError') {
+                cotacoes = cotacoes.slice(-20); // limpa as mais antigas
+                localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
+            }
+        }
 
       // 🔥 SYNC FIRESTORE
       if (typeof db !== "undefined") {
@@ -14399,7 +14551,7 @@ linhas.forEach((tr, index) => {
             reaberta: true,
             dataFechamento: cot.dataFechamento
           });
-          console.log(`✅ Firestore: Cotação ${docId} reaberta.`);
+          console.log(`OK: Firestore: Cotação ${docId} reaberta.`);
         } catch (e) {
           console.warn("⚠️ Falha ao atualizar Firestore:", e);
         }
@@ -15081,14 +15233,14 @@ linhas.forEach((tr, index) => {
         const docId = idStr;
         console.log(`☁️ Tentando remover ${docId} do Firestore em background...`);
         db.collection("cotacoes").doc(docId).delete()
-          .then(() => console.log(`✅ Firestore: Cotação ${docId} removida.`))
+          .then(() => console.log(`OK: Firestore: Cotação ${docId} removida.`))
           .catch(fsError => console.warn("⚠️ Firestore: Falha na exclusão (Quota?), mas o item permanecerá oculto localmente.", fsError));
       }
 
       if (typeof rtdb !== "undefined") {
         console.log(`☁️ Tentando remover ${idStr} do RTDB em background...`);
         rtdb.ref("cotacoes/" + idStr).remove()
-          .then(() => console.log(`✅ RTDB: Cotação ${idStr} removida.`))
+          .then(() => console.log(`OK: RTDB: Cotação ${idStr} removida.`))
           .catch(rtError => console.warn("⚠️ RTDB: Falha na exclusão.", rtError));
       }
 
@@ -15100,6 +15252,12 @@ linhas.forEach((tr, index) => {
 
   // 🔄 Lógica para Reabrir Cotação (ACEITA DATA CUSTOMIZADA)
   window.reabrirCotacao = async function (id, novaDataFornecida = null) {
+    let _cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
+    let _cot = _cotacoes.find(c => String(c.numero) === String(id) || String(c.id) === String(id));
+    if (_cot && _cot.tipo === "web") {
+        alert("Você não tem permissão para reabrir uma Compra Web. Exclua e crie uma nova se necessário.");
+        return;
+    }
     if (!novaDataFornecida && !confirm("⚠️ Deseja REABRIR esta cotação?\n\nIsso estenderá o prazo de fechamento em 3 dias para tentar atrair novos fornecedores.")) {
       return;
     }
@@ -15127,7 +15285,14 @@ linhas.forEach((tr, index) => {
       cot.prazoEncerrado = false;
       cot.dataFechamento = dataFechamentoFormatada;
 
-      localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
+              try {
+            localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
+        } catch (err) {
+            if (err.name === 'QuotaExceededError') {
+                cotacoes = cotacoes.slice(-20); // limpa as mais antigas
+                localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
+            }
+        }
 
       // 🔥 SYNC FIRESTORE: Atualiza no Firestore se possível
       if (typeof db !== "undefined") {
@@ -15138,7 +15303,7 @@ linhas.forEach((tr, index) => {
             prazoEncerrado: false,
             dataFechamento: cot.dataFechamento
           });
-          console.log(`✅ Cotação ${docId} reaberta no Firestore`);
+          console.log(`OK: Cotação ${docId} reaberta no Firestore`);
         } catch (fsError) {
           console.warn("⚠️ Falha ao atualizar Firestore em reabrirCotacao:", fsError);
         }
@@ -15185,7 +15350,14 @@ linhas.forEach((tr, index) => {
 
       cotacoes[idx].status = "finalizada";
       cotacoes[idx].dataFinalizacao = new Date().toLocaleString();
-      localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
+              try {
+            localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
+        } catch (err) {
+            if (err.name === 'QuotaExceededError') {
+                cotacoes = cotacoes.slice(-20); // limpa as mais antigas
+                localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
+            }
+        }
 
       // Sincroniza com Firebase RTDB se disponível
       if (typeof rtdb !== "undefined") {
@@ -15324,9 +15496,12 @@ linhas.forEach((tr, index) => {
       });
     }
 
-    // 3. Monta a lista de ADJUDICAÇÃO (Vencedores)
+        // 3. Monta a lista de ADJUDICACAO (Vencedores)
     const adjudicacao = [];
 
+    if (cotacao.tipo === "web" && Array.isArray(cotacao.adjudicacao) && cotacao.adjudicacao.length > 0) {
+        adjudicacao.push(...cotacao.adjudicacao);
+    } else {
     cotacao.produtos.forEach((prod, idx) => {
       let vencedorEmail = null;
       let vencedorNome = "Sem Oferta";
@@ -15400,6 +15575,7 @@ linhas.forEach((tr, index) => {
         });
       }
     });
+    }
 
     // 4. Salva e Atualiza Status
     if (adjudicacao.length === 0) {
@@ -15411,7 +15587,14 @@ linhas.forEach((tr, index) => {
     cotacao.status = "aprovacao"; // Avança workflow
 
     cotacoes[index] = cotacao;
-    localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
+            try {
+            localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
+        } catch (err) {
+            if (err.name === 'QuotaExceededError') {
+                cotacoes = cotacoes.slice(-20); // limpa as mais antigas
+                localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
+            }
+        }
 
     // 🔥 SYNC FIRESTORE (AWAIT OBRIGATÓRIO)
     if (typeof db !== "undefined") {
@@ -16501,3 +16684,4 @@ linhas.forEach((tr, index) => {
 </body>
 
 </html>
+
