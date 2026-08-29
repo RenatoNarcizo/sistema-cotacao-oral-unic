@@ -2874,8 +2874,8 @@
 
       <!-- DESCRIÇÃO -->
       <label>Descrição da Cotação</label>
-      <input type="text" id="descricaoCotacaoManual" style="width:100%;margin-bottom:8px;background:#1a1a1a;color:white;
-          border:1px solid #661155;border-radius:5px;padding:6px;">
+      <textarea id="descricaoCotacaoManual" rows="4" style="width:100%;margin-bottom:8px;background:#1a1a1a;color:white;
+          border:1px solid #661155;border-radius:5px;padding:6px;"></textarea>
 
       <p><strong>Data de Criação:</strong> <span id="dataCriacaoManual"></span></p>
 
@@ -2966,8 +2966,8 @@
 
       <!-- DESCRIÇÃO -->
       <label>Descrição da Cotação</label>
-      <input type="text" id="descricaoCotacaoMateriais" style="width:100%;margin-bottom:8px;background:#1a1a1a;color:white;
-          border:1px solid #661155;border-radius:5px;padding:6px;">
+      <textarea id="descricaoCotacaoMateriais" rows="4" style="width:100%;margin-bottom:8px;background:#1a1a1a;color:white;
+          border:1px solid #661155;border-radius:5px;padding:6px;"></textarea>
 
       <p><strong>Data de Criação:</strong> <span id="dataCriacaoMateriais"></span></p>
 
@@ -3013,8 +3013,8 @@
 
       <!-- DESCRIÇÃO -->
       <label>Descrição da Cotação</label>
-      <input type="text" id="descricaoCotacaoServicos" style="width:100%;margin-bottom:8px;background:#1a1a1a;color:white;
-          border:1px solid #661155;border-radius:5px;padding:6px;">
+      <textarea id="descricaoCotacaoServicos" rows="4" style="width:100%;margin-bottom:8px;background:#1a1a1a;color:white;
+          border:1px solid #661155;border-radius:5px;padding:6px;"></textarea>
 
       <p><strong>Data de Criação:</strong> <span id="dataCriacaoServicos"></span></p>
 
@@ -5162,7 +5162,11 @@
 
     if (listaFinal.length > 0) {
       try {
-        localStorage.setItem("cotacoes", JSON.stringify(listaFinal));
+        try {
+            localStorage.setItem("cotacoes", JSON.stringify(listaFinal));
+          } catch(e) {
+            console.warn("Storage cheio, não foi possível salvar cotacoes localmente", e.name);
+          }
       } catch (e) {
         console.warn("⚠️ LocalStorage cheio ao salvar lista de cotações. Operando sem cache persistente.", e);
       }
@@ -6488,7 +6492,7 @@
 
       sheet.slice(1).forEach(r => {
         if (r.length < 4) return;
-        const index = r[0];
+        const index = tbody.children.length + 1;
         const item = r[1];
         const marca = r[2];
         const is5Cols = r.length >= 5 && typeof r[4] === 'number';
@@ -6550,7 +6554,8 @@
       }
 
       // 📦 ITENS
-      if (Array.isArray(sol.itens)) {
+      let linhasAdicionadas = 0;
+      if (Array.isArray(sol.itens) && sol.itens.length > 0) {
         sol.itens.forEach(item => {
           adicionarLinhaManual(
             item.nome || item.produto || item.item || "",
@@ -6558,7 +6563,251 @@
             item.embalagem || "Unidade",
             item.quantidade || item.qtd || ""
           );
+          linhasAdicionadas++;
         });
+      }
+
+      // 📎 ANEXOS (EXCEL PARSING)
+      if (Array.isArray(sol.anexos) && sol.anexos.length > 0) {
+          let temExcel = false;
+          let urlExcel = ""; let b64Excel = "";
+          let anexosTexto = "";
+          
+          sol.anexos.forEach(a => {
+              if (a.nome && a.nome.toLowerCase().endsWith(".xlsx")) {
+                  temExcel = true;
+                  urlExcel = a.url; if (a.base64) b64Excel = a.base64;
+              }
+              anexosTexto += `<a href="${a.url}" target="_blank" style="color:blue;text-decoration:underline;">${a.nome}</a><br>`;
+          });
+          
+          const campoDescricao = document.getElementById("descricaoCotacaoManual");
+          if (campoDescricao && anexosTexto !== "") {
+              campoDescricao.value += "\n\nARQUIVOS ANEXOS (Copie os links abaixo e cole no navegador para baixar):\n";
+              sol.anexos.forEach(a => {
+                  campoDescricao.value += `${a.nome}: ${a.url}\n`;
+              });
+          }
+
+          if (temExcel && urlExcel && linhasAdicionadas === 0) {
+              console.log("Baixando Excel do anexo automaticamente...", urlExcel);
+              
+              if (urlExcel.startsWith("data:application/") || b64Excel) {
+                  console.log("Processando via Base64 Fallback ou Propriedade Base64...");
+                  try {
+                      let strToSplit = urlExcel.startsWith("data:application/") ? urlExcel : b64Excel;
+                      const base64Data = strToSplit.split(",")[1];
+                      const binaryStr = atob(base64Data);
+                      const len = binaryStr.length;
+                      const bytes = new Uint8Array(len);
+                      for (let i = 0; i < len; i++) {
+                          bytes[i] = binaryStr.charCodeAt(i);
+                      }
+                      const workbook = XLSX.read(bytes.buffer, { type: 'array' });
+                      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                      const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+                      
+                      let cabecalhoEncontrado = false;
+                            let colDesc = -1, colMarca = -1, colEmb = -1, colQtd = -1;
+                            
+                            for (let i = 0; i < jsonData.length; i++) {
+                                const row = jsonData[i];
+                                if (!row || row.length === 0) continue;
+                                
+                                if (!cabecalhoEncontrado) {
+                                    const strRow = row.join(" ").toLowerCase();
+                                    if (strRow.includes("item") || strRow.includes("descri") || strRow.includes("qnt") || strRow.includes("quant") || strRow.includes("produto")) {
+                                        cabecalhoEncontrado = true;
+                                        // Mapear colunas
+                                        for (let c = 0; c < row.length; c++) {
+                                            const colName = (row[c] || "").toString().toLowerCase();
+                                            if (colName.includes("descri") || colName.includes("produto") || colName.includes("item")) colDesc = c;
+                                            else if (colName.includes("marca")) colMarca = c;
+                                            else if (colName.includes("embala") || colName.includes("und")) colEmb = c;
+                                            else if (colName.includes("quant") || colName.includes("qnt") || colName.includes("qtd")) colQtd = c;
+                                        }
+                                        
+                                        // Se não encontrou alguma coluna essencial, usa fallback baseado em posição
+                                        if (colDesc === -1) {
+                                            // Procura a primeira coluna com texto longo
+                                            colDesc = row.findIndex(x => (x||"").toString().length > 3);
+                                            if (colDesc === -1) colDesc = row.findIndex(x => (x||"").toString().trim() !== "");
+                                        }
+                                    }
+                                    continue;
+                                }
+                                
+                                // Verifica se a linha tem pelo menos algum dado na coluna de descrição
+                                if (colDesc !== -1 && row[colDesc]) {
+                                    const descricao = row[colDesc] ? row[colDesc].toString() : "Item sem descrição";
+                                    const marca = (colMarca !== -1 && row[colMarca]) ? row[colMarca].toString() : "-";
+                                    const embalagem = (colEmb !== -1 && row[colEmb]) ? row[colEmb].toString() : "Unidade";
+                                    const quantidade = (colQtd !== -1 && row[colQtd]) ? parseFloat(row[colQtd]) : 1;
+                                    
+                                    adicionarLinhaManual(descricao, marca, embalagem, quantidade || 1);
+                                    linhasAdicionadas++;
+                                } else if (row.length >= 2 && colDesc === -1) {
+                                    // Fallback super genérico se o cabeçalho não mapeou nada
+                                    // Pula a primeira coluna se for número (ex: 1, 2, 3)
+                                    let startCol = (!isNaN(row[0]) && row[1]) ? 1 : 0;
+                                    const descricao = row[startCol] ? row[startCol].toString() : "Item sem descrição";
+                                    const marca = row[startCol+1] ? row[startCol+1].toString() : "-";
+                                    const embalagem = row[startCol+2] ? row[startCol+2].toString() : "Unidade";
+                                    const quantidade = parseFloat(row[startCol+3] || row[startCol+2] || 1) || 1;
+                                    
+                                    adicionarLinhaManual(descricao, marca, embalagem, quantidade);
+                                    linhasAdicionadas++;
+                                }
+                            }
+                      if (linhasAdicionadas === 0) {
+                          adicionarLinhaManual("FALHA AO ENCONTRAR ITENS NO EXCEL (Base64)", "-", "Unidade", 1);
+                      }
+                  } catch(b64err) {
+                      adicionarLinhaManual("ERRO AO LER BASE64: " + b64err.message, "-", "Unidade", 1);
+                  }
+              } else {
+                  fetch(urlExcel)
+                    .then(res => res.arrayBuffer())
+                    .then(ab => {
+                        const workbook = XLSX.read(ab, { type: 'array' });
+                        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+                        
+                        let cabecalhoEncontrado = false;
+                            let colDesc = -1, colMarca = -1, colEmb = -1, colQtd = -1;
+                            
+                            for (let i = 0; i < jsonData.length; i++) {
+                                const row = jsonData[i];
+                                if (!row || row.length === 0) continue;
+                                
+                                if (!cabecalhoEncontrado) {
+                                    const strRow = row.join(" ").toLowerCase();
+                                    if (strRow.includes("item") || strRow.includes("descri") || strRow.includes("qnt") || strRow.includes("quant") || strRow.includes("produto")) {
+                                        cabecalhoEncontrado = true;
+                                        // Mapear colunas
+                                        for (let c = 0; c < row.length; c++) {
+                                            const colName = (row[c] || "").toString().toLowerCase();
+                                            if (colName.includes("descri") || colName.includes("produto") || colName.includes("item")) colDesc = c;
+                                            else if (colName.includes("marca")) colMarca = c;
+                                            else if (colName.includes("embala") || colName.includes("und")) colEmb = c;
+                                            else if (colName.includes("quant") || colName.includes("qnt") || colName.includes("qtd")) colQtd = c;
+                                        }
+                                        
+                                        // Se não encontrou alguma coluna essencial, usa fallback baseado em posição
+                                        if (colDesc === -1) {
+                                            // Procura a primeira coluna com texto longo
+                                            colDesc = row.findIndex(x => (x||"").toString().length > 3);
+                                            if (colDesc === -1) colDesc = row.findIndex(x => (x||"").toString().trim() !== "");
+                                        }
+                                    }
+                                    continue;
+                                }
+                                
+                                // Verifica se a linha tem pelo menos algum dado na coluna de descrição
+                                if (colDesc !== -1 && row[colDesc]) {
+                                    const descricao = row[colDesc] ? row[colDesc].toString() : "Item sem descrição";
+                                    const marca = (colMarca !== -1 && row[colMarca]) ? row[colMarca].toString() : "-";
+                                    const embalagem = (colEmb !== -1 && row[colEmb]) ? row[colEmb].toString() : "Unidade";
+                                    const quantidade = (colQtd !== -1 && row[colQtd]) ? parseFloat(row[colQtd]) : 1;
+                                    
+                                    adicionarLinhaManual(descricao, marca, embalagem, quantidade || 1);
+                                    linhasAdicionadas++;
+                                } else if (row.length >= 2 && colDesc === -1) {
+                                    // Fallback super genérico se o cabeçalho não mapeou nada
+                                    // Pula a primeira coluna se for número (ex: 1, 2, 3)
+                                    let startCol = (!isNaN(row[0]) && row[1]) ? 1 : 0;
+                                    const descricao = row[startCol] ? row[startCol].toString() : "Item sem descrição";
+                                    const marca = row[startCol+1] ? row[startCol+1].toString() : "-";
+                                    const embalagem = row[startCol+2] ? row[startCol+2].toString() : "Unidade";
+                                    const quantidade = parseFloat(row[startCol+3] || row[startCol+2] || 1) || 1;
+                                    
+                                    adicionarLinhaManual(descricao, marca, embalagem, quantidade);
+                                    linhasAdicionadas++;
+                                }
+                            }
+                        if (linhasAdicionadas === 0) {
+                            adicionarLinhaManual("FALHA AO ENCONTRAR ITENS NO EXCEL", "-", "Unidade", 1);
+                        }
+                    })
+                    .catch(err => {
+                        console.error("Erro ao ler excel anexado via fetch (CORS?):", err);
+                        if (b64Excel) {
+                            console.log("Usando b64Excel no catch do fetch...");
+                            try {
+                                const base64Data = b64Excel.split(",")[1];
+                                const binaryStr = atob(base64Data);
+                                const len = binaryStr.length;
+                                const bytes = new Uint8Array(len);
+                                for (let i = 0; i < len; i++) {
+                                    bytes[i] = binaryStr.charCodeAt(i);
+                                }
+                                const workbook = XLSX.read(bytes.buffer, { type: 'array' });
+                                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                                const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+                                
+                                let cabecalhoEncontrado = false;
+                            let colDesc = -1, colMarca = -1, colEmb = -1, colQtd = -1;
+                            
+                            for (let i = 0; i < jsonData.length; i++) {
+                                const row = jsonData[i];
+                                if (!row || row.length === 0) continue;
+                                
+                                if (!cabecalhoEncontrado) {
+                                    const strRow = row.join(" ").toLowerCase();
+                                    if (strRow.includes("item") || strRow.includes("descri") || strRow.includes("qnt") || strRow.includes("quant") || strRow.includes("produto")) {
+                                        cabecalhoEncontrado = true;
+                                        // Mapear colunas
+                                        for (let c = 0; c < row.length; c++) {
+                                            const colName = (row[c] || "").toString().toLowerCase();
+                                            if (colName.includes("descri") || colName.includes("produto") || colName.includes("item")) colDesc = c;
+                                            else if (colName.includes("marca")) colMarca = c;
+                                            else if (colName.includes("embala") || colName.includes("und")) colEmb = c;
+                                            else if (colName.includes("quant") || colName.includes("qnt") || colName.includes("qtd")) colQtd = c;
+                                        }
+                                        
+                                        // Se não encontrou alguma coluna essencial, usa fallback baseado em posição
+                                        if (colDesc === -1) {
+                                            // Procura a primeira coluna com texto longo
+                                            colDesc = row.findIndex(x => (x||"").toString().length > 3);
+                                            if (colDesc === -1) colDesc = row.findIndex(x => (x||"").toString().trim() !== "");
+                                        }
+                                    }
+                                    continue;
+                                }
+                                
+                                // Verifica se a linha tem pelo menos algum dado na coluna de descrição
+                                if (colDesc !== -1 && row[colDesc]) {
+                                    const descricao = row[colDesc] ? row[colDesc].toString() : "Item sem descrição";
+                                    const marca = (colMarca !== -1 && row[colMarca]) ? row[colMarca].toString() : "-";
+                                    const embalagem = (colEmb !== -1 && row[colEmb]) ? row[colEmb].toString() : "Unidade";
+                                    const quantidade = (colQtd !== -1 && row[colQtd]) ? parseFloat(row[colQtd]) : 1;
+                                    
+                                    adicionarLinhaManual(descricao, marca, embalagem, quantidade || 1);
+                                    linhasAdicionadas++;
+                                } else if (row.length >= 2 && colDesc === -1) {
+                                    // Fallback super genérico se o cabeçalho não mapeou nada
+                                    // Pula a primeira coluna se for número (ex: 1, 2, 3)
+                                    let startCol = (!isNaN(row[0]) && row[1]) ? 1 : 0;
+                                    const descricao = row[startCol] ? row[startCol].toString() : "Item sem descrição";
+                                    const marca = row[startCol+1] ? row[startCol+1].toString() : "-";
+                                    const embalagem = row[startCol+2] ? row[startCol+2].toString() : "Unidade";
+                                    const quantidade = parseFloat(row[startCol+3] || row[startCol+2] || 1) || 1;
+                                    
+                                    adicionarLinhaManual(descricao, marca, embalagem, quantidade);
+                                    linhasAdicionadas++;
+                                }
+                            }
+                            } catch(e3) {
+                                adicionarLinhaManual("ERRO CORS E ERRO B64: " + e3.message, "-", "Unidade", 1);
+                            }
+                        } else {
+                            adicionarLinhaManual("ERRO CORS E SEM BASE64", "-", "Unidade", 1);
+                        }
+                    });
+              }
+          } else if (linhasAdicionadas === 0) {
+              adicionarLinhaManual("VIDE ARQUIVOS EM ANEXO (Ler Descrição)", "-", "Unidade", 1);
+          }
       }
 
       // 🔒 AJUSTE: NÃO limpa aqui, preserva para o momento da publicação!
@@ -6569,48 +6818,53 @@
 
 
   function adicionarLinhaManual(nome = "", marca = "", embalagem = "Unidade", quantidade = "") {
-    const tabela = document.getElementById("tabelaManualCorpo");
-    if (!tabela) return;
-
-    const index = tabela.children.length + 1;
-
-    const optionsHtml = ["Balde", "Caixa", "Fardo", "Frasco", "Garrafa", "Litro", "Pacote", "Pote", "Peça", "Quilogramas (KG)", "Saco", "Unidade", "Ampola"].map(opt =>
-      `<option value="${opt}" ${opt.toLowerCase() === embalagem.trim().toLowerCase() ? 'selected' : ''}>${opt}</option>`
-    ).join("");
-
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-   <td>${index}</td>
-   <td style="padding-left: 10px;">
-     <input
-       type="text"
-       value="${nome}"
-       placeholder="Nome do produto"
-       style="width:100%;background:#1a1a1a;color:white;border:1px solid #661155;border-radius:5px;padding:4px;"
-     >
-   </td>
-   <td style="padding-left: 15px;">
-     <input
-       type="text"
-       value="${marca}"
-       placeholder="Marca"
-       style="width:100%;background:#1a1a1a;color:white;border:1px solid #661155;border-radius:5px;padding:4px;"
-     >
-   </td>
-   <td style="padding-left: 15px;">
-     <select style="background:#1a1a1a;color:white;border:1px solid #661155;border-radius:5px;padding:4px;">
-       ${optionsHtml}
-     </select>
-   </td>
-   <td style="padding-left: 15px;">
-     <input
-       type="number"
-       value="${quantidade}"
-
-  `;
-
-    tabela.appendChild(tr);
-  }
+      const tabela = document.getElementById("tabelaManualCorpo");
+      if (!tabela) return;
+  
+      const index = tabela.children.length + 1;
+  
+      const optionsHtml = ["Balde", "Caixa", "Fardo", "Frasco", "Garrafa", "Litro", "Pacote", "Pote", "Peça", "Quilogramas (KG)", "Saco", "Unidade", "Ampola"].map(opt =>
+        `<option value="${opt}" ${opt.toLowerCase() === embalagem.trim().toLowerCase() ? 'selected' : ''}>${opt}</option>`
+      ).join("");
+  
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+     <td>${index}</td>
+     <td style="padding-left: 10px;">
+       <input
+         type="text"
+         value="${nome}"
+         placeholder="Nome do produto"
+         style="width:100%;background:#1a1a1a;color:white;border:1px solid #661155;border-radius:5px;padding:4px;"
+       >
+     </td>
+     <td style="padding-left: 15px;">
+       <input
+         type="text"
+         value="${marca}"
+         placeholder="Marca"
+         style="width:100%;background:#1a1a1a;color:white;border:1px solid #661155;border-radius:5px;padding:4px;"
+       >
+     </td>
+     <td style="padding-left: 15px;">
+       <select style="background:#1a1a1a;color:white;border:1px solid #661155;border-radius:5px;padding:4px;">
+         ${optionsHtml}
+       </select>
+     </td>
+     <td style="padding-left: 15px;">
+       <input
+         type="number"
+         value="${quantidade}"
+         placeholder="Qtd"
+         style="width:80px;background:#1a1a1a;color:white;border:1px solid #661155;border-radius:5px;padding:4px;"
+       >
+     </td>
+     <td style="text-align:center;">
+       <button type="button" onclick="this.closest('tr').remove();" style="background:#661155;color:white;border:none;border-radius:4px;padding:5px 10px;cursor:pointer;"><i class="fa-solid fa-trash"></i></button>
+     </td>
+    `;
+      tabela.appendChild(tr);
+    }
 
 
 
@@ -6856,17 +7110,25 @@
 
       // Remove duplicatas e junta com vírgula
       const emailFinal = [...new Set(emailsCombo)].join(", ");
+      const isJaNaCotacao = emailsCombo.some(e => fornecedoresAtuais.includes(normalizarEmail(e)));
+      
+      let labelStyle = "display:block; padding:8px; border-bottom:1px solid #333; cursor:pointer;";
+      let inputAttrs = `class="checkFornecedor" data-nome="${f.nome}" data-email="${emailFinal}" data-whats="${f.whats || f.telefone || ''}" style="margin-right:6px;"`;
+      
+      if (isJaNaCotacao) {
+          labelStyle += " background:#1a1018; opacity:0.6; pointer-events:none;"; // Escuro
+          inputAttrs += " checked disabled";
+      } else {
+          if (window.estadoCheckboxesFornecedores && window.estadoCheckboxesFornecedores.has(f.nome + emailFinal)) {
+              inputAttrs += " checked";
+          }
+      }
 
       return `
-   <label style="display:block; padding:8px; border-bottom:1px solid #333; cursor:pointer;">
+   <label style="${labelStyle}">
      <input
        type="checkbox"
-       class="checkFornecedor"
-       data-nome="${f.nome}"
-       data-email="${emailFinal}"
-       data-whats="${f.whats || f.telefone || ''}"
-       style="margin-right:6px;"
-       ${window.estadoCheckboxesFornecedores && window.estadoCheckboxesFornecedores.has(f.nome + emailFinal) ? 'checked' : ''}
+       ${inputAttrs}
        onchange="window.atualizarEstadoCheckboxFornecedor(this)"
      >
      <strong>${f.nome}</strong> — ${f.tipo || "Sem tipo"}<br>
@@ -6997,9 +7259,9 @@
       const listaAtualizada = [...fornecedoresAtuais, ...fornecedoresParaAdicionar];
 
       // Atualiza Firestore
-      await db.collection("cotacoes").doc(String(numeroCotacao)).update({
+      await db.collection("cotacoes").doc(String(numeroCotacao)).set({
         fornecedores: listaAtualizada
-      });
+      }, { merge: true });
 
       // Atualiza RTDB (Sincronização Rápida)
       if (typeof rtdb !== "undefined") {
@@ -7015,6 +7277,21 @@
       // Atualiza LocalStorage
       localCotacoes[index].fornecedores = listaAtualizada;
       localStorage.setItem("cotacoes", JSON.stringify(localCotacoes));
+
+      // DISPARA NOTIFICAÇÃO APENAS PARA OS NOVOS FORNECEDORES
+      if (typeof window.enviarNotificacaoCotacao === "function") {
+        const cotacaoParaNotificar = {
+          ...cotacaoLocal,
+          fornecedores: fornecedoresParaAdicionar
+        };
+        window.enviarNotificacaoCotacao(cotacaoParaNotificar);
+      } else if (typeof window.dispararNotificacaoFornecedores === "function") {
+        const cotacaoParaNotificar = {
+          ...cotacaoLocal,
+          fornecedores: fornecedoresParaAdicionar
+        };
+        window.dispararNotificacaoFornecedores(cotacaoParaNotificar);
+      }
 
       alert(`✅ Fornecedores adicionados com sucesso à cotação #${numeroCotacao}!`);
       
@@ -11774,17 +12051,48 @@
           const uploadTask = await storageRef.put(file);
           const downloadURL = await uploadTask.ref.getDownloadURL();
 
+          
+          // Sempre tenta pegar o Base64 para evitar problemas de CORS no frontend
+          let base64String = "";
+          if (file.name.toLowerCase().endsWith(".xlsx")) {
+             try {
+                 base64String = await new Promise((resolve, reject) => {
+                     const reader = new FileReader();
+                     reader.onload = () => resolve(reader.result);
+                     reader.onerror = reject;
+                     reader.readAsDataURL(file);
+                 });
+             } catch(e) {}
+          }
+
           anexos.push({
             nome: file.name,
             tipo: file.type,
             tamanho: (file.size / 1024).toFixed(2) + " KB",
-            url: downloadURL
+            url: downloadURL,
+            base64: base64String
           });
 
           console.log(`OK: Upload concluído: ${file.name}`);
         } catch (err) {
-          console.error("❌ Erro no upload:", err);
-          alert(`⚠️ Falha ao enviar o arquivo: ${file.name}. Ele não ficará disponível na nuvem.`);
+          console.warn("Upload falhou, usando Base64 fallback para:", file.name);
+          try {
+             const base64 = await new Promise((resolve, reject) => {
+                 const reader = new FileReader();
+                 reader.onload = () => resolve(reader.result);
+                 reader.onerror = reject;
+                 reader.readAsDataURL(file);
+             });
+             anexos.push({
+                nome: file.name,
+                tipo: file.type,
+                tamanho: (file.size / 1024).toFixed(2) + " KB",
+                url: base64
+             });
+          } catch(e) {
+             console.error("Erro fallback:", e);
+             alert(`Falha total no anexo: ${file.name}`);
+          }
         }
       }
     }
@@ -14454,7 +14762,11 @@ linhas.forEach((tr, index) => {
           window._rtdbUltimoHash = hashAtual;
 
           // Salva Local
-          localStorage.setItem("cotacoes", JSON.stringify(listaFinal));
+          try {
+            localStorage.setItem("cotacoes", JSON.stringify(listaFinal));
+          } catch(e) {
+            console.warn("Storage cheio, não foi possível salvar cotacoes localmente", e.name);
+          }
           console.log(`☁️ Sync Merge (RTDB+Local): ${listaFinal.length} cotações.`);
 
           // 🟢 ATUALIZAÇÃO REATIVA DA UI
@@ -16685,3 +16997,5 @@ linhas.forEach((tr, index) => {
 
 </html>
 
+
+<!-- fix -->
