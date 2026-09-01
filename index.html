@@ -5905,6 +5905,15 @@
     });
     // Garante que o scroll do corpo seja liberado
     document.body.style.overflow = "auto";
+    
+    // Limpa o campo de busca de usuários ao trocar de tela
+    const buscaUsuarios = document.getElementById("buscaUsuariosEmpresa");
+    if (buscaUsuarios) {
+        buscaUsuarios.value = "";
+        if (typeof window.filtrarUsuariosLista === "function") {
+            window.filtrarUsuariosLista('listaUsuariosEmpresa', "");
+        }
+    }
   }
   window.fecharTodasAsSecoes = fecharTodasAsSecoes;
 
@@ -7100,13 +7109,17 @@
       return;
     }
 
-    lista.sort((a, b) => a.nome.localeCompare(b.nome));
+    lista.sort((a, b) => String(a.nome || "").localeCompare(String(b.nome || "")));
 
     listaDiv.innerHTML = lista.map(f => {
       // 🟢 FIX: Combina todos os e-mails disponíveis (string e array)
       let emailsCombo = [];
-      if (f.email) emailsCombo.push(f.email);
+      if (f.email) {
+          if (Array.isArray(f.email)) emailsCombo.push(...f.email);
+          else emailsCombo.push(f.email);
+      }
       if (Array.isArray(f.emails)) emailsCombo.push(...f.emails);
+      emailsCombo = emailsCombo.map(e => String(e));
 
       // Remove duplicatas e junta com vírgula
       const emailFinal = [...new Set(emailsCombo)].join(", ");
@@ -7152,8 +7165,10 @@
       // 🔥 DEDUPLICAÇÃO AGRESSIVA (NOME + EMAIL) - Case Insensitive
       const mapaDeduplicado = new Map();
       listaCrua.forEach(f => {
-        const emailKey = (f.email || f.emails || "").toLowerCase().trim();
-        const nomeKey = (f.nome || "").toLowerCase().trim();
+        let rawEmail = f.email || f.emails || "";
+        if (Array.isArray(rawEmail)) rawEmail = rawEmail[0] || "";
+        const emailKey = String(rawEmail).toLowerCase().trim();
+        const nomeKey = String(f.nome || "").toLowerCase().trim();
 
         if (emailKey && !mapaDeduplicado.has(emailKey)) {
           mapaDeduplicado.set(emailKey, f);
@@ -7405,9 +7420,23 @@
     const fornecedores = JSON.parse(localStorage.getItem("fornecedores")) || [];
 
     const filtrados = fornecedores.filter(f => {
-      const matchesNome = f.nome.toLowerCase().includes(termo);
+      const nome = String(f.nome || "").toLowerCase();
+      const email = String(f.email || f.emails || "").toLowerCase();
+      const responsavel = String(f.responsavel || "").toLowerCase();
+      const whats = String(f.whats || f.telefone || "").toLowerCase();
+      const endereco = String(f.endereco || f.logradouro || "").toLowerCase();
+      const tipo = String(f.tipo || "").toLowerCase();
+
+      const matchesTerm = termo === "" || 
+                          nome.includes(termo) || 
+                          email.includes(termo) || 
+                          responsavel.includes(termo) || 
+                          whats.includes(termo) || 
+                          endereco.includes(termo);
+
       const matchesTipo = !tipoFiltro || f.tipo === tipoFiltro;
-      return matchesNome && matchesTipo;
+      
+      return matchesTerm && matchesTipo;
     });
 
     renderizarFornecedoresModal(filtrados);
