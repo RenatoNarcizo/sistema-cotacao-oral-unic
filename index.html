@@ -1889,7 +1889,7 @@
       border-radius: 10px;
 
       width: 90%;
-      max-width: 500px;
+      box-sizing: border-box;
       /* 🔑 tamanho correto */
       max-height: none;
       /* 🔑 remove limitação */
@@ -2376,13 +2376,7 @@
         <p>Gerar novo pedido de orçamento</p>
       </div>
 
-      <!-- 🌟 Minhas Avaliações (FORNECEDOR) -->
-      <div class="card" id="cardAvaliacoesFornecedor" style="display:none;" onclick="abrirDetalhesReputacao()">
-        <i class="fa-solid fa-star-half-stroke"></i>
-        <h3>Minhas Avaliações</h3>
-        <p>Ver detalhes e comentários dos compradores</p>
-      </div>
-
+      
       <!-- 📝 Solicitação de Compra -->
       <div class="card" id="cardSolicitacaoCompra" onclick="abrirSolicitacaoCompra()">
         <i class="fa-solid fa-clipboard-list"></i>
@@ -2427,6 +2421,13 @@
         <i class="fa-solid fa-envelope-open-text"></i>
         <h3>Responder Cotação</h3>
         <p>Ver e responder solicitações recebidas</p>
+      </div>
+
+      <!-- 🌟 Minhas Avaliações (FORNECEDOR) -->
+      <div class="card" id="cardAvaliacoesFornecedor" style="display:none;" onclick="abrirDetalhesReputacao()">
+        <i class="fa-solid fa-star-half-stroke"></i>
+        <h3>Minhas Avaliações</h3>
+        <p>Ver detalhes e comentários dos compradores</p>
       </div>
 
       <!-- ⚙️ CONFIGURAÇÕES (Removido a pedido do usuário)
@@ -2653,7 +2654,7 @@
 
         <!-- Área de Feedback e Envio -->
         <div id="feedbackUploadManual"
-          style="margin-top: 20px; display: none; text-align: left; max-width: 500px; margin-left: auto; margin-right: auto;">
+          style="margin-top: 20px; display: none; text-align: left; box-sizing: border-box; margin-left: auto; margin-right: auto;">
           <div id="msgArquivoSelecionado"
             style="color: #0dcaf0; margin-bottom: 10px; font-size:14px; background:#1a1a1a; padding:15px; border-radius:8px; border:1px dashed #661155; width: 100%; box-sizing: border-box;">
           </div>
@@ -3015,6 +3016,10 @@
       <label>Descrição da Cotação</label>
       <textarea id="descricaoCotacaoServicos" rows="4" style="width:100%;margin-bottom:8px;background:#1a1a1a;color:white;
           border:1px solid #661155;border-radius:5px;padding:6px;"></textarea>
+
+      <label style="margin-top:10px; display:block;">Termo de Referência (Obrigatório em PDF):</label>
+      <input type="file" id="uploadTermoServico" accept="application/pdf" style="width:100%;margin-bottom:15px;background:#1a1a1a;color:white;border:1px solid #661155;border-radius:5px;padding:6px;">
+
 
       <p><strong>Data de Criação:</strong> <span id="dataCriacaoServicos"></span></p>
 
@@ -3617,13 +3622,14 @@
 
         <div style="margin-right:8px;">
           <label>Nome do Serviço</label>
+          <input type="hidden" id="servId">
           <input id="servNome" type="text"
             style="width:100%;background:#1a1a1a;border:1px solid #661155;border-radius:5px;color:white;padding:8px;">
         </div>
 
         <div style="margin-left:8px;">
           <label>Código do Serviço</label>
-          <input id="servCodigo" type="text"
+          <input id="servCodigo" type="text" readonly title="O código é gerado automaticamente" style="cursor:not-allowed;"
             style="width:100%;background:#1a1a1a;border:1px solid #661155;border-radius:5px;color:white;padding:8px;">
         </div>
 
@@ -3814,6 +3820,7 @@
           <button id="btnExportarPlanilhaFornecedor" onclick="exportarPlanilhaRespostaParaExcel()" style="margin-top:15px; background:#10b981; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer; font-weight:bold; font-size:13px; display:flex; align-items:center; gap:5px; transition:0.2s;">
             <i class="fa-solid fa-file-excel"></i> Baixar Planilha de Itens
           </button>
+          <a id="btnBaixarTermoRef" target="_blank" title="Faça o download do termo de referência e consulte todas as especificações deste serviço." style="margin-top:15px; display:none; background:#dc2626; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer; font-weight:bold; font-size:13px; align-items:center; gap:5px; transition:0.2s; text-decoration:none;"><i class="fa-solid fa-file-pdf"></i> Baixar Termo de referência de serviço</a>
         </div>
 
         <!-- ⏳ TIMER RELÓGIO -->
@@ -4427,6 +4434,12 @@
       </h2>
 
       </p>
+
+            <div style="margin-top: 15px; margin-bottom: 20px; display: flex; justify-content: center;">
+        <input type="text" id="buscaRequisicoes" placeholder="🔍 Buscar por solicitante, setor, data..." 
+          onkeyup="filtrarRequisicoes()" 
+          style="width: 100%; box-sizing: border-box; padding: 10px; border-radius: 8px; border: 1px solid #661155; background: #222; color: #fff;">
+      </div>
 
       <!-- Aqui entraremos com a lista depois -->
       <div id="listaSolicitacoesCompra" style="margin-top:25px;"></div>
@@ -5569,6 +5582,7 @@
       mostrar("Aprovar Compras");
       mostrar("Gerenciar Usuários");
       mostrar("Gestão Financeira");
+      
       // mostrar("Configurações");
     }
 
@@ -5586,6 +5600,7 @@
       mostrar("Cadastrar Serviço");
       mostrar("Cotações Respondidas");
       mostrar("Gestão Financeira");
+      
       // mostrar("Configurações");
     }
 
@@ -5598,6 +5613,7 @@
       mostrar("Cotações Respondidas");
       mostrar("Aprovar Compras");
       mostrar("Gestão Financeira");
+      
     }
 
     /* ===========================
@@ -5613,6 +5629,8 @@
     if (tipo === "fornecedor") {
       mostrar("Responder Cotação");
       mostrar("Gestão Financeira");
+      mostrar("Minhas Avaliações");
+      
       
       const bannerScore = document.getElementById("bannerScorecardFornecedor");
       if (bannerScore) {
@@ -5659,12 +5677,12 @@
                   txtScore.style.color = nota >= 4 ? '#00ff99' : (nota >= 3 ? '#fbbf24' : '#ff5555');
                   let qtdStr = totalAv > 0 ? totalAv : (ficha.totalAvaliacoes || 0);
                   subScore.innerText = `Você possui ${qtdStr} avaliações. Aqui você encontra a pontuação referente ao serviço prestado ou material vendido. Sua nota e desempenho ficam visíveis aos compradores.`;
-                  if (cardAvaliacoes) cardAvaliacoes.style.display = 'block';
+                  
               } else {
                   txtScore.innerText = nomeEmpresa;
                   txtScore.style.color = "#ccc";
                   subScore.innerText = "Aqui você encontra a pontuação referente ao serviço prestado ou material vendido. Ao realizar vendas e entregas, sua nota aparecerá aqui, sendo um diferencial visível para os compradores.";
-                  if (cardAvaliacoes) cardAvaliacoes.style.display = 'none';
+                  
               }
           }, 500); // Dá tempo para o ranking carregar em background
       }
@@ -6908,7 +6926,7 @@
     let materiais = JSON.parse(localStorage.getItem("materiais")) || [];
 
     // ☁️ 2. Se localStorage vazio, tenta carregar do RTDB
-    if (materiais.length === 0 && typeof rtdb !== "undefined") {
+    if (typeof rtdb !== "undefined") {
       try {
         const snap = await rtdb.ref("materiais").once("value");
         const data = snap.val();
@@ -7001,7 +7019,7 @@
     let servicos = JSON.parse(localStorage.getItem("servicos")) || [];
 
     // ☁️ 2. Se localStorage vazio, tenta carregar do RTDB
-    if (servicos.length === 0 && typeof rtdb !== "undefined") {
+    if (typeof rtdb !== "undefined") {
       try {
         const snap = await rtdb.ref("servicos").once("value");
         const data = snap.val();
@@ -10175,14 +10193,25 @@
   }
 
   // Monta a lista de materiais (NÃO controla visibilidade)
-  function mostrarListaMateriais() {
+  async function mostrarListaMateriais() {
     const tabela = document.getElementById("materiaisTabela");
     const lista = document.getElementById("listaMateriais");
 
     if (!tabela || !lista) return;
 
-    tabela.innerHTML = "";
+    tabela.innerHTML = "<tr><td colspan='5' style='text-align:center;'>Sincronizando materiais...</td></tr>";
 
+    if (typeof rtdb !== "undefined") {
+      try {
+        const snap = await rtdb.ref("materiais").once("value");
+        if (snap.val()) {
+          const dados = Object.values(snap.val()).filter(m => m && m.nome);
+          localStorage.setItem("materiais", JSON.stringify(dados));
+        }
+      } catch (e) { console.warn("RTDB erro:", e); }
+    }
+
+    tabela.innerHTML = "";
     const materiais = JSON.parse(localStorage.getItem("materiais")) || [];
 
     if (materiais.length === 0) {
@@ -10335,7 +10364,18 @@
       if (!tela || !lista) return;
 
       tela.style.display = "block";
-      lista.style.display = "none"; // 🔑 começa sempre fechada
+      lista.style.display = "none";
+
+      const servicos = JSON.parse(localStorage.getItem("servicos")) || [];
+      const codigos = servicos.map(s => parseInt(s.codigo)).filter(c => !isNaN(c)).sort((a, b) => a - b);
+      let nextCode = 1;
+      for (let c of codigos) {
+          if (c === nextCode) nextCode++;
+      }
+      const inputCodigo = document.getElementById("servCodigo");
+      if (inputCodigo) {
+          inputCodigo.value = nextCode;
+      }
     }
   }
   /* ===============================
@@ -10357,14 +10397,25 @@
   }
 
 
-  function mostrarListaServicos() {
+  async function mostrarListaServicos() {
     const tabela = document.getElementById("servicosTabela");
     const lista = document.getElementById("listaServicos");
 
     if (!tabela || !lista) return;
 
-    tabela.innerHTML = "";
+    tabela.innerHTML = "<tr><td colspan='5' style='text-align:center;'>Sincronizando serviços...</td></tr>";
 
+    if (typeof rtdb !== "undefined") {
+      try {
+        const snap = await rtdb.ref("servicos").once("value");
+        if (snap.val()) {
+          const dados = Object.values(snap.val()).filter(s => s && s.nome);
+          localStorage.setItem("servicos", JSON.stringify(dados));
+        }
+      } catch (e) { console.warn("RTDB erro:", e); }
+    }
+
+    tabela.innerHTML = "";
     const servicos = JSON.parse(localStorage.getItem("servicos")) || [];
 
     if (servicos.length === 0) {
@@ -10389,8 +10440,8 @@
      <td>${s.preco || "-"}</td>
      <td style="text-align:center;">
        <div style="display:flex; justify-content:center; gap:8px;">
-         <button onclick="editarServico(${i})">✏️</button>
-         <button onclick="excluirServico(${i})">🗑️</button>
+         <button onclick="editarServico('${s.id}')">✏️</button>
+         <button onclick="excluirServico('${s.id}')">🗑️</button>
        </div>
      </td>
    `;
@@ -10414,8 +10465,9 @@
       return;
     }
 
+    const servId = document.getElementById("servId")?.value;
     const novoServico = {
-      id: "SRV-" + Date.now(),
+      id: servId ? servId : ("SRV-" + Date.now()),
       nome,
       codigo: codigo || "",
       categoria,
@@ -10424,7 +10476,8 @@
     };
 
     const servicos = JSON.parse(localStorage.getItem("servicos")) || [];
-    servicos.push(novoServico);
+    const idx = servicos.findIndex(x => x.id === novoServico.id);
+    if (idx > -1) { servicos[idx] = novoServico; } else { servicos.push(novoServico); }
     servicos.sort((a, b) => a.nome.localeCompare(b.nome));
     localStorage.setItem("servicos", JSON.stringify(servicos));
 
@@ -10436,11 +10489,19 @@
     }
 
     // limpa formulário
+    document.getElementById("servId").value = "";
     document.getElementById("servNome").value = "";
-    document.getElementById("servCodigo").value = "";
     document.getElementById("servCategoria").value = "";
     document.getElementById("servDescricao").value = "";
     document.getElementById("servPreco").value = "";
+    
+    const servicosAtuais = JSON.parse(localStorage.getItem("servicos")) || [];
+    const codigosAtuais = servicosAtuais.map(s => parseInt(s.codigo)).filter(c => !isNaN(c)).sort((a, b) => a - b);
+    let nextCode2 = 1;
+    for (let c of codigosAtuais) {
+        if (c === nextCode2) nextCode2++;
+    }
+    document.getElementById("servCodigo").value = nextCode2;
 
     // 🔁 atualiza lista SOMENTE se estiver aberta
     const lista = document.getElementById("listaServicos");
@@ -10456,45 +10517,40 @@
   =============================== */
 
   if (typeof editarServico !== "function") {
-    function editarServico(index) {
+    function editarServico(id) {
       const servicos = JSON.parse(localStorage.getItem("servicos")) || [];
-      const s = servicos[index];
+      const s = servicos.find(x => x.id === id);
       if (!s) return;
 
-      // Preenche formulário
+      document.getElementById("servId").value = s.id || "";
       document.getElementById("servNome").value = s.nome || "";
       document.getElementById("servCodigo").value = s.codigo || "";
       document.getElementById("servCategoria").value = s.categoria || "";
       document.getElementById("servDescricao").value = s.descricao || "";
       document.getElementById("servPreco").value = s.preco || "";
 
-      // Remove o item para salvar novamente ao editar
-      servicos.splice(index, 1);
-      localStorage.setItem("servicos", JSON.stringify(servicos));
-
-      // Atualiza lista se estiver aberta
-      const lista = document.getElementById("listaServicos");
-      if (lista && lista.style.display === "block") {
-        mostrarListaServicos();
-      }
-
-      // Garante que o usuário veja o formulário
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   }
 
   if (typeof excluirServico !== "function") {
-    function excluirServico(index) {
-      if (!confirm("❌ Deseja realmente excluir este serviço?")) return;
+    function excluirServico(id) {
+      if (!confirm("Deseja realmente excluir este serviço?")) return;
 
       const servicos = JSON.parse(localStorage.getItem("servicos")) || [];
-      servicos.splice(index, 1);
-      localStorage.setItem("servicos", JSON.stringify(servicos));
+      const index = servicos.findIndex(x => x.id === id);
+      if (index > -1) {
+          servicos.splice(index, 1);
+          localStorage.setItem("servicos", JSON.stringify(servicos));
+      }
 
-      // Atualiza lista se estiver aberta
-      const lista = document.getElementById("listaServicos");
-      if (lista && lista.style.display === "block") {
-        mostrarListaServicos();
+      if (typeof rtdb !== "undefined") {
+          rtdb.ref("servicos/" + id).remove().then(() => {
+              const lista = document.getElementById("listaServicos");
+              if (lista && lista.style.display === "block") {
+                  mostrarListaServicos();
+              }
+          }).catch(e => console.error(e));
       }
     }
   }
@@ -12308,6 +12364,50 @@
 
   window.abrirSolicitacoesCompra = abrirSolicitacoesCompra;
 
+  window.filtrarRequisicoes = function() {
+      const termo = document.getElementById("buscaRequisicoes").value.toLowerCase().trim();
+      const divLista = document.getElementById("listaSolicitacoesCompra");
+      if (!divLista) return;
+
+      const accordions = divLista.children; 
+
+      for(let a = 0; a < accordions.length; a++) {
+          const accordion = accordions[a];
+          const header = accordion.children[0];
+          const content = accordion.children[1];
+          
+          if (!content) continue;
+
+          const items = content.getElementsByClassName("linha-cotacao");
+          let visiveisNoGrupo = 0;
+          
+          for(let i = 0; i < items.length; i++) {
+              const txt = items[i].innerText.toLowerCase();
+              if (txt.includes(termo)) {
+                  items[i].style.display = "";
+                  visiveisNoGrupo++;
+              } else {
+                  items[i].style.display = "none";
+              }
+          }
+
+          if (termo !== "") {
+              if (visiveisNoGrupo > 0) {
+                  accordion.style.display = ""; 
+                  content.style.display = "block"; 
+                  if (header) header.style.borderColor = "#661155";
+              } else {
+                  accordion.style.display = "none"; 
+              }
+          } else {
+              accordion.style.display = "";
+              content.style.display = "none";
+              if (header) header.style.borderColor = "#333";
+          }
+      }
+  };
+
+
 
 
   async function carregarSolicitacoesCompra() {
@@ -13705,7 +13805,35 @@
       anexosHerdados = window.cotacaoOrigemSolicitacao.anexos;
     }
 
+    // UPLOAD DO TERMO DE REFERENCIA SE SERVICOS
+    let termoReferenciaUrl = "";
+    if (tipo === "servicos") {
+      const fileInput = document.getElementById("uploadTermoServico");
+      if (!fileInput || !fileInput.files[0]) {
+        alert("⚠️ O Termo de Referência em PDF é obrigatório para cotações de serviços!");
+        return;
+      }
+      const file = fileInput.files[0];
+      const statusDiv = document.createElement("div");
+      statusDiv.innerText = "Subindo Termo de Referência...";
+      statusDiv.style = "position:fixed;top:10px;right:10px;background:#000;color:#fff;padding:15px;z-index:9999;";
+      document.body.appendChild(statusDiv);
+      try {
+        const ref = storage.ref(`termos_referencia/${numeroCotacaoAtual}/${file.name}`);
+        await ref.put(file);
+        termoReferenciaUrl = await ref.getDownloadURL();
+        document.body.removeChild(statusDiv);
+      } catch (e) {
+        document.body.removeChild(statusDiv);
+        console.error(e);
+        alert("Erro ao fazer upload do Termo de Referência");
+        return;
+      }
+    }
+
     const novaCotacao = {
+      termoReferenciaUrl: termoReferenciaUrl,
+
       id: numeroCotacaoAtual,
       numero: numeroCotacaoAtual,
       tipo: tipo,
@@ -14260,6 +14388,16 @@ linhas.forEach((tr, index) => {
     }
     atualizarTimer();
     window.timerCotacaoInterval = setInterval(atualizarTimer, 1000);
+
+    const btnTermo = document.getElementById("btnBaixarTermoRef");
+    if (btnTermo) {
+        if (cotacao.tipo === "servicos" && cotacao.termoReferenciaUrl) {
+            btnTermo.href = cotacao.termoReferenciaUrl;
+            btnTermo.style.display = "flex";
+        } else {
+            btnTermo.style.display = "none";
+        }
+    }
 
     // Tabela de Itens
     const tbody = document.getElementById("tabelaResponderCorpo");
