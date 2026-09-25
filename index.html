@@ -3,6 +3,50 @@
 
 <head>
 
+    <!-- MULTI-TAB SESSION PROXY (ISOLAMENTO DE ABAS) -->
+    <script>
+    (function() {
+        const originalGetItem = localStorage.getItem;
+        localStorage.getItem = function(key) {
+            if (key === 'usuarioLogado') {
+                let sessionUser = sessionStorage.getItem('usuario_logado');
+                if (sessionUser) return sessionUser;
+            }
+            return originalGetItem.call(localStorage, key);
+        };
+    })();
+    </script>
+    
+  <!-- FIX GLOBAL DE QUOTA DO LOCALSTORAGE -->
+  <script>
+    (function() {
+      const originalSetItem = localStorage.setItem;
+      localStorage.setItem = function(key, value) {
+          if (key === 'cotacoes') {
+              try {
+                  originalSetItem.call(this, key, value);
+              } catch (e) {
+                  if (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+                      console.warn('⚠️ Quota do LocalStorage excedida! Limpando as mais antigas para salvar...');
+                      try {
+                          let array = JSON.parse(value);
+                          if (Array.isArray(array)) {
+                              array = array.slice(-5);
+                              originalSetItem.call(this, key, JSON.stringify(array));
+                          }
+                      } catch (err) {}
+                  } else {
+                      throw e;
+                  }
+              }
+          } else {
+              originalSetItem.call(this, key, value);
+          }
+      };
+    })();
+  </script>
+  
+
 
 
 
@@ -24,6 +68,7 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
+  <link rel="stylesheet" href="chat.css">
   <style>
     :root {
       --primaria: #661155;
@@ -2162,7 +2207,18 @@
     .rating-stars label:hover, .rating-stars label:hover ~ label { color: #fbbf24 !important; opacity: 0.8; }
     .btn-aba.ativo { background: #661155 !important; color: white !important; border-color: #661155 !important; }
 </style>
-</head>
+
+    <style>
+    .chat-blink {
+        animation: blink-anim-force 1s infinite !important;
+    }
+    @keyframes blink-anim-force {
+        0% { box-shadow: 0 0 10px 5px rgba(0, 255, 0, 0.8) !important; transform: scale(1.05); }
+        50% { box-shadow: 0 0 2px 1px rgba(0, 255, 0, 0.2) !important; transform: scale(1); }
+        100% { box-shadow: 0 0 10px 5px rgba(0, 255, 0, 0.8) !important; transform: scale(1.05); }
+    }
+    </style>
+    </head>
 
 <body>
   <img id="logo-oral-unic" src="logo.png" style="display:none;">
@@ -2332,10 +2388,14 @@
 
   <!-- DASHBOARD -->
   <section id="dashboard">
-    <header>
-      <button class="btn-sair" onclick="sair()">Sair</button>
-      <h1>Painel de Controle</h1>
-    </header>
+      <header>
+        <button class="btn-sair" onclick="sair()">Sair</button>
+        <h1>Painel de Controle</h1>
+        <!-- BOTAO CHAT GLOBAL -->
+        <button id="btnChatGeral" class="btn-chat-geral" onclick="console.log('CLICOU NO CHAT'); abrirChatGeral()" style="display:none; background:#661155; color:white; border:2px solid #fff; padding:10px 15px; border-radius:6px; font-weight:bold; cursor:pointer; align-items:center; gap:8px; position:absolute; right:20px; width: max-content; z-index:999999;">
+          <i class="fa-solid fa-comments"></i> Chat Direto
+        </button>
+      </header>
 
     <!-- 🌟 SCORECARD DO FORNECEDOR (visível apenas para fornecedores) -->
     <div id="bannerScorecardFornecedor" style="display:none; background:#111; border:1px solid #661155; border-radius:10px; padding:20px; margin:20px auto; width:95%; max-width:1200px; color:white; text-align:center; box-shadow:0 0 15px rgba(102,17,85,0.4);">
@@ -2422,6 +2482,11 @@
         <h3>Responder Cotação</h3>
         <p>Ver e responder solicitações recebidas</p>
       </div>
+        <div class="card" id="cardChatFornecedor" style="display:none;" onclick="console.log('CLICOU NO CHAT FORNECEDOR'); abrirChatGeral()">
+          <i class="fa-solid fa-comments"></i>
+          <h3>Chat Direto</h3>
+          <p>Falar com a Oral Unic</p>
+        </div>
 
       <!-- 🌟 Minhas Avaliações (FORNECEDOR) -->
       <div class="card" id="cardAvaliacoesFornecedor" style="display:none;" onclick="abrirDetalhesReputacao()">
@@ -2519,7 +2584,10 @@
       <!-- Área de Gráficos -->
       <div style="display:flex; gap:20px; flex-wrap:nowrap;">
         <div style="flex:2; min-width:300px; background:#1a1a1a; padding:20px; border-radius:8px;">
-          <h3 style="color:var(--primaria); margin-top:0;">Economia Mensal (Últimos 6 meses)</h3>
+          <div>
+            <h3 id="tituloGraficoEconomia" style="color:var(--primaria); margin-top:0; margin-bottom:8px;">Economia Mensal (Últimos 6 meses)</h3>
+            <button id="btnAlternarMeses" onclick="alternarVisualizacaoMeses()" style="background:transparent; color:#3ab9b6; border:1px solid #3ab9b6; padding:4px 12px; border-radius:4px; cursor:pointer; font-size:11px; font-weight:bold; transition:0.3s; margin-bottom:15px; display:block; width: max-content;" onmouseover="this.style.background='#3ab9b6';this.style.color='#121212';" onmouseout="this.style.background='transparent';this.style.color='#3ab9b6';">Ver Todos Meses</button>
+          </div>
           <canvas id="graficoEconomia"></canvas>
         </div>
         <div style="flex:1; min-width:300px; background:#1a1a1a; padding:20px; border-radius:8px;">
@@ -4687,7 +4755,8 @@
       }
     </style>
 
-</body>
+
+    </body>
 
 </html>
 
@@ -5551,6 +5620,9 @@
 
 
   function aplicarPermissoes(tipo) {
+      const btnChat = document.getElementById("btnChatGeral");
+      if (btnChat) btnChat.style.display = (tipo === "administrador" || tipo === "comprador" || tipo === "requisitante") ? "flex" : "none";
+
 
     // Esconde TODOS os cards primeiro
     document.querySelectorAll(".card").forEach(card => {
@@ -5630,6 +5702,7 @@
       mostrar("Responder Cotação");
       mostrar("Gestão Financeira");
       mostrar("Minhas Avaliações");
+        mostrar("Chat Direto");
       
       
       const bannerScore = document.getElementById("bannerScorecardFornecedor");
@@ -5841,8 +5914,12 @@
     console.log(`✏️ Editando usuário: ${u.email}. O salvamento na nuvem ocorrerá ao clicar em "Criar Usuário" (Upsert).`);
   }
 
-  function sair() {
-    // 1. Limpa a sessão
+      function sair() {
+      let chatMod = document.getElementById('supportWindowSystem');
+      if (chatMod) chatMod.style.display = 'none';
+      if (typeof chatUnsubscribe !== 'undefined' && chatUnsubscribe) chatUnsubscribe();
+      
+      // 1. Limpa a sessão
     sessionStorage.removeItem("usuario_logado");
     localStorage.removeItem("logado");
     localStorage.removeItem("usuarioLogado"); // Remove também do localStorage para evitar conflitos
@@ -14598,7 +14675,8 @@ linhas.forEach((tr, index) => {
         <title>${nome}</title>
         <body style="margin:0; background:#333; display:flex; align-items:center; justify-content:center;">
           <iframe src="${base64}" frameborder="0" style="width:100%; height:100vh; border:none;"></iframe>
-        </body>
+        
+    </body>
       `);
     } catch (e) {
       console.error("Erro abrirArquivoDireto:", e);
@@ -16598,13 +16676,18 @@ linhas.forEach((tr, index) => {
     const mesAtual = hoje.getMonth();
     const anoAtual = hoje.getFullYear();
     
-    const dadosMes = [0,0,0,0,0,0]; 
-    const labelsMes = [];
-    
-    for (let i=5; i>=0; i--) {
-        const d = new Date(anoAtual, mesAtual - i, 1);
-        labelsMes.push(d.toLocaleString('pt-BR', { month: 'short' }).toUpperCase());
-    }
+          // -- GERAÇÃO DINÂMICA DE MESES --
+      const labelsMes = [];
+      const dadosMes = [];
+      
+      // Pega desde Janeiro do ano atual ou pelo menos 6 meses para trás
+      let mesesParaTras = Math.max(mesAtual, 5);
+      
+      for (let i = mesesParaTras; i >= 0; i--) {
+          const d = new Date(anoAtual, mesAtual - i, 1);
+          labelsMes.push(d.toLocaleString('pt-BR', { month: 'short' }).toUpperCase());
+          dadosMes.push(0);
+      }
     
     let matVsServ = { mat: 0, serv: 0 };
     
@@ -16628,9 +16711,14 @@ linhas.forEach((tr, index) => {
            diffMeses = (anoAtual - dataObj.getFullYear()) * 12 + (mesAtual - dataObj.getMonth());
        }
        
-       let tipoReal = (c.tipo || "").toLowerCase();
-       if (tipoReal === "materiais" || tipoReal === "materiais_excel" || tipoReal === "manual" || tipoReal === "excel" || tipoReal === "web") matVsServ.mat++;
-       else if (tipoReal === "servicos") matVsServ.serv++;
+                let tipoReal = (c.tipo || "").toLowerCase();
+         // Melhoria: Captura qualquer variação da palavra "serviço" (singular, plural, sem cedilha, etc)
+         if (tipoReal.includes("servic") || tipoReal.includes("serviç")) {
+             matVsServ.serv++;
+         } else {
+             // Qualquer outro tipo (ou vazio) é contabilizado como material por padrão
+             matVsServ.mat++;
+         }
        
        let economiaCotacao = 0;
        const respostas = Array.isArray(c.respostasFornecedores) ? c.respostasFornecedores : Object.values(c.respostasFornecedores || {});
@@ -16709,9 +16797,9 @@ linhas.forEach((tr, index) => {
            if (isMesAtual) ecoMes += economiaCotacao;
        if (isAnoAtual) ecoAno += economiaCotacao;
        
-       if (diffMeses >= 0 && diffMeses <= 5) {
-           dadosMes[5 - diffMeses] += economiaCotacao;
-       }
+                if (diffMeses >= 0 && diffMeses <= mesesParaTras) {
+             dadosMes[mesesParaTras - diffMeses] += economiaCotacao;
+         }
        
        let dataCriacaoStr = c.criadoEm || c.dataCriacao;
        let dataFim = c.dataEnviadoAprovacao || c.dataFechamento;
@@ -16754,15 +16842,44 @@ linhas.forEach((tr, index) => {
     document.getElementById("ecoTempo").innerText = `${diasExibicao} dias`;
     console.log(`[Econommetro] MDIA GERAL: ${mediaTempo.toFixed(2)} dias reais -> Exibindo: ${diasExibicao} dias.`);
     
+    // --- LÓGICA DE TOGGLE 6 MESES / TODOS OS MESES ---
+    window.labelsTodosMesesEco = [...labelsMes];
+    window.valoresTodosMesesEco = [...dadosMes];
+    window.mostrandoTodosEco = false;
+    
+    // Filtra para mostrar apenas os últimos 6 meses por padrão
+    let labelsAtuaisEco = labelsMes.slice(-6);
+    let dadosAtuaisEco = dadosMes.slice(-6);
+    
+    window.alternarVisualizacaoMeses = function() {
+        window.mostrandoTodosEco = !window.mostrandoTodosEco;
+        const btn = document.getElementById('btnAlternarMeses');
+        const titulo = document.getElementById('tituloGraficoEconomia');
+        
+        if (window.mostrandoTodosEco) {
+            window.chartEco.data.labels = window.labelsTodosMesesEco;
+            window.chartEco.data.datasets[0].data = window.valoresTodosMesesEco;
+            btn.innerText = 'Últimos 6 Meses';
+            titulo.innerText = 'Economia Mensal (Todos os meses)';
+        } else {
+            window.chartEco.data.labels = window.labelsTodosMesesEco.slice(-6);
+            window.chartEco.data.datasets[0].data = window.valoresTodosMesesEco.slice(-6);
+            btn.innerText = 'Ver Todos Meses';
+            titulo.innerText = 'Economia Mensal (Últimos 6 meses)';
+        }
+        window.chartEco.update();
+    };
+    // ------------------------------------------------
+    
     const ctxEco = document.getElementById('graficoEconomia').getContext('2d');
     if (window.chartEco) window.chartEco.destroy();
     window.chartEco = new Chart(ctxEco, {
         type: 'bar',
         data: {
-            labels: labelsMes,
+            labels: labelsAtuaisEco,
             datasets: [{
                 label: 'Economia Mensal (R$)',
-                data: dadosMes,
+                data: dadosAtuaisEco,
                 backgroundColor: '#3ab9b6',
                 borderRadius: 4
             }]
@@ -17160,7 +17277,46 @@ linhas.forEach((tr, index) => {
 
 </script>
 
-</body>
+ <!-- ========================================== -->
+    <!-- CHAT MODAL (CENTRALIZADO) -->
+    <!-- ========================================== -->
+    <div id="supportWindowSystem" style="display:none; position:fixed; bottom:20px; right:20px; width:90%; max-width:400px; height:80vh; max-height:600px; background-color:#1a1a1a; color:white; border:2px solid #661155; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.8); z-index:999999; flex-direction:column; overflow:hidden;">
+        <div id="chatHeader" style="display: flex; align-items: center; justify-content: space-between; padding: 15px; background-color: var(--primaria); color: white; border-top-left-radius: 12px; border-top-right-radius: 12px; border-bottom: 1px solid #333;">
+            <button id="chatBackBtn" onclick="voltarListaChats()" style="padding: 6px 12px; font-size: 12px; display: none; background: rgba(0,0,0,0.3); border: none; border-radius: 6px; color: white; cursor: pointer; font-weight: bold; transition: 0.2s; width: max-content !important; flex: 0 0 max-content !important;" onmouseover="this.style.background='rgba(0,0,0,0.5)'" onmouseout="this.style.background='rgba(0,0,0,0.3)'">Voltar</button>
+            <span id="chatTitle" style="font-weight: bold; font-size: 15px; text-align: center; flex: 1; word-break: break-word; line-height: 1.2; padding: 0 10px;">Atendimento</span>
+            <button id="chatCloseBtn" class="close-btn" onclick="fecharChat()" style="background:#661155; border:none; color:white; border-radius:50%; width:32px; height:32px; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 5px rgba(0,0,0,0.5); flex-shrink:0; transition: 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'"><i class="fa-solid fa-times" style="font-size:16px;"></i></button>
+        </div>
+
+        <div id="chatBody" style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+            <div id="chatContactList" style="flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 10px;">
+            </div>
+
+            <div id="chatRoomView" style="display: none; flex-direction: column; height: 100%;">
+                <div id="chatMessagesArea" style="flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; background-color: #000;">
+                </div>
+                
+                <!-- Preview area for attachments -->
+                <div id="chatAttachmentPreview" style="display:none; padding: 5px; background: #222; border-top: 1px solid #444; color: #aaa; font-size: 12px; flex-direction: row; justify-content: space-between; align-items: center;">
+                    <span id="chatAttachmentName"></span>
+                    <button onclick="removerAnexoChat()" style="background:none;border:none;color:#ff5555;cursor:pointer;"><i class="fa-solid fa-times"></i></button>
+                </div>
+                
+                <div id="chatInputArea" style="padding: 10px; background-color: #1a1a1a; display: flex; align-items: center; gap: 8px; border-top: 1px solid #333;">
+                    <input type="file" id="chatFileInput" style="display:none;" onchange="handleChatFileSelect(event)">
+                    <button class="chat-action-btn" onclick="document.getElementById('chatFileInput').click()" title="Anexar Arquivo" style="background:transparent; border:none; color:white; font-size:18px; cursor:pointer;"><i class="fa-solid fa-paperclip"></i></button>
+                    
+                    <input type="text" id="chatInputText" placeholder="Digite uma mensagem..." style="flex: 1; padding: 10px; border-radius: 20px; border: none; outline: none; background-color: #333; color: white;" onkeypress="if(event.key === 'Enter') enviarMensagemChat()">
+                    
+                    <button class="chat-action-btn" onclick="enviarMensagemChat()" title="Enviar" style="background:transparent; border:none; color:white; font-size:18px; cursor:pointer;"><i class="fa-solid fa-paper-plane"></i></button>
+                    <button class="chat-action-btn" id="btnRecordAudio" onmousedown="startRecording(event)" onmouseup="stopRecording(event)" ontouchstart="startRecording(event)" ontouchend="stopRecording(event)" title="Segure para Gravar" style="background:transparent; border:none; color:white; font-size:18px; cursor:pointer;"><i class="fa-solid fa-microphone"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="chat4.js?v=1790259408"></script>
+
+    </body>
 
 </html>
 
