@@ -6179,7 +6179,7 @@
     // ☁️ FALLBACK CLOUD (Sync Cruzado)
     if (!respostaSalva && Array.isArray(cotacao.respostasFornecedores)) {
       const respCloud = cotacao.respostasFornecedores.find(r =>
-        normalizarEmail(r.email) === normalizarEmail(usuario.email)
+        normalizarEmail((r.email || r.emailFornecedor)) === normalizarEmail(usuario.email)
       );
       if (respCloud) {
         console.log("☁️ Resposta recuperada da nuvem para o modal.");
@@ -8663,7 +8663,7 @@
     function fornecedorRespondeu(cotacao, email) {
       return Array.isArray(cotacao.respostasFornecedores) &&
         cotacao.respostasFornecedores.some(r =>
-          normalizarEmail(r.email) === normalizarEmail(email)
+          normalizarEmail((r.email || r.emailFornecedor)) === normalizarEmail(email)
         );
     }
 
@@ -8855,7 +8855,7 @@
              let responderamHtml = [];
              
              convidados.forEach(f => {
-               const jaRespondeu = respostas.some(r => normalizarEmail(r.email) === normalizarEmail(f.email));
+               const jaRespondeu = respostas.some(r => normalizarEmail((r.email || r.emailFornecedor)) === normalizarEmail(f.email));
                if (jaRespondeu) {
                  responderamHtml.push(`<span style="color:#0dcaf0; font-size:11px; margin-right:8px;"><i class="fa-solid fa-check-circle"></i> ${f.nome} respondeu</span>`);
                }
@@ -9062,57 +9062,101 @@
       return;
     }
 
-    // 🧠 INTELIGÊNCIA: Capturar Marca e Embalagem digitadas na tela e salvar na cotação!
-    let sofreuAlteracao = false;
-    document.querySelectorAll('.input-edit-marca').forEach(inp => {
-        const idx = inp.getAttribute('data-idx');
-        const nomeProd = inp.getAttribute('data-nome');
-        const val = inp.value.trim() || "-";
-        
-        if (c.produtos && c.produtos[idx] && c.produtos[idx].marca !== val) {
-            c.produtos[idx].marca = val;
-            sofreuAlteracao = true;
-        }
-        if (c.adjudicacao) {
-            const adj = c.adjudicacao.find(a => a.produto === nomeProd);
-            if (adj && adj.marca !== val) { adj.marca = val; sofreuAlteracao = true; }
-        }
-    });
-    
-    document.querySelectorAll('.input-edit-emb').forEach(inp => {
-        const idx = inp.getAttribute('data-idx');
-        const nomeProd = inp.getAttribute('data-nome');
-        const val = inp.value.trim() || "-";
-        
-        if (c.produtos && c.produtos[idx] && c.produtos[idx].embalagem !== val) {
-            c.produtos[idx].embalagem = val;
-            sofreuAlteracao = true;
-        }
-        if (c.adjudicacao) {
-            const adj = c.adjudicacao.find(a => a.produto === nomeProd);
-            if (adj && adj.embalagem !== val) { adj.embalagem = val; sofreuAlteracao = true; }
-        }
-    });
-    
-    if (sofreuAlteracao) {
-        const cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
-        const index = cotacoes.findIndex(x => x.id === c.id);
-        if (index !== -1) {
-            cotacoes[index] = c;
-                    try {
-            localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
-        } catch (err) {
-            if (err.name === 'QuotaExceededError') {
-                cotacoes = cotacoes.slice(-20); // limpa as mais antigas
-                localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
+    // --- REBUILD ADJUDICACAO DYNAMICALLY ---
+    try {
+      const norm = (s) => (s || "").toLowerCase().trim();
+      const decisoes = JSON.parse(localStorage.getItem("decisoesAnalise")) || {};
+      const decisoesCotacao = decisoes[c.numero || c.id] || {};
+      const listaFornecedoresLocal = JSON.parse(localStorage.getItem("fornecedores")) || [];
+      
+      let respostas = [];
+      const emailsJaAdicionados = new Set();
+      
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key.includes(`res_${c.id}_`) || key.includes(`resposta_${c.numero}_`) || key.includes(`res_${c.numero}_`)) {
+          try {
+            const r = JSON.parse(localStorage.getItem(key));
+            if (r && (r.email || r.emailFornecedor)) {
+              const em = norm(r.email || r.emailFornecedor);
+              if (!emailsJaAdicionados.has(em)) { respostas.push(r); emailsJaAdicionados.add(em); }
             }
+          } catch (e) { }
         }
+      }
+      
+      if (Array.isArray(c.respostasFornecedores)) {
+        c.respostasFornecedores.forEach(r => {
+          if (r && (r.email || r.emailFornecedor)) {
+            const em = norm(r.email || r.emailFornecedor);
+            if (!emailsJaAdicionados.has(em)) { respostas.push(r); emailsJaAdicionados.add(em); }
+          }
+        });
+      }
+      
+      const novaAdjudicacao = [];
+      (c.produtos || c.itens || []).forEach((prod, idx) => {
+        let vencedorEmail = null;
+        let vencedorNome = "Sem Oferta";
+        let precoFinal = 0;
+        let winningItem = null;
+        const keyItem = `item_${idx}`;
+        
+        if (decisoesCotacao[keyItem]) {
+          vencedorEmail = norm(decisoesCotacao[keyItem]);
+        } else if (decisoesCotacao[prod.nome]) {
+          vencedorEmail = norm(decisoesCotacao[prod.nome]);
+        } else if (c.decisoes && c.decisoes[keyItem]) {
+          vencedorEmail = norm(c.decisoes[keyItem]);
         }
-        if (typeof db !== "undefined" && db.collection) {
-            db.collection("cotacoes").doc(c.id).set(c).catch(console.error);
+        
+        if (!vencedorEmail) {
+          let precosRow = [];
+          respostas.forEach((r) => {
+             const pItem = (r.itens || []).find(it => norm(it.produto) === norm(prod.nome) || norm(it.nome) === norm(prod.nome));
+             if (pItem) {
+               let val = Number(pItem.preco || pItem.valor || 0);
+               if (val > 0) precosRow.push({ val: val, email: norm(r.email || r.emailFornecedor) });
+             }
+          });
+          precosRow.sort((a,b) => a.val - b.val);
+          if (precosRow.length > 0) vencedorEmail = precosRow[0].email;
         }
+        
+        if (vencedorEmail) {
+          const resp = respostas.find(r => norm(r.email || r.emailFornecedor) === vencedorEmail);
+          if (resp) {
+            const fornLocal = listaFornecedoresLocal.find(f => norm(f.email) === vencedorEmail);
+            vencedorNome = fornLocal ? fornLocal.nome : (resp.fornecedor || resp.fornecedorNome || vencedorEmail);
+            const pItem = (resp.itens || []).find(it => norm(it.produto) === norm(prod.nome) || norm(it.nome) === norm(prod.nome));
+            if (pItem) {
+               precoFinal = Number(pItem.preco || pItem.valor || 0);
+               winningItem = pItem;
+            }
+          }
+        }
+        
+        if (precoFinal > 0) {
+          novaAdjudicacao.push({
+            produto: prod.nome || prod.descricao || "Item",
+            marca: (winningItem && winningItem.marca) ? winningItem.marca : (prod.marca || "-"),
+            embalagem: (winningItem && winningItem.embalagem) ? winningItem.embalagem : (prod.embalagem || "-"),
+            quantidade: prod.quantidade,
+            fornecedor: vencedorNome,
+            emailFornecedor: vencedorEmail,
+            preco: precoFinal,
+            total: precoFinal * Number(prod.quantidade || 1)
+          });
+        }
+      });
+      
+      if (novaAdjudicacao.length > 0) {
+        c.adjudicacao = novaAdjudicacao;
+      }
+    } catch(err) {
+      console.error("Erro ao reconstruir adjudicacao para o PDF: ", err);
     }
-
+    // --- END REBUILD ---
     if (!Array.isArray(c.adjudicacao) || c.adjudicacao.length === 0) {
       alert("⚠️ Esta cotação não possui itens adjudicados.");
       return;
@@ -9487,7 +9531,7 @@
         }
 
         const respostaCloud = respostasArray.find(r =>
-          r && r.email && normalizarEmail(r.email) === normalizarEmail(usuario.email)
+          r && (r.email || r.emailFornecedor) && normalizarEmail((r.email || r.emailFornecedor)) === normalizarEmail(usuario.email)
         );
 
         if (respostaCloud) {
@@ -10193,7 +10237,7 @@
       if (!fornecedor) return;
 
       const docIdForn = fornecedor.docId;
-      const emailForn = (fornecedor.email || fornecedor.emails || "").toLowerCase().trim();
+      const emailForn = (fornecedo(r.email || r.emailFornecedor) || fornecedor.emails || "").toLowerCase().trim();
       if (!confirm(`Deseja realmente excluir o fornecedor ${fornecedor.nome}?`)) return;
 
       // 🔥 1. REMOVE NO FIRESTORE (ID DIRETO + QUERY P/ DUPLICADOS)
@@ -10636,7 +10680,7 @@
     if (cotacao.status === "fechada") return false;
 
     return !cotacao.respostasFornecedores?.some(r =>
-      (r.email || "").toLowerCase().trim() ===
+      ((r.email || r.emailFornecedor) || "").toLowerCase().trim() ===
       fornecedorEmail.toLowerCase().trim()
     );
   }
@@ -10841,7 +10885,7 @@
       if (key.startsWith(`resposta_${cotacao.numero}_`)) {
         try {
           const r = JSON.parse(localStorage.getItem(key));
-          if (!respostas.some(x => normalizarEmail(x.email) === normalizarEmail(r.email))) {
+          if (!respostas.some(x => normalizarEmail(x.email) === normalizarEmail((r.email || r.emailFornecedor)))) {
             respostas.push(r);
           }
         } catch (e) { }
@@ -10852,7 +10896,7 @@
     for (const [prodNome, emailVencedor] of Object.entries(decisoes)) {
       if (!emailVencedor) continue;
 
-      const respForn = respostas.find(r => normalizarEmail(r.email) === normalizarEmail(emailVencedor));
+      const respForn = respostas.find(r => normalizarEmail((r.email || r.emailFornecedor)) === normalizarEmail(emailVencedor));
       if (respForn) {
         const itemDados = (respForn.itens || []).find(i => i.produto === prodNome || i.nome === prodNome);
         const preco = itemDados ? (Number(itemDados.preco) || Number(itemDados.valor) || 0) : 0;
@@ -11842,10 +11886,10 @@
       if (chave.startsWith(`res_${cotacao.numero}_`) || chave.startsWith(`resposta_${cotacao.numero}_`)) {
         try {
           const r = JSON.parse(localStorage.getItem(chave));
-          if (!respostas.some(x => x.email === r.email)) {
+          if (!respostas.some(x => x.email === (r.email || r.emailFornecedor))) {
             respostas.push({
               fornecedor: r.fornecedor || r.fornecedorNome || "Fornecedor",
-              email: r.email || r.emailFornecedor || "",
+              email: (r.email || r.emailFornecedor) || r.emailFornecedor || "",
               itens: r.itens || r.precos || []
             });
           }
@@ -11885,7 +11929,7 @@
       const temAnexo = r.anexo || (Array.isArray(r.anexos) && r.anexos.length > 0) || r.base64;
       html += `<th style="text-align:center;">
                 <div style="display:flex; align-items:center; justify-content:center; gap:5px;">
-                  ${temAnexo ? `<i class="fa-solid fa-paperclip" style="color:#10b981; cursor:pointer; font-size:12px;" title="Ver Anexos" onclick="visualizarDocumentos('${cotacao.numero}', '${r.email}')"></i>` : ''}
+                  ${temAnexo ? `<i class="fa-solid fa-paperclip" style="color:#10b981; cursor:pointer; font-size:12px;" title="Ver Anexos" onclick="visualizarDocumentos('${cotacao.numero}', '${(r.email || r.emailFornecedor)}')"></i>` : ''}
                   ${r.fornecedor}
                 </div>
               </th>`;
@@ -11925,7 +11969,7 @@
       const precosDesteItem = respostas.map(r => {
         const itemResp = (r.itens || []).find(i => (i.produto === nomeProd) || (i.nome === nomeProd));
         const preco = itemResp ? (Number(itemResp.preco) || Number(itemResp.valor) || 0) : 0;
-        return { fornecedor: r.fornecedor, email: r.email, preco: preco };
+        return { fornecedor: r.fornecedor, email: (r.email || r.emailFornecedor), preco: preco };
       });
 
       const validos = precosDesteItem.filter(p => p.preco > 0);
@@ -14195,7 +14239,7 @@ linhas.forEach((tr, index) => {
 
       if (!respAntiga) {
         const respondidas = cotacao.respostasFornecedores || [];
-        respAntiga = respondidas.find(r => (r.email || "").toLowerCase().trim() === usuario.email.toLowerCase().trim());
+        respAntiga = respondidas.find(r => ((r.email || r.emailFornecedor) || "").toLowerCase().trim() === usuario.email.toLowerCase().trim());
       }
 
       const temNovoAnexo = fileInput && fileInput.files.length > 0;
@@ -14316,7 +14360,7 @@ linhas.forEach((tr, index) => {
             if (resSegura.anexos) resSegura.anexos.forEach(a => delete a.base64);
             delete resSegura.base64;
 
-            resps = resps.filter(r => (r.email || "").toLowerCase().trim() !== usuario.email.toLowerCase().trim());
+            resps = resps.filter(r => ((r.email || r.emailFornecedor) || "").toLowerCase().trim() !== usuario.email.toLowerCase().trim());
             resps.push(resSegura);
             current.respostasFornecedores = resps;
             return current;
@@ -14333,7 +14377,7 @@ linhas.forEach((tr, index) => {
         delete respostaSegura.base64;
 
         if (!cotacao.respostasFornecedores) cotacao.respostasFornecedores = [];
-        cotacao.respostasFornecedores = cotacao.respostasFornecedores.filter(r => (r.email || "").toLowerCase().trim() !== usuario.email.toLowerCase().trim());
+        cotacao.respostasFornecedores = cotacao.respostasFornecedores.filter(r => ((r.email || r.emailFornecedor) || "").toLowerCase().trim() !== usuario.email.toLowerCase().trim());
         cotacao.respostasFornecedores.push(respostaSegura);
 
         try {
@@ -14534,7 +14578,7 @@ linhas.forEach((tr, index) => {
     console.log(`🔍 [DEBUG] Buscando resposta local (Chave: ${chave}):`, resposta ? "✅ Encontrada" : "❌ Não encontrada");
 
     if (!resposta && cotacao.respostasFornecedores) {
-      resposta = cotacao.respostasFornecedores.find(r => (r.email || "").toLowerCase().trim() === email);
+      resposta = cotacao.respostasFornecedores.find(r => ((r.email || r.emailFornecedor) || "").toLowerCase().trim() === email);
       console.log(`🔍 [DEBUG] Buscando na lista da cotação:`, resposta ? "✅ Encontrada" : "❌ Não encontrada");
     }
 
@@ -14740,11 +14784,11 @@ linhas.forEach((tr, index) => {
       
       // Ignorar anexos do módulo financeiro na tela de documentos da cotação
       if ((r.fornecedor && String(r.fornecedor).toUpperCase().includes("GESTÃO FINANCEIRA")) || 
-          (r.email && String(r.email).toLowerCase().includes("financeiro@"))) {
+          ((r.email || r.emailFornecedor) && String((r.email || r.emailFornecedor)).toLowerCase().includes("financeiro@"))) {
           return;
       }
 
-      const email = (r.email || r.fornecedor || r.nome || "Outros").toLowerCase().trim();
+      const email = ((r.email || r.emailFornecedor) || r.fornecedor || r.nome || "Outros").toLowerCase().trim();
 
       const temAnexo = r.anexo || (Array.isArray(r.anexos) && r.anexos.length > 0) || r.base64 || r.url || r.link;
 
@@ -14856,9 +14900,9 @@ linhas.forEach((tr, index) => {
     let todasRespostas = Array.from(todasRespostasMap.values());
     if (emailFornecedor && String(emailFornecedor) !== "undefined") {
       todasRespostas = todasRespostas.filter(r => {
-          const iden = (r.email || r.fornecedor || r.nome || "Outros").toLowerCase().trim();
+          const iden = ((r.email || r.emailFornecedor) || r.fornecedor || r.nome || "Outros").toLowerCase().trim();
           return iden === emailFornecedor.toLowerCase().trim() || 
-                 (r.email || "").toLowerCase().trim() === emailFornecedor.toLowerCase().trim();
+                 ((r.email || r.emailFornecedor) || "").toLowerCase().trim() === emailFornecedor.toLowerCase().trim();
       });
     }
 
@@ -14906,7 +14950,7 @@ linhas.forEach((tr, index) => {
        <tr style="border-bottom:1px solid #1a1a1a; transition: 0.2s;" onmouseover="this.style.background='rgba(58,185,182,0.05)'" onmouseout="this.style.background='transparent'">
          <td style="padding:18px 25px;">
            <div style="font-weight:800; color:#3ab9b6; font-size:15px; margin-bottom:4px; text-transform: uppercase;">${r.fornecedor || r.nome || "FORNECEDOR"}</div>
-           <div style="font-size:11px; color:#555; font-family: monospace;">${r.email || ""}</div>
+           <div style="font-size:11px; color:#555; font-family: monospace;">${(r.email || r.emailFornecedor) || ""}</div>
          </td>
          <td style="padding:18px 25px; text-align:center; vertical-align: middle;">
      `;
@@ -15390,7 +15434,7 @@ linhas.forEach((tr, index) => {
     /* ==========================
        🌟 PAINEL DE PERFORMANCE (SCORECARD)
     ========================== */
-    const emailsParticipantes = [...new Set(respostas.map(r => normalizarEmail(r.email)))];
+    const emailsParticipantes = [...new Set(respostas.map(r => normalizarEmail((r.email || r.emailFornecedor))))];
     let resumoPerformanceHtml = `
       <div id="painelPerformanceScorecard" style="background:#111; border:1px solid #661155; border-radius:12px; padding:15px; margin-bottom:20px; display:flex; flex-wrap:nowrap; gap:20px; align-items:center;">
         <div style="color:#661155; font-weight:bold; font-size:12px; text-transform:uppercase; border-right:1px solid #333; padding-right:15px; display:flex; align-items:center; gap:8px;">
@@ -15458,9 +15502,9 @@ linhas.forEach((tr, index) => {
                        <i class="fa-solid fa-paperclip" 
                           style="color:#10b981; cursor:pointer;" 
                           title="Ver Anexos deste Fornecedor" 
-                          onclick="visualizarDocumentos('${cotacao.numero}', '${r.email}')"></i>
+                          onclick="visualizarDocumentos('${cotacao.numero}', '${(r.email || r.emailFornecedor)}')"></i>
                        ` : ''}
-                       ${getNomeExibicao(r.email, r.fornecedor)}
+                       ${getNomeExibicao((r.email || r.emailFornecedor), r.fornecedor)}
                    </div>
                 </th>`;
     });
@@ -15484,7 +15528,7 @@ linhas.forEach((tr, index) => {
         if (pItem) {
           let valor = Number(pItem.preco || pItem.valor || pItem.precoUnitario || 0);
           if (valor > 0) {
-            precosRow.push({ fornecedor: r.fornecedor, email: r.email, val: valor, rIdx: rIdx });
+            precosRow.push({ fornecedor: r.fornecedor, email: (r.email || r.emailFornecedor), val: valor, rIdx: rIdx });
             totaisBrutos[rIdx] += (valor * qtd);
           }
         }
@@ -15541,7 +15585,7 @@ linhas.forEach((tr, index) => {
           normalizarTexto(it.nome) === normalizarTexto(nomeItem)
         );
         const valor = pItem ? (Number(pItem.preco) || Number(pItem.valor) || 0) : 0;
-        const rankIndex = precosRow.findIndex(x => x.email === r.email);
+        const rankIndex = precosRow.findIndex(x => x.email === (r.email || r.emailFornecedor));
 
         let badge = "";
         let textColor = "#fff";
@@ -15561,7 +15605,7 @@ linhas.forEach((tr, index) => {
       });
 
 
-      let fornEscolhidoObj = respostas.find(r => normalizarEmail(r.email) === normalizarEmail(emailEscolhido));
+      let fornEscolhidoObj = respostas.find(r => normalizarEmail((r.email || r.emailFornecedor)) === normalizarEmail(emailEscolhido));
       let nomeEscolhido = fornEscolhidoObj ? getNomeExibicao(fornEscolhidoObj.email, fornEscolhidoObj.fornecedor) : "Selecione";
       const labelId = `label-escolhido-${idx}`;
 
@@ -16758,7 +16802,7 @@ linhas.forEach((tr, index) => {
                            precosItem2.sort((a,b) => a - b);
                            let emailEscolhido = c.decisoes ? c.decisoes[`item_${idx}`] : null;
                            if (emailEscolhido) {
-                               let rWin = respostas.find(r => r.email === emailEscolhido);
+                               let rWin = respostas.find(r => (r.email || r.emailFornecedor) === emailEscolhido);
                                if (rWin) {
                                    let rItemWin = (rWin.itens || []).find(i => (i.produto || i.nome || "").trim().toLowerCase() === (item.nome || item.produto || "").trim().toLowerCase());
                                    if (rItemWin && rItemWin.preco && Number(rItemWin.preco) > 0) {
@@ -17109,7 +17153,7 @@ linhas.forEach((tr, index) => {
                            precosItem2.sort((a,b) => a - b);
                            let emailEscolhido = c.decisoes ? c.decisoes[`item_${idx}`] : null;
                            if (emailEscolhido) {
-                               let rWin = respostas.find(r => r.email === emailEscolhido);
+                               let rWin = respostas.find(r => (r.email || r.emailFornecedor) === emailEscolhido);
                                if (rWin) {
                                    let rItemWin = (rWin.itens || []).find(i => (i.produto || i.nome || "").trim().toLowerCase() === (item.nome || item.produto || "").trim().toLowerCase());
                                    if (rItemWin && rItemWin.preco && Number(rItemWin.preco) > 0) {
