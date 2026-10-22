@@ -200,6 +200,14 @@
       background: #882277;
     }
 
+    #barraFiltrosAuditoriaIA button {
+      width: auto !important;
+      max-width: none !important;
+      display: inline-flex !important;
+      flex: 0 0 auto !important;
+      white-space: nowrap !important;
+    }
+
     .btn-outline {
       background: transparent;
       border: 1px solid var(--primaria);
@@ -2574,10 +2582,23 @@
         
         <div style="flex-basis: 100%; height: 0;"></div>
         
+        <!-- 3 Cards de Gestão: Economia, Histórico de Produtos e Histórico de Serviços -->
         <div style="flex:1; min-width:200px; background:#1a1a1a; padding:20px; border-radius:8px; border-left:4px solid var(--secundaria); text-align:center; cursor:pointer; transition:0.3s;" onclick="abrirEconomiaPorCotacao()" onmouseover="this.style.background='#2a2a2a'" onmouseout="this.style.background='#1a1a1a'">
           <h3 style="color:var(--secundaria); font-size:14px; margin:0 0 10px 0;">Economia por Cotação</h3>
           <div style="font-size:28px; font-weight:bold; color:var(--secundaria);"><i class="fa-solid fa-list-check"></i></div>
           <div style="color:#888; font-size:12px; margin-top:5px;">Ver detalhes</div>
+        </div>
+
+        <div style="flex:1; min-width:200px; background:#1a1a1a; padding:20px; border-radius:8px; border-left:4px solid #00ff99; text-align:center; cursor:pointer; transition:0.3s;" onclick="abrirHistoricoPrecos('produto')" onmouseover="this.style.background='#2a2a2a'" onmouseout="this.style.background='#1a1a1a'">
+          <h3 style="color:#00ff99; font-size:14px; margin:0 0 10px 0;">Histórico de Produtos</h3>
+          <div style="font-size:28px; font-weight:bold; color:#00ff99;"><i class="fa-solid fa-boxes-stacked"></i></div>
+          <div style="color:#888; font-size:12px; margin-top:5px;">Preços, compras & variações</div>
+        </div>
+
+        <div style="flex:1; min-width:200px; background:#1a1a1a; padding:20px; border-radius:8px; border-left:4px solid #f39c12; text-align:center; cursor:pointer; transition:0.3s;" onclick="abrirHistoricoPrecos('servico')" onmouseover="this.style.background='#2a2a2a'" onmouseout="this.style.background='#1a1a1a'">
+          <h3 style="color:#f39c12; font-size:14px; margin:0 0 10px 0;">Histórico por Serviço</h3>
+          <div style="font-size:28px; font-weight:bold; color:#f39c12;"><i class="fa-solid fa-screwdriver-wrench"></i></div>
+          <div style="color:#888; font-size:12px; margin-top:5px;">Escopos, valores & fornecedores</div>
         </div>
       </div>
 
@@ -2620,6 +2641,199 @@
           </tbody>
         </table>
       </div>
+    </div>
+  </div>
+
+  <!-- ======================================================
+       📦 MODAL HISTÓRICO DE PRODUTOS E SERVIÇOS
+  ====================================================== -->
+  <div id="modalHistoricoPrecos" class="modal" style="display:none; z-index:200;">
+    <div class="modal-content" style="width: 95%; max-width: 1100px; background: #111; border: 1px solid #661155; border-radius: 12px; padding: 25px; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 10px 40px rgba(0,0,0,0.8); margin: 30px auto;">
+      
+      <!-- Cabeçalho do Modal -->
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
+        <div>
+          <h2 id="histPrecosTitulo" style="color:var(--secundaria); margin:0; display:flex; align-items:center; gap:10px;">
+            <i id="histPrecosIcone" class="fa-solid fa-boxes-stacked"></i> <span id="histPrecosTituloTexto">Histórico de Preços - Produtos</span>
+          </h2>
+          <p id="histPrecosSubtitulo" style="color:#aaa; font-size:13px; margin:5px 0 0 0;">
+            Mapeamento de todos os itens comprados, evolução de preços e comparativo de mercado.
+          </p>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center;">
+          <button class="btn-novo" style="background:#1e7e34; padding:8px 14px; font-size:13px; border-radius:6px; cursor:pointer;" onclick="exportarHistoricoExcel()">
+            <i class="fa-solid fa-file-excel"></i> Exportar Excel
+          </button>
+          <button class="close-btn" style="position:static; font-size:26px; color:#aaa; cursor:pointer; background:none; border:none;" onclick="fecharModalHistoricoPrecos()">×</button>
+        </div>
+      </div>
+
+      <!-- Abas de Alternância (Produtos vs Serviços) -->
+      <div style="display:flex; gap:10px; margin-bottom:15px; border-bottom:1px solid #333; padding-bottom:10px;">
+        <button id="btnTabProdutos" onclick="alternarTabHistorico('produto')" style="background:#00ff99; color:#000; font-weight:bold; border:none; padding:8px 18px; border-radius:6px; cursor:pointer; display:flex; align-items:center; gap:8px; transition:0.2s;">
+          <i class="fa-solid fa-boxes-stacked"></i> Produtos
+        </button>
+        <button id="btnTabServicos" onclick="alternarTabHistorico('servico')" style="background:#222; color:#ccc; font-weight:bold; border:1px solid #444; padding:8px 18px; border-radius:6px; cursor:pointer; display:flex; align-items:center; gap:8px; transition:0.2s;">
+          <i class="fa-solid fa-screwdriver-wrench"></i> Serviços
+        </button>
+      </div>
+
+      <!-- Termômetro / Mini KPIs -->
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px; margin-bottom:15px;">
+        <div style="background:#1a1a1a; padding:12px 15px; border-radius:8px; border-left:3px solid var(--secundaria);">
+          <div style="color:#888; font-size:11px; text-transform:uppercase; font-weight:600;">Itens Mapeados</div>
+          <div id="histKpiTotalItens" style="font-size:22px; font-weight:bold; color:#fff; margin-top:3px;">0</div>
+        </div>
+        <div style="background:#1a1a1a; padding:12px 15px; border-radius:8px; border-left:3px solid #00ff99;">
+          <div style="color:#888; font-size:11px; text-transform:uppercase; font-weight:600;">Preço em Queda / Estável</div>
+          <div id="histKpiEmQueda" style="font-size:22px; font-weight:bold; color:#00ff99; margin-top:3px;">0 📉</div>
+        </div>
+        <div style="background:#1a1a1a; padding:12px 15px; border-radius:8px; border-left:3px solid #ff5555;">
+          <div style="color:#888; font-size:11px; text-transform:uppercase; font-weight:600;">Preço em Alta (Atenção)</div>
+          <div id="histKpiEmAlta" style="font-size:22px; font-weight:bold; color:#ff5555; margin-top:3px;">0 📈</div>
+        </div>
+        <div style="background:#1a1a1a; padding:12px 15px; border-radius:8px; border-left:3px solid #f39c12;">
+          <div style="color:#888; font-size:11px; text-transform:uppercase; font-weight:600;">Compras Registradas</div>
+          <div id="histKpiTotalCompras" style="font-size:22px; font-weight:bold; color:#f39c12; margin-top:3px;">0</div>
+        </div>
+      </div>
+
+      <!-- Barra de Filtros e Busca -->
+      <div style="display:flex; gap:12px; margin-bottom:15px; flex-wrap:wrap; align-items:center;">
+        <div style="flex:2; min-width:240px; position:relative;">
+          <input type="text" id="histFiltroBusca" placeholder="🔍 Pesquisar por nome do item ou fornecedor..." oninput="filtrarTabelaHistorico()" style="width:100%; box-sizing:border-box; padding:10px 14px; background:#1a1a1a; border:1px solid #444; border-radius:6px; color:#fff; font-size:13px; outline:none;">
+        </div>
+        <div style="flex:1; min-width:180px;">
+          <select id="histFiltroOrdem" onchange="filtrarTabelaHistorico()" style="width:100%; padding:10px; background:#1a1a1a; border:1px solid #444; border-radius:6px; color:#fff; font-size:13px; outline:none; cursor:pointer;">
+            <option value="maisComprados">Mais Comprados</option>
+            <option value="maiorAlta">Maior Aumento de Preço (🔴)</option>
+            <option value="maiorQueda">Maior Queda de Preço (🟢)</option>
+            <option value="nomeAsc">Nome (A - Z)</option>
+            <option value="recente">Compra Mais Recente</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Tabela com Scroll -->
+      <div style="flex:1; overflow-y:auto; border:1px solid #333; border-radius:8px; max-height:450px;">
+        <table class="tabela-fornecedores" style="width:100%; border-collapse:collapse; text-align:left;">
+          <thead style="background:#222; position:sticky; top:0; z-index:2;">
+            <tr>
+              <th style="padding:10px 14px; color:#fff; font-size:13px;">Item / Descrição</th>
+              <th style="padding:10px; color:#fff; font-size:13px; text-align:center;">Unid. / Embalagem</th>
+              <th style="padding:10px; color:#fff; font-size:13px; text-align:center;">Compras</th>
+              <th style="padding:10px; color:#fff; font-size:13px; text-align:right;">Menor Preço</th>
+              <th style="padding:10px; color:#fff; font-size:13px; text-align:right;">Preço Médio</th>
+              <th style="padding:10px; color:#fff; font-size:13px; text-align:right;">Último Preço</th>
+              <th style="padding:10px; color:#fff; font-size:13px; text-align:center;">Tendência</th>
+              <th style="padding:10px; color:#fff; font-size:13px; text-align:center;">Ação</th>
+            </tr>
+          </thead>
+          <tbody id="histTabelaCorpo">
+            <!-- Preenchido dinamicamente via JS -->
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ======================================================
+       🧠 MODAL DE AUDITORIA INTELIGENTE DE PROPOSTAS COM I.A.
+  ====================================================== -->
+  <div id="modalAuditoriaIA" class="modal" style="display:none; z-index:9999999; backdrop-filter:blur(6px);">
+    <div class="modal-content" style="max-width:1100px; width:95%; background:#0e0e11; border:1px solid #3ab9b6; border-radius:14px; padding:0; overflow:hidden; box-shadow:0 0 50px rgba(58,185,182,0.3); margin:30px auto; max-height:90vh; display:flex; flex-direction:column; font-family:'Segoe UI', system-ui, sans-serif;">
+      
+      <!-- Cabeçalho Futurista -->
+      <div style="background:linear-gradient(135deg, #420836, #0e1e24); padding:20px 25px; border-bottom:1px solid #3ab9b6; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <div style="display:flex; align-items:center; gap:14px;">
+          <div style="width:42px; height:42px; border-radius:10px; background:linear-gradient(135deg, #661155, #3ab9b6); display:flex; align-items:center; justify-content:center; box-shadow:0 0 15px rgba(58,185,182,0.5);">
+            <i class="fa-solid fa-wand-magic-sparkles" style="color:#fff; font-size:20px;"></i>
+          </div>
+          <div>
+            <h2 style="color:#fff; margin:0; font-size:18px; font-weight:800; letter-spacing:-0.3px; display:flex; align-items:center; gap:10px;">
+              Auditoria de Propostas com I.A. <span id="iaBadgeCotacao" style="background:rgba(58,185,182,0.2); color:#3ab9b6; border:1px solid #3ab9b6; padding:2px 8px; border-radius:12px; font-size:11px;">#COT</span>
+            </h2>
+            <p style="color:#aaa; font-size:12px; margin:3px 0 0 0;">
+              A I.A. lê os anexos (Fotos, PDFs e Planilhas) e cruza com os valores digitados pensando como o comprador.
+            </p>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:10px; align-items:center;">
+          <button onclick="reexecutarAuditoriaIA()" style="background:rgba(58,185,182,0.15); border:1px solid #3ab9b6; color:#3ab9b6; padding:7px 14px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.2s;" onmouseover="this.style.background='#3ab9b6'; this.style.color='#000';" onmouseout="this.style.background='rgba(58,185,182,0.15)'; this.style.color='#3ab9b6';">
+            <i class="fa-solid fa-rotate"></i> Reanalisar
+          </button>
+          <button onclick="fecharModalAuditoriaIA()" style="background:none; border:none; color:#aaa; font-size:28px; cursor:pointer; line-height:1;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#aaa'">&times;</button>
+        </div>
+      </div>
+
+      <!-- Corpo do Modal -->
+      <div id="iaCorpoAuditoria" style="padding:25px; overflow-y:auto; flex:1; background:#0e0e11; color:#fff;">
+        <!-- Preenchido via JavaScript -->
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ======================================================
+       🔍 SUB-MODAL DETALHE DO ITEM (TIMELINE DE PREÇOS)
+  ====================================================== -->
+  <div id="modalDetalheItemHistorico" class="modal" style="display:none; z-index:300;">
+    <div class="modal-content" style="width: 90%; max-width: 950px; background: #151515; border: 1px solid var(--secundaria); border-radius: 12px; padding: 25px; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 10px 40px rgba(0,0,0,0.9); margin: 40px auto;">
+      
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
+        <div>
+          <div style="display:inline-block; padding:3px 10px; border-radius:12px; font-size:11px; font-weight:bold; background:#222; color:var(--secundaria); margin-bottom:6px;" id="detItemBadgeTipo">PRODUTO</div>
+          <h2 id="detItemTitulo" style="color:#fff; margin:0; font-size:20px;">-</h2>
+          <p id="detItemSubtitulo" style="color:#888; font-size:13px; margin:4px 0 0 0;">Histórico cronológico de todas as compras deste item</p>
+        </div>
+        <button class="close-btn" style="position:static; font-size:26px; color:#aaa; cursor:pointer; background:none; border:none;" onclick="fecharModalDetalheItem()">×</button>
+      </div>
+
+      <!-- Mini Comparativo do Item -->
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:10px; margin-bottom:15px; background:#1e1e1e; padding:14px; border-radius:8px;">
+        <div>
+          <div style="color:#888; font-size:11px; font-weight:600; text-transform:uppercase;">Menor Pago (Benchmark)</div>
+          <div id="detItemMenor" style="font-size:17px; font-weight:bold; color:#00ff99; margin-top:2px;">R$ 0,00</div>
+        </div>
+        <div>
+          <div style="color:#888; font-size:11px; font-weight:600; text-transform:uppercase;">Preço Médio Ponderado</div>
+          <div id="detItemMedio" style="font-size:17px; font-weight:bold; color:#fff; margin-top:2px;">R$ 0,00</div>
+        </div>
+        <div>
+          <div style="color:#888; font-size:11px; font-weight:600; text-transform:uppercase;">Último Preço Pago</div>
+          <div id="detItemUltimo" style="font-size:17px; font-weight:bold; color:var(--secundaria); margin-top:2px;">R$ 0,00</div>
+        </div>
+        <div>
+          <div style="color:#888; font-size:11px; font-weight:600; text-transform:uppercase;">Maior Preço Pago</div>
+          <div id="detItemMaior" style="font-size:17px; font-weight:bold; color:#ff5555; margin-top:2px;">R$ 0,00</div>
+        </div>
+      </div>
+
+      <!-- Tabela Timeline das compras -->
+      <div style="flex:1; overflow-y:auto; border:1px solid #333; border-radius:8px; max-height:400px;">
+        <table class="tabela-fornecedores" style="width:100%; border-collapse:collapse; text-align:left;">
+          <thead style="background:#222; position:sticky; top:0; z-index:2;">
+            <tr>
+              <th style="padding:10px; color:#fff; font-size:12px;">Data</th>
+              <th style="padding:10px; color:#fff; font-size:12px;">Cotação</th>
+              <th style="padding:10px; color:#fff; font-size:12px;">Fornecedor Vencedor</th>
+              <th style="padding:10px; color:#fff; font-size:12px; text-align:center;">Marca / Emb.</th>
+              <th style="padding:10px; color:#fff; font-size:12px; text-align:center;">Qtd</th>
+              <th style="padding:10px; color:#fff; font-size:12px; text-align:right;">Preço Unit.</th>
+              <th style="padding:10px; color:#fff; font-size:12px; text-align:right;">Total</th>
+              <th style="padding:10px; color:#fff; font-size:12px; text-align:center;">Variação vs Anterior</th>
+            </tr>
+          </thead>
+          <tbody id="detItemTabelaCorpo">
+            <!-- Preenchido via JS -->
+          </tbody>
+        </table>
+      </div>
+
     </div>
   </div>
 
@@ -3930,10 +4144,14 @@
         </table>
       </div>
       <!-- 📎 Anexo -->
-      <!-- 📎 Anexo (CONTAINER REINICIÁVEL) -->
+      <!-- 📎 Anexo (CONTAINER REINICIÁVEL - REGRA DE ANEXO ÚNICO) -->
       <div id="containerAnexoResponder" style="margin-top:15px;">
-        <label>Anexar Orçamento (PDF ou imagem) <span style="color:#ff4444; font-weight:bold;">(Obrigatório)</span>:</label>
-        <input type="file" id="respAnexo" accept=".pdf,image/*" multiple style="
+        <label style="display:block; font-size:14px; color:#eee; font-weight:bold; margin-bottom:4px;">Anexar Orçamento (PDF, Imagem ou Excel) <span style="color:#ff4444;">(Obrigatório)</span>:</label>
+        <div style="font-size:12px; color:#fbbf24; margin:6px 0 10px 0; background:rgba(251,191,36,0.1); border:1px solid rgba(251,191,36,0.3); padding:8px 12px; border-radius:6px; display:flex; align-items:center; gap:8px;">
+          <i class="fa-solid fa-circle-exclamation" style="color:#fbbf24; font-size:16px;"></i>
+          <div><b>Regra de Envio:</b> É permitido anexar <u>apenas 1 arquivo</u> com a proposta/orçamento (PDF, Imagem ou Excel de até 10MB). Caso sua proposta tenha mais de uma página, salve tudo em um único arquivo.</div>
+        </div>
+        <input type="file" id="respAnexo" accept=".pdf,image/*,.xlsx,.xls" style="
          width:100%;
          background:#1a1a1a;
          border:1px solid #661155;
@@ -10848,9 +11066,25 @@
       }
     }
 
+    const motivosArmazenados = JSON.parse(localStorage.getItem('motivosNaoComprar')) || {};
+    const motivosCotacao = cotacao.motivosNaoComprar || motivosArmazenados[numeroCotacao] || {};
+    const itensNaoComprados = [];
+
     // Processa Decisões
     for (const [prodNome, emailVencedor] of Object.entries(decisoes)) {
       if (!emailVencedor) continue;
+
+      if (emailVencedor === "NAO_COMPRAR" || emailVencedor === "nao_comprar") {
+        const prodOriginal = (cotacao.produtos || []).find(p => (p.nome || p.descricao) === prodNome);
+        itensNaoComprados.push({
+          produto: prodNome,
+          marca: (prodOriginal && prodOriginal.marca) ? prodOriginal.marca : "-",
+          embalagem: (prodOriginal && prodOriginal.embalagem) ? prodOriginal.embalagem : "-",
+          quantidade: prodOriginal ? (Number(prodOriginal.quantidade) || 0) : 0,
+          motivo: motivosCotacao[prodNome] || "Item desconsiderado na compra pelo comprador"
+        });
+        continue;
+      }
 
       const respForn = respostas.find(r => normalizarEmail(r.email) === normalizarEmail(emailVencedor));
       if (respForn) {
@@ -10889,6 +11123,8 @@
 
     // ATUALIZAÇÃO LOCAL (CRÍTICA)
     cotacao.adjudicacao = novaAdjudicacao;
+    cotacao.itensNaoComprados = itensNaoComprados;
+    cotacao.motivosNaoComprar = motivosCotacao;
     cotacao.status = "aprovacao"; // Muda status para aprovação
 
     // Salva no Array Principal
@@ -11075,6 +11311,717 @@
       }));
   }
 
+
+  /* ======================================================
+     🧠 AUDITOR INTELIGENTE DE PROPOSTAS COM I.A. (GEMINI)
+  ====================================================== */
+  window.GEMINI_KEY_DEFAULT = "AQ.Ab8RN6Kr5c6-QwjPX3Nd20or9P4Zh8U9FJoV57bV4zvbO7hYNA";
+  window.cotacaoAuditandoAtual = null;
+
+  window.getGeminiKey = function() {
+    return localStorage.getItem("gemini_api_key") || window.GEMINI_KEY_DEFAULT;
+  };
+
+  window.iniciarAuditoriaIA = async function(idCotacao, filtroEmail = null) {
+    if (!idCotacao) return alert("Cotação inválida.");
+    window.cotacaoAuditandoAtual = idCotacao;
+
+    const modal = document.getElementById("modalAuditoriaIA");
+    if (!modal) return alert("Erro: Modal de Auditoria com I.A. não encontrado.");
+
+    const idLimpo = String(idCotacao).replace(/#/g, "").replace(/COT-/gi, "").trim();
+    const badge = document.getElementById("iaBadgeCotacao");
+    if (badge) badge.innerText = `COT-${idLimpo}`;
+
+    modal.style.display = "flex";
+    document.body.style.overflow = "hidden";
+
+    const corpo = document.getElementById("iaCorpoAuditoria");
+    corpo.innerHTML = `
+      <div style="text-align:center; padding:70px 20px;">
+        <div style="display:inline-block; width:60px; height:60px; border-radius:50%; background:rgba(58,185,182,0.1); border:2px solid #3ab9b6; display:flex; align-items:center; justify-content:center; margin-bottom:20px; box-shadow:0 0 25px rgba(58,185,182,0.3);">
+          <i class="fa-solid fa-brain fa-fade" style="font-size:28px; color:#3ab9b6;"></i>
+        </div>
+        <h3 style="color:#fff; font-size:18px; margin:0 0 10px 0; font-weight:800;">Iniciando Auditoria Inteligente...</h3>
+        <p id="iaAuditoriaStatusMsg" style="color:#aaa; font-size:13px; max-width:500px; margin:0 auto 20px auto;">
+          A I.A. está lendo as propostas comerciais, escaneando fotos/PDFs anexados e checando a conformidade dos preços e marcas.
+        </p>
+        <div style="display:flex; justify-content:center; gap:8px;">
+          <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#3ab9b6; animation:pulse 1s infinite alternate;"></span>
+          <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#661155; animation:pulse 1s infinite alternate 0.3s;"></span>
+          <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#f39c12; animation:pulse 1s infinite alternate 0.6s;"></span>
+        </div>
+      </div>
+    `;
+
+    // Carrega dados da cotação
+    const cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
+    let cotacao = cotacoes.find(c => String(c.numero) === String(idCotacao) || String(c.id) === String(idCotacao) || String(c.numero) === String(idLimpo));
+
+    if (!cotacao) {
+      corpo.innerHTML = `<div style="text-align:center; padding:50px; color:#ef4444;"><i class="fa-solid fa-circle-exclamation fa-2x"></i><br><br>Cotação #${idLimpo} não encontrada.</div>`;
+      return;
+    }
+
+    const produtos = cotacao.produtos || cotacao.itens || [];
+    let respostas = Array.isArray(cotacao.respostasFornecedores) ? cotacao.respostasFornecedores : Object.values(cotacao.respostasFornecedores || {});
+
+    // Carrega respostas salvas em chaves individuais caso não estejam no array principal
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (key.startsWith(`resposta_${idLimpo}_`) || key.startsWith(`resposta_${cotacao.numero}_`))) {
+        try {
+          const r = JSON.parse(localStorage.getItem(key));
+          if (r && !respostas.some(x => (x.email || "").toLowerCase().trim() === (r.email || "").toLowerCase().trim())) {
+            respostas.push(r);
+          }
+        } catch(e){}
+      }
+    }
+
+    if (filtroEmail) {
+      respostas = respostas.filter(r => (r.email || "").toLowerCase().trim() === filtroEmail.toLowerCase().trim());
+    }
+
+    if (respostas.length === 0) {
+      corpo.innerHTML = `
+        <div style="text-align:center; padding:60px 20px; color:#aaa;">
+          <i class="fa-solid fa-inbox fa-3x" style="color:#555; margin-bottom:15px; display:block;"></i>
+          <h3 style="color:#fff; margin:0 0 8px 0;">Nenhum fornecedor respondeu a esta cotação ainda.</h3>
+          <p style="font-size:13px; color:#777;">Assim que os fornecedores enviarem suas respostas e anexos, a auditoria estará pronta.</p>
+        </div>
+      `;
+      return;
+    }
+
+    // Executa auditoria para cada fornecedor com feedback visual dinâmico
+    try {
+      const resultadosAuditoria = [];
+
+      for (let i = 0; i < respostas.length; i++) {
+        const resp = respostas[i];
+        const nomeF = resp.fornecedor || resp.fornecedorNome || resp.email || ('Fornecedor ' + (i + 1));
+        const statusEl = document.getElementById('iaAuditoriaStatusMsg');
+        if (statusEl) {
+          statusEl.innerHTML = 'Auditando proposta <b>' + (i + 1) + ' de ' + respostas.length + '</b>: <span style="color:#3ab9b6;">' + nomeF + '</span>...<br><span style="font-size:11px; color:#888;">Batimento de preços e marcas em andamento</span>';
+        }
+        const resultadoFornecedor = await window.executarAuditoriaFornecedor(cotacao, produtos, resp);
+        resultadosAuditoria.push(resultadoFornecedor);
+      }
+
+      window.renderizarResultadosAuditoriaIA(cotacao, produtos, resultadosAuditoria);
+    } catch (err) {
+      console.error("Erro na auditoria com IA:", err);
+      corpo.innerHTML = `
+        <div style="text-align:center; padding:50px 20px; color:#ef4444;">
+          <i class="fa-solid fa-triangle-exclamation fa-3x" style="margin-bottom:15px; display:block;"></i>
+          <h3 style="color:#fff; margin:0 0 10px 0;">Não foi possível concluir a auditoria</h3>
+          <p style="color:#aaa; font-size:13px; max-width:500px; margin:0 auto 20px auto;">
+            ${err.message || "Erro de conexão com os servidores da I.A."}
+          </p>
+          <button onclick="reexecutarAuditoriaIA()" style="background:#3ab9b6; color:#000; font-weight:bold; border:none; padding:10px 20px; border-radius:6px; cursor:pointer;">
+            Tentar Novamente
+          </button>
+        </div>
+      `;
+    }
+  };
+
+  window.reexecutarAuditoriaIA = function() {
+    if (window.cotacaoAuditandoAtual) {
+      window.iniciarAuditoriaIA(window.cotacaoAuditandoAtual);
+    }
+  };
+
+  window.fecharModalAuditoriaIA = function() {
+    const modal = document.getElementById("modalAuditoriaIA");
+    if (modal) modal.style.display = "none";
+    document.body.style.overflow = "auto";
+  };
+
+  // 🔍 Extrai anexo (PDF, Imagem, Excel) associado a este fornecedor
+  window.obterAnexoFornecedorIA = async function(cotacao, resposta) {
+    const num = cotacao.numero || cotacao.id;
+    const idLimpo = String(num).replace(/#/g, "").replace(/COT-/gi, "").trim();
+    const emailForn = (resposta.email || resposta.fornecedor || "").toLowerCase().trim();
+
+    let anexo = resposta.anexo || (Array.isArray(resposta.anexos) && resposta.anexos.length > 0 ? resposta.anexos[0] : null);
+
+    if (!anexo) {
+      // Varre docs_${num}
+      for (const k of [`docs_${num}`, `docs_${idLimpo}`]) {
+        const docs = JSON.parse(localStorage.getItem(k)) || [];
+        const match = docs.find(d => {
+          const u = (d.usuario || d.fornecedor || d.email || "").toLowerCase().trim();
+          return u === emailForn || (resposta.fornecedor && u.includes((resposta.fornecedor || "").toLowerCase().trim()));
+        });
+        if (match) {
+          anexo = match;
+          break;
+        }
+      }
+    }
+
+    if (!anexo) return null;
+
+    let nome = anexo.nome || anexo.nomeArquivo || "anexo_proposta";
+    let base64 = anexo.base64 || anexo.dados || "";
+    let url = anexo.url || anexo.link || "";
+
+    // Se tiver URL remota e não tiver base64, tenta converter via fetch
+    if (!base64 && url && url.startsWith("http")) {
+      try {
+        const resp = await fetch(url);
+        const blob = await resp.blob();
+        base64 = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const resStr = String(reader.result || "");
+            resolve(resStr.includes(",") ? resStr.split(",")[1] : resStr);
+          };
+          reader.readAsDataURL(blob);
+        });
+      } catch(e) {
+        console.warn("Aviso: Falha ao baixar arquivo remoto do anexo:", e);
+      }
+    }
+
+    if (base64 && base64.includes(",")) {
+      base64 = base64.split(",")[1];
+    }
+
+    let mimeType = "image/jpeg";
+    const nLower = nome.toLowerCase();
+    if (nLower.endsWith(".pdf")) mimeType = "application/pdf";
+    else if (nLower.endsWith(".png")) mimeType = "image/png";
+    else if (nLower.endsWith(".webp")) mimeType = "image/webp";
+    else if (nLower.endsWith(".xlsx") || nLower.endsWith(".xls")) mimeType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
+    return { nome, base64, url, mimeType };
+  };
+
+  // 🧠 Executa o batimento e prompt para 1 fornecedor
+  window.executarAuditoriaFornecedor = async function(cotacao, produtos, resposta) {
+    const nomeForn = resposta.fornecedor || resposta.fornecedorNome || resposta.email || "Fornecedor";
+    const emailForn = resposta.email || "";
+
+    const anexoObj = await window.obterAnexoFornecedorIA(cotacao, resposta);
+
+    // Formata itens da cotação solicitada
+    const listaItensCotacaoTexto = produtos.map((p, i) => {
+      return `${i + 1}. Item: "${p.nome || p.descricao || ('Item ' + (i+1))}" | Qtd: ${p.quantidade || 1} ${p.embalagem || 'UN'} | Marca Solicitada: "${p.marca || 'Livre / Qualquer'}"`;
+    }).join("\n");
+
+    // Formata itens preenchidos pelo fornecedor (Busca robusta com suporte a nome, descricao, produto e índice)
+    const itensResp = resposta.itens || [];
+    const respostasFormatadas = produtos.map((p, i) => {
+      const nomeItem = p.nome || p.descricao || p.produto || ("Item " + (i + 1));
+      const nomeProd = p.produto || p.nome || p.descricao || nomeItem;
+      const respItem = itensResp.find(it => {
+        const n1 = (it.produto || it.nome || it.descricao || "").toLowerCase().trim();
+        const nItemNorm = (nomeItem || "").toLowerCase().trim();
+        const nProdNorm = (nomeProd || "").toLowerCase().trim();
+        return (n1 && (n1 === nItemNorm || n1.includes(nItemNorm) || nItemNorm.includes(n1) ||
+                       n1 === nProdNorm || n1.includes(nProdNorm) || nProdNorm.includes(n1)));
+      }) || (itensResp[i] && (itensResp.length === produtos.length) ? itensResp[i] : null);
+
+      const preco = respItem ? (Number(respItem.preco || respItem.valor || respItem.precoUnitario || 0)) : 0;
+      const marca = respItem ? (respItem.marca || "Não informada") : (preco > 0 ? "Não informada" : "Não cotado");
+      return `${i + 1}. Item: "${nomeItem}" -> Preço Digitado: R$ ${preco.toFixed(2)} | Marca Digitada: "${marca}"`;
+    }).join("\n");
+
+    // Conteúdo adicional se for planilha Excel
+    let excelTextoExtra = "";
+    if (anexoObj && anexoObj.mimeType.includes("sheet") && anexoObj.base64 && typeof XLSX !== "undefined") {
+      try {
+        const wb = XLSX.read(anexoObj.base64, { type: 'base64' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        excelTextoExtra = "\nCONTEÚDO DA PLANILHA EXCEL DO FORNECEDOR:\n" + XLSX.utils.sheet_to_csv(ws);
+      } catch(e){
+        console.warn("Erro ao ler planilha no XLSX:", e);
+      }
+    }
+
+    const promptAuditoria = `
+Você é um Auditor Sênior de Compras e Suprimentos.
+Sua missão é auditar a proposta comercial do fornecedor: "${nomeForn}" (${emailForn}) para a cotação #${cotacao.numero || cotacao.id}.
+
+ITENS SOLICITADOS PELO COMPRADOR:
+${listaItensCotacaoTexto}
+
+O QUE O FORNECEDOR PREENCHEU NO SISTEMA:
+${respostasFormatadas}
+
+${excelTextoExtra}
+
+ANEXO DO FORNECEDOR: ${anexoObj ? `Arquivo "${anexoObj.nome}" (${anexoObj.mimeType})` : "Nenhum anexo encontrado."}
+
+DIRETRIZES DE AUDITORIA CRÍTICA E RIGOROSA:
+1. BATIMENTO DE PREÇOS COM DESCONTO COMERCIAL (REGRA CRUCIAL DE RECONCILIAÇÃO):
+Muitos fornecedores emitem orçamentos contendo: "Vlr.Unitário" bruto, desconto do item e coluna "Total R$" (ex: Orçamento Total Mix Embalagens onde Saco 20L tem Vlr.Unitário R$ 16,50, Desc -0,90 e Total R$ 32,10 para 2 unidades).
+No sistema, o fornecedor preenche o VALOR UNITÁRIO LÍQUIDO RATEADO (Total Líquido dividido pela Quantidade):
+Exemplos reais:
+- Total R$ 32,10 / 2 un = R$ 16,05 unitário líquido. O fornecedor digitou exatamente R$ 16,05 no sistema.
+- Total R$ 50,30 / 2 un = R$ 25,15 unitário líquido. O fornecedor digitou exatamente R$ 25,15 no sistema.
+- Total R$ 68,90 / 2 un = R$ 34,45 unitário líquido. O fornecedor digitou exatamente R$ 34,45 no sistema.
+- Total R$ 98,80 / 2 un = R$ 49,40 unitário líquido. O fornecedor digitou exatamente R$ 49,40 no sistema.
+- Total R$ 160,92 / 1 un = R$ 160,92 unitário líquido. O fornecedor digitou exatamente R$ 160,92 no sistema.
+- Total R$ 52,09 / 1 un = R$ 52,09 unitário líquido. O fornecedor digitou exatamente R$ 52,09 no sistema.
+BATIMENTO DE PREÇO: Se o valor digitado no sistema conferir com o valor unitário bruto OU conferir exatamente com o valor unitário líquido com desconto do anexo:
+-> CONSIDERE O PREÇO 100% CORRETO (STATUS: OK ou MATERIAL_OK se marca livre)!
+-> Em PRECO_ANEXO informe: R$ 16,05 (líq)
+-> Em RESUMO_CELULA informe: "✓ Anexo OK (c/ desc)" ou "✓ 100% OK"
+-> Em PARECER explique: "Preço digitado confere com o valor unitário líquido do anexo (Total do item no anexo dividido pela quantidade considerando o desconto comercial)."
+APENAS se o preço digitado NÃO conferir nem com o bruto nem com o líquido com desconto do anexo, aponte STATUS: DIVERGENCIA_PRECO!
+
+2. BATIMENTO DE QUANTIDADE (CRÍTICO): Compare a quantidade que consta no anexo com a quantidade solicitada pelo comprador. Se a quantidade no anexo for diferente da solicitada (ex: pediu 2 pacotes e no anexo tem apenas 1 pacote), aponte IMEDIATAMENTE: STATUS: DIVERGENCIA_QTD!
+
+3. BATIMENTO DE MARCA / ESPECIFICAÇÃO: Compare a marca e especificação técnica do produto. Se a marca informada no anexo for incompatível ou diferente da solicitada, aponte: STATUS: DIVERGENCIA_MARCA! Se a cotação for marca livre e o material atender plenamente, aponte: STATUS: MATERIAL_OK.
+
+4. REGRA DE CONFORMIDADE TOTAL: Um item SÓ PODE ser considerado STATUS: OK ou MATERIAL_OK se o PREÇO (bruto ou líquido rateado), a MARCA e a QUANTIDADE estiverem 100% corretos e confirmados!
+
+5. ITENS COTADOS NO SISTEMA MAS AUSENTES NO ANEXO: Se o fornecedor digitou um valor no sistema (Preço Digitado > 0), mas o item NÃO consta no anexo (ou não foi localizado no PDF), marque: STATUS: NAO_CONSTA_ANEXO e RESUMO_CELULA: "⚠️ Não consta no anexo". NUNCA use "Não cotado" quando houver preço digitado no sistema!
+
+6. ITENS REALMENTE NÃO COTADOS: Apenas marque STATUS: NAO_COTADO se o fornecedor NÃO digitou preço no sistema (Preço Digitado R$ 0,00 ou traço).
+
+7. RESUMO PARA A CÉLULA (RESUMO_CELULA): Crie uma frase curta (2 a 5 palavras).
+Exemplos:
+- "✓ Anexo 100% OK"
+- "✓ Anexo OK (c/ desc)"
+- "⚠️ Anexo difere: R$ 25,90"
+- "⚠️ Qtd anexo: 1 (pediu 2)"
+- "⚠️ Marca difere"
+- "⚠️ Não consta no anexo"
+- "ℹ️ Material OK"
+- "🚫 Não cotado" (APENAS se Preço Digitado for R$ 0,00)
+
+FORMATO OBRIGATÓRIO DE RESPOSTA (NÃO USE NEGRITO NAS CHAVES):
+[STATUS_GERAL]: (CONFORME, DIVERGENCIAS, PARCIAL ou SEM_ANEXO)
+[RESUMO_EXECUTIVO]: (2 a 3 frases práticas para o comprador)
+[ITENS_AUDITADOS]:
+- ITEM: <Nome> | QTD_SIS: <qtd> | QTD_ANEXO: <qtd ou "-"> | PRECO_SIS: <valor> | PRECO_ANEXO: <valor ou "-"> | MARCA_SIS: <marca> | MARCA_ANEXO: <marca ou "-"> | STATUS: <OK, DIVERGENCIA_QTD, DIVERGENCIA_PRECO, DIVERGENCIA_MARCA, MATERIAL_OK ou NAO_COTADO> | RESUMO_CELULA: <frase curta> | PARECER: <explicação detalhada>
+[RECOMENDACAO_COMPRADOR]: (Orientação final para o comprador)
+`;
+
+    // Chama a I.A. Gemini (com o anexo inline se for foto ou PDF)
+    let inlineAnexo = null;
+    if (anexoObj && anexoObj.base64 && (anexoObj.mimeType.startsWith("image/") || anexoObj.mimeType === "application/pdf")) {
+      inlineAnexo = {
+        mimeType: anexoObj.mimeType,
+        data: anexoObj.base64
+      };
+    }
+
+    const respostaTextoIA = await window.chamarGeminiAuditoria(promptAuditoria, inlineAnexo);
+
+    return {
+      fornecedor: nomeForn,
+      email: emailForn,
+      anexo: anexoObj,
+      rawTexto: respostaTextoIA,
+      dados: window.interpretarRespostaAuditoria(respostaTextoIA, produtos, respostasFormatadas)
+    };
+  };
+
+  // 📡 Comunicação com a API do Gemini com auto-retry e fallback inteligente
+  window.chamarGeminiAuditoria = async function(prompt, inlineAttachment = null) {
+    const key = window.getGeminiKey();
+    // Modelos ordenados com prioridade para os modelos de alta capacidade e cotas independentes
+    const models = [
+      'gemini-3.5-flash-lite',
+      'gemini-flash-lite-latest',
+      'gemini-3.1-flash-lite',
+      'gemini-3.6-flash',
+      'gemini-3.5-flash',
+      'gemini-3-flash-preview'
+    ];
+
+    let parts = [];
+    if (inlineAttachment && inlineAttachment.data) {
+      parts.push({
+        inlineData: {
+          mimeType: inlineAttachment.mimeType || 'image/jpeg',
+          data: inlineAttachment.data
+        }
+      });
+    }
+    parts.push({ text: prompt });
+
+    const payload = {
+      contents: [{ parts: parts }]
+    };
+
+    const waitMs = (ms) => new Promise(res => setTimeout(res, ms));
+
+    let lastError = null;
+    for (const model of models) {
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
+          const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+
+          if (!res.ok) {
+            const errText = await res.text();
+            console.warn(`Aviso Gemini (${model} tentativa ${attempt} -> ${res.status}):`, errText);
+            lastError = new Error(`Erro na API (${res.status}): ${errText}`);
+
+            // Se for 429 (cota do modelo esgotada), pula IMEDIATAMENTE para o próximo modelo da lista
+            if (res.status === 429) {
+              console.warn(`Cota do modelo ${model} atingida (429). Alternando instantaneamente para o próximo modelo...`);
+              break;
+            }
+
+            // Se for 503 (pico temporário nos servidores), aguarda breve pausa e retenta
+            if (res.status === 503) {
+              const statusEl = document.getElementById('iaAuditoriaStatusMsg');
+              if (statusEl) {
+                statusEl.innerHTML = '<span style="color:#f39c12;"><i class="fa-solid fa-clock-rotate-left"></i> Servidores da I.A. com pico momentâneo. Tentando conexão alternativa...</span>';
+              }
+              if (attempt < 2) {
+                await waitMs(1000);
+                continue;
+              }
+            }
+            break; // Vai para o próximo modelo
+          }
+
+          const data = await res.json();
+          const txt = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (txt) return txt;
+        } catch (err) {
+          console.warn(`Tentativa com ${model} (tentativa ${attempt}) falhou:`, err);
+          lastError = err;
+          if (attempt < 2) {
+            await waitMs(1000);
+            continue;
+          }
+        }
+      }
+    }
+
+    throw lastError || new Error("Falha na comunicação com os servidores do Google Gemini.");
+  };
+
+  // 📝 Parser inteligente da resposta da I.A. (com suporte a markdown e validação determinística de valores)
+  window.interpretarRespostaAuditoria = function(texto, produtos, respostasFormatadas) {
+    if (!texto) texto = "";
+    
+    let statusGeral = "CONFORME";
+    const mStatusGeral = texto.match(/\[STATUS_GERAL\]:?\s*([A-Z_]+)/i);
+    if (mStatusGeral) {
+      statusGeral = mStatusGeral[1].trim().toUpperCase();
+    } else {
+      if (texto.includes("DIVERGENCIAS") || texto.includes("DIVERGENCIA")) statusGeral = "DIVERGENCIAS";
+      else if (texto.includes("PARCIAL")) statusGeral = "PARCIAL";
+      else if (texto.includes("SEM_ANEXO")) statusGeral = "SEM_ANEXO";
+    }
+
+    // Extrai Resumo Executivo
+    let resumoExecutivo = "";
+    const mResumo = texto.match(/\[RESUMO_EXECUTIVO\]:?\s*([\s\S]*?)(?=\[ITENS_AUDITADOS\]|\[RECOMENDACAO|$)/i);
+    if (mResumo) resumoExecutivo = mResumo[1].trim();
+
+    // Extrai Recomendação
+    let recomendacao = "";
+    const mRec = texto.match(/\[RECOMENDACAO_COMPRADOR\]:?\s*([\s\S]*?)$/i);
+    if (mRec) recomendacao = mRec[1].trim();
+
+    // Helper para converter valores monetários/quantidades em números reais
+    const extrairNumeroAud = (v) => {
+      if (!v || v === "-") return null;
+      const s = String(v).replace(/[^\d.,]/g, "").replace(/\.(?=\d{3})/g, "").replace(",", ".");
+      const n = parseFloat(s);
+      return isNaN(n) ? null : n;
+    };
+
+    // Extrai Itens
+    const itens = [];
+    const linhas = texto.split("\n");
+    linhas.forEach(linha => {
+      if (linha.includes("ITEM:") && linha.includes("|")) {
+        const partes = linha.split("|").map(p => p.trim());
+        const objItem = {
+          nome: "", precoSis: "-", precoAnexo: "-", qtdSis: "-", qtdAnexo: "-", marcaSis: "-", marcaAnexo: "-", status: "OK", resumoCelula: "", parecer: ""
+        };
+        partes.forEach(p => {
+          // Remove marcadores markdown como "-", "*", "**", "1.", etc. do início
+          const pLimpo = p.replace(/^[\s\*\-\#\d\.\>]+/, "").replace(/\*\*/g, "").trim();
+          const pUpper = pLimpo.toUpperCase();
+          if (pUpper.startsWith("ITEM:")) objItem.nome = pLimpo.substring(5).trim();
+          else if (pUpper.startsWith("QTD_SIS:")) objItem.qtdSis = pLimpo.substring(8).trim();
+          else if (pUpper.startsWith("QTD_ANEXO:")) objItem.qtdAnexo = pLimpo.substring(10).trim();
+          else if (pUpper.startsWith("PRECO_SIS:")) objItem.precoSis = pLimpo.substring(10).trim();
+          else if (pUpper.startsWith("PRECO_ANEXO:")) objItem.precoAnexo = pLimpo.substring(12).trim();
+          else if (pUpper.startsWith("MARCA_SIS:")) objItem.marcaSis = pLimpo.substring(10).trim();
+          else if (pUpper.startsWith("MARCA_ANEXO:")) objItem.marcaAnexo = pLimpo.substring(12).trim();
+          else if (pUpper.startsWith("STATUS:")) objItem.status = pLimpo.substring(7).trim().toUpperCase();
+          else if (pUpper.startsWith("RESUMO_CELULA:")) objItem.resumoCelula = pLimpo.substring(14).trim();
+          else if (pUpper.startsWith("PARECER:")) objItem.parecer = pLimpo.substring(8).trim();
+        });
+
+        if (objItem.nome) {
+          // 🛡️ VALIDAÇÃO DETERMINÍSTICA AUTOMÁTICA (Sem depender apenas do texto da IA):
+          const numP_Sis = extrairNumeroAud(objItem.precoSis);
+          const numP_Anexo = extrairNumeroAud(objItem.precoAnexo);
+          const numQ_Sis = extrairNumeroAud(objItem.qtdSis);
+          const numQ_Anexo = extrairNumeroAud(objItem.qtdAnexo);
+
+          // 1. Batimento de Preço (com suporte inteligente a descontos comerciais validados pela IA)
+          const iaAprovouPreco = (objItem.status === "OK" || objItem.status === "MATERIAL_OK");
+          const parecerComDesconto = (objItem.parecer || "").toLowerCase().includes("desc") || (objItem.resumoCelula || "").toLowerCase().includes("desc");
+
+          if ((!iaAprovouPreco && !parecerComDesconto) && numP_Sis !== null && numP_Anexo !== null && Math.abs(numP_Sis - numP_Anexo) > 0.009) {
+            objItem.status = "DIVERGENCIA_PRECO";
+            objItem.resumoCelula = `⚠️ Anexo: R$ ${numP_Anexo.toFixed(2).replace('.', ',')}`;
+            statusGeral = "DIVERGENCIAS";
+          }
+          // 2. Batimento de Quantidade:
+          else if (numQ_Sis !== null && numQ_Anexo !== null && Math.abs(numQ_Sis - numQ_Anexo) > 0.001) {
+            objItem.status = "DIVERGENCIA_QTD";
+            objItem.resumoCelula = `⚠️ Qtd anexo: ${numQ_Anexo} (pediu ${numQ_Sis})`;
+            statusGeral = "DIVERGENCIAS";
+          }
+          // 3. Batimento de Marca:
+          else if (objItem.status.includes("MARCA")) {
+            objItem.status = "DIVERGENCIA_MARCA";
+            if (!objItem.resumoCelula || objItem.resumoCelula.includes("OK")) {
+              objItem.resumoCelula = `⚠️ Marca difere`;
+            }
+            statusGeral = "DIVERGENCIAS";
+          }
+          // 4. Se tem preço digitado no sistema (numP_Sis > 0), NUNCA é "Não cotado", mas sim ausente no anexo
+          else if (numP_Sis !== null && numP_Sis > 0 && (objItem.status.includes("NAO_COTADO") || objItem.status.includes("SEM_ANEXO") || objItem.status.includes("AUSENTE"))) {
+            objItem.status = "NAO_CONSTA_ANEXO";
+            objItem.resumoCelula = "⚠️ Não consta no anexo";
+            if (!objItem.parecer || objItem.parecer.toLowerCase().includes("não cotado")) {
+              objItem.parecer = `Item cotado no sistema por R$ ${numP_Sis.toFixed(2).replace('.', ',')}, porém não foi identificado no anexo enviado pelo fornecedor.`;
+            }
+          }
+
+          // Se o item tinha sido classificado provisoriamente como divergência de preço mas o parecer/resumo comprovou desconto:
+          if (objItem.status === "DIVERGENCIA_PRECO" && parecerComDesconto) {
+            objItem.status = "MATERIAL_OK";
+            objItem.resumoCelula = "✓ Anexo OK (c/ desc)";
+          }
+
+          itens.push(objItem);
+        }
+      }
+    });
+
+    // Reconciliação final do status geral com base no batimento dos itens auditados
+    if (itens.length > 0) {
+      const temDivergencia = itens.some(it => (it.status || "").startsWith("DIVERGENCIA") || it.status === "NAO_CONSTA_ANEXO");
+      const temNaoCotado = itens.some(it => it.status === "NAO_COTADO");
+      if (temDivergencia) {
+        statusGeral = "DIVERGENCIAS";
+      } else if (itens.every(it => it.status === "OK" || it.status === "MATERIAL_OK")) {
+        statusGeral = "CONFORME";
+      } else if (temNaoCotado) {
+        statusGeral = "PARCIAL";
+      }
+    }
+
+    return {
+      statusGeral,
+      resumoExecutivo: resumoExecutivo || "Auditoria realizada com sucesso com base nas informações disponíveis.",
+      recomendacao: recomendacao || "Consulte a tabela de batimento detalhada para orientar a adjudicação.",
+      itens: itens
+    };
+  };
+
+  // 🎨 Renderiza o painel final de auditoria
+  window.renderizarResultadosAuditoriaIA = function(cotacao, produtos, resultados) {
+    // 💾 Salva em localStorage e em cache global de memória
+    const idC = String(cotacao.numero || cotacao.id);
+    const idLimpo = idC.replace(/#/g, "").replace(/COT-/gi, "").trim();
+    window.auditoriasIA = window.auditoriasIA || {};
+    window.auditoriasIA[idC] = resultados;
+    window.auditoriasIA[idLimpo] = resultados;
+    try {
+      localStorage.setItem("auditoria_ia_" + idC, JSON.stringify(resultados));
+      localStorage.setItem("auditoria_ia_" + idLimpo, JSON.stringify(resultados));
+    } catch(e) {
+      console.warn("Aviso ao salvar auditoria no localStorage:", e);
+    }
+
+    // 🔄 Re-renderiza a tabela de análise imediatamente para aplicar os selos de auditoria em todas as células!
+    if (typeof renderizarTabelaAnalise === "function") {
+      renderizarTabelaAnalise(cotacao.numero || cotacao.id);
+    }
+
+    const corpo = document.getElementById("iaCorpoAuditoria");
+    if (!corpo) return;
+
+    let totalConformes = 0;
+    let totalDivergentes = 0;
+    let totalParciais = 0;
+
+    resultados.forEach(r => {
+      const st = r.dados.statusGeral;
+      if (st === "CONFORME") totalConformes++;
+      else if (st === "DIVERGENCIAS") totalDivergentes++;
+      else totalParciais++;
+    });
+
+    let html = `
+      <!-- KPIs do Parecer Geral -->
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:12px; margin-bottom:25px;">
+        <div style="background:#16161c; border-left:4px solid #3ab9b6; padding:14px 18px; border-radius:8px;">
+          <div style="color:#888; font-size:11px; text-transform:uppercase; font-weight:700;">Fornecedores Auditados</div>
+          <div style="color:#fff; font-size:22px; font-weight:800; margin-top:3px;">${resultados.length}</div>
+        </div>
+
+        <div style="background:#16161c; border-left:4px solid #10b981; padding:14px 18px; border-radius:8px;">
+          <div style="color:#888; font-size:11px; text-transform:uppercase; font-weight:700;">Propostas 100% Conformes</div>
+          <div style="color:#10b981; font-size:22px; font-weight:800; margin-top:3px;">${totalConformes} ✅</div>
+        </div>
+
+        <div style="background:#16161c; border-left:4px solid #ef4444; padding:14px 18px; border-radius:8px;">
+          <div style="color:#888; font-size:11px; text-transform:uppercase; font-weight:700;">Com Divergências de Preço/Marca</div>
+          <div style="color:#ef4444; font-size:22px; font-weight:800; margin-top:3px;">${totalDivergentes} 🚨</div>
+        </div>
+
+        <div style="background:#16161c; border-left:4px solid #f59e0b; padding:14px 18px; border-radius:8px;">
+          <div style="color:#888; font-size:11px; text-transform:uppercase; font-weight:700;">Propostas Parciais (Sem estoque)</div>
+          <div style="color:#f59e0b; font-size:22px; font-weight:800; margin-top:3px;">${totalParciais} ℹ️</div>
+        </div>
+      </div>
+    `;
+
+    // Cards individuais para cada fornecedor
+    resultados.forEach((res, idx) => {
+      const st = res.dados.statusGeral;
+      let badgeSt = `<span style="background:rgba(16,185,129,0.15); color:#10b981; border:1px solid #10b981; padding:4px 10px; border-radius:20px; font-size:11px; font-weight:800;">✅ 100% CONFORME</span>`;
+      let borderColor = "#10b981";
+
+      if (st === "DIVERGENCIAS") {
+        badgeSt = `<span style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid #ef4444; padding:4px 10px; border-radius:20px; font-size:11px; font-weight:800;">🚨 DIVERGÊNCIAS DETECTADAS</span>`;
+        borderColor = "#ef4444";
+      } else if (st === "PARCIAL") {
+        badgeSt = `<span style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid #f59e0b; padding:4px 10px; border-radius:20px; font-size:11px; font-weight:800;">ℹ️ PROPOSTA PARCIAL</span>`;
+        borderColor = "#f59e0b";
+      } else if (st === "SEM_ANEXO") {
+        badgeSt = `<span style="background:#222; color:#aaa; border:1px solid #444; padding:4px 10px; border-radius:20px; font-size:11px;">📄 SEM DOCUMENTO ANEXO</span>`;
+        borderColor = "#444";
+      }
+
+      html += `
+        <div style="background:#141419; border:1px solid ${borderColor}; border-radius:10px; padding:20px; margin-bottom:20px; box-shadow:0 4px 20px rgba(0,0,0,0.5);">
+          
+          <!-- Topo do Card -->
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
+            <div>
+              <h3 style="color:#fff; margin:0; font-size:16px; font-weight:800; display:flex; align-items:center; gap:8px;">
+                <i class="fa-solid fa-building" style="color:#3ab9b6;"></i> ${res.fornecedor}
+                <span style="font-size:12px; color:#888; font-weight:normal;">(${res.email || 'Email não informado'})</span>
+              </h3>
+              <div style="color:#aaa; font-size:12px; margin-top:5px; display:flex; align-items:center; gap:8px;">
+                <i class="fa-solid fa-paperclip" style="color:#3ab9b6;"></i> Anexo Analisado: 
+                <strong style="color:#fff;">${res.anexo ? res.anexo.nome : 'Nenhum documento anexado'}</strong>
+              </div>
+            </div>
+            <div>
+              ${badgeSt}
+            </div>
+          </div>
+
+          <!-- Resumo da IA -->
+          <div style="background:rgba(255,255,255,0.03); border-left:3px solid #3ab9b6; padding:12px 15px; border-radius:6px; margin-bottom:15px;">
+            <div style="color:#3ab9b6; font-size:11px; font-weight:800; text-transform:uppercase; margin-bottom:4px; display:flex; align-items:center; gap:6px;">
+              <i class="fa-solid fa-robot"></i> Parecer do Auditor I.A.
+            </div>
+            <div style="color:#ddd; font-size:13px; line-height:1.5;">
+              ${res.dados.resumoExecutivo}
+            </div>
+          </div>
+
+          <!-- Tabela de Batimento Item a Item (se houver itens) -->
+          ${res.dados.itens && res.dados.itens.length > 0 ? `
+            <div style="overflow-x:auto; margin-bottom:15px; border:1px solid #262626; border-radius:8px;">
+              <table style="width:100%; border-collapse:collapse; font-size:12px; text-align:left;">
+                <thead style="background:#1d1d24; color:#fff;">
+                  <tr>
+                    <th style="padding:10px 12px;">Item Solicitado</th>
+                    <th style="padding:10px; text-align:right;">No Sistema</th>
+                    <th style="padding:10px; text-align:right;">No Anexo Oficial</th>
+                    <th style="padding:10px; text-align:center;">Marca (Sis / Anexo)</th>
+                    <th style="padding:10px; text-align:center;">Diagnóstico I.A.</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${res.dados.itens.map(it => {
+                    let corItem = "#fff";
+                    let badgeItem = `<span style="color:#10b981; font-weight:bold;">✅ Bate 100%</span>`;
+
+                    if (it.status.includes("DIVERGENCIA_PRECO") || it.status.includes("DIVERGENTE")) {
+                      corItem = "#fca5a5";
+                      badgeItem = `<span style="background:rgba(239,68,68,0.2); color:#ef4444; padding:2px 8px; border-radius:8px; font-weight:bold;">🚨 Preço Divergente</span>`;
+                    } else if (it.status.includes("MARCA")) {
+                      badgeItem = `<span style="background:rgba(245,158,11,0.2); color:#f59e0b; padding:2px 8px; border-radius:8px; font-weight:bold;">⚠️ Marca Incompatível</span>`;
+                    } else if (it.status.includes("NAO_COTADO") || it.status.includes("NAO_CONSTA_ANEXO") || it.status.includes("AUSENTE_ANEXO")) {
+                      const temPrecoSis = it.precoSis && it.precoSis !== "-" && !it.precoSis.includes("0.00") && !it.precoSis.includes("0,00");
+                      if (temPrecoSis) {
+                        badgeItem = `<span style="background:rgba(245,158,11,0.2); color:#f59e0b; padding:2px 8px; border-radius:8px; font-weight:bold;">⚠️ Não Consta no Anexo</span>`;
+                      } else {
+                        badgeItem = `<span style="background:#222; color:#888; padding:2px 8px; border-radius:8px;">🚫 Não Cotado</span>`;
+                      }
+                    }
+
+                    return `
+                      <tr style="border-bottom:1px solid #222; background:rgba(0,0,0,0.2);">
+                        <td style="padding:10px 12px; color:${corItem};">
+                          <strong>${it.nome}</strong>
+                          ${it.parecer ? `<br><span style="font-size:11px; color:#aaa;">${it.parecer}</span>` : ''}
+                        </td>
+                        <td style="padding:10px; text-align:right; font-weight:bold; color:#fff;">
+                          ${it.precoSis.startsWith("R$") ? it.precoSis : "R$ " + it.precoSis}
+                        </td>
+                        <td style="padding:10px; text-align:right; font-weight:bold; color:#3ab9b6;">
+                          ${it.precoAnexo.startsWith("R$") ? it.precoAnexo : (it.precoAnexo !== '-' ? "R$ " + it.precoAnexo : "-")}
+                        </td>
+                        <td style="padding:10px; text-align:center; color:#ccc;">
+                          ${it.marcaSis || '-'} / <strong style="color:#fff;">${it.marcaAnexo || '-'}</strong>
+                        </td>
+                        <td style="padding:10px; text-align:center;">
+                          ${badgeItem}
+                        </td>
+                      </tr>
+                    `;
+                  }).join('')}
+                </tbody>
+              </table>
+            </div>
+          ` : `
+            <!-- Fallback para exibição em texto formatado caso não seja tabular -->
+            <div style="background:#09090b; padding:15px; border-radius:8px; font-size:13px; line-height:1.6; color:#ccc; white-space:pre-wrap; border:1px solid #222; margin-bottom:15px;">
+              ${res.rawTexto}
+            </div>
+          `}
+
+          <!-- Recomendação para o Comprador -->
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; border-top:1px solid #262626; padding-top:12px;">
+            <div style="color:#aaa; font-size:12px;">
+              <strong style="color:#fff;">💡 Recomendação:</strong> ${res.dados.recomendacao}
+            </div>
+            ${res.anexo ? `
+              <button onclick="visualizarDocumentos('${cotacao.numero || cotacao.id}', '${res.email}')" style="background:#222; border:1px solid #444; color:#fff; padding:6px 12px; border-radius:6px; font-size:11px; cursor:pointer; display:flex; align-items:center; gap:6px;">
+                <i class="fa-solid fa-eye"></i> Inspecionar Anexo Original
+              </button>
+            ` : ''}
+          </div>
+
+        </div>
+      `;
+    });
+
+    corpo.innerHTML = html;
+  };
+
 </script>
 
 <script>
@@ -11158,8 +12105,39 @@
       html += `
        </tbody>
      </table>
-     <h3 style="margin-top:15px; text-align:right;">💰 Total Geral: R$ ${total.toFixed(2)}</h3>
+     <h3 style="margin-top:15px; text-align:right;">💰 Total Geral: R$ ${total.toFixed(2)}</h3>`;
 
+      if (Array.isArray(cotacao.itensNaoComprados) && cotacao.itensNaoComprados.length > 0) {
+        html += `
+          <div style="margin-top:20px; background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.3); border-radius:8px; padding:15px;">
+            <h4 style="color:#ef4444; margin:0 0 10px 0; font-size:14px; display:flex; align-items:center; gap:8px;">
+              <i class="fa-solid fa-ban"></i> Itens Desconsiderados / Não Comprados pelo Comprador (${cotacao.itensNaoComprados.length})
+            </h4>
+            <table style="width:100%; border-collapse:collapse; font-size:12px; color:#ccc;">
+              <thead style="background:rgba(0,0,0,0.5); text-align:left;">
+                <tr>
+                  <th style="padding:8px 10px; color:#fff;">Item</th>
+                  <th style="padding:8px 10px; text-align:center; color:#fff;">Qtd</th>
+                  <th style="padding:8px 10px; text-align:center; color:#fff;">Marca / Emb.</th>
+                  <th style="padding:8px 10px; color:#ff9999;">Motivo Informado</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${cotacao.itensNaoComprados.map(it => `
+                  <tr style="border-bottom:1px solid rgba(255,255,255,0.06);">
+                    <td style="padding:8px 10px; color:#fff;"><strong>${it.produto}</strong></td>
+                    <td style="padding:8px 10px; text-align:center;">${it.quantidade}</td>
+                    <td style="padding:8px 10px; text-align:center; color:#aaa;">${it.marca || "-"} / ${it.embalagem || "-"}</td>
+                    <td style="padding:8px 10px; color:#fca5a5;">${it.motivo || "Item cancelado / desconsiderado na compra"}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        `;
+      }
+
+      html += `
      <!-- 📂 BOTÃO CENTRAL DE ANEXOS (CONSISTÊNCIA) -->
      <div style="text-align:center; margin-top:20px; padding-top:15px; border-top:1px solid #444; display:none;">
      </div>
@@ -14498,12 +15476,16 @@ linhas.forEach((tr, index) => {
       tbody.appendChild(tr);
     });
 
-    // Sanitização e Recriação do Container de Anexo
+    // Sanitização e Recriação do Container de Anexo (COM REGRA DE ANEXO ÚNICO)
     const containerAnexo = document.getElementById("containerAnexoResponder");
     if (containerAnexo) {
       const novoId = "respAnexo_" + Date.now();
       containerAnexo.innerHTML = `
-       <label style="display:block; margin-bottom:8px; font-size:14px; color:#eee;">Anexar Orçamento (PDF ou imagem):</label>
+       <label style="display:block; margin-bottom:4px; font-size:14px; color:#eee; font-weight:bold;">Anexar Orçamento (PDF, Imagem ou Excel) <span style="color:#ff4444;">(Obrigatório)</span>:</label>
+       <div style="font-size:12px; color:#fbbf24; margin-bottom:8px; background:rgba(251,191,36,0.1); border:1px solid rgba(251,191,36,0.3); padding:8px 12px; border-radius:6px; display:flex; align-items:center; gap:8px;">
+         <i class="fa-solid fa-circle-exclamation" style="color:#fbbf24; font-size:16px;"></i>
+         <div><b>Regra de Envio:</b> É permitido anexar <u>apenas 1 arquivo</u> com sua proposta (PDF, Imagem ou Excel de até 10MB). Caso sua proposta tenha várias páginas, junte todas em um único arquivo.</div>
+       </div>
        <div style="display:flex; align-items:center; background:#111; border:1px solid #661155; border-radius:5px; padding:4px 10px; min-height:38px; width:100%; box-sizing:border-box;">
          <button type="button" id="btnFakeAnexo" onclick="document.getElementById('${novoId}').click()" style="
            display:inline-block !important;
@@ -14521,8 +15503,32 @@ linhas.forEach((tr, index) => {
            box-sizing:border-box;
          ">Escolher arquivo</button>
          <span id="labelLocal_${novoId}" class="file-name-label" style="font-size:13px; color:#aaa; font-family: Arial, sans-serif; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1;">Nenhum arquivo escolhido</span>
-         <input type="file" id="${novoId}" name="${novoId}" accept=".pdf,image/*" style="display:none;" 
-           onchange="const span = document.getElementById('labelLocal_${novoId}'); if(this.files.length){ span.innerText = this.files[0].name; span.style.color = '#fff'; } else { span.innerText = 'Nenhum arquivo escolhido'; span.style.color = '#aaa'; }">
+         <input type="file" id="${novoId}" name="${novoId}" accept=".pdf,image/*,.xlsx,.xls" style="display:none;" 
+           onchange="
+             const span = document.getElementById('labelLocal_${novoId}');
+             if (this.files && this.files.length > 1) {
+               alert('⚠️ Atenção: É permitido anexar apenas 1 arquivo com seu orçamento.');
+               this.value = '';
+               span.innerText = 'Nenhum arquivo escolhido';
+               span.style.color = '#aaa';
+               return;
+             }
+             if (this.files && this.files.length === 1) {
+               const f = this.files[0];
+               if (f.size > 15 * 1024 * 1024) {
+                 alert('⚠️ O arquivo selecionado é muito grande (' + (f.size / (1024*1024)).toFixed(1) + 'MB). O limite máximo permitido é de 15MB.');
+                 this.value = '';
+                 span.innerText = 'Nenhum arquivo escolhido';
+                 span.style.color = '#aaa';
+                 return;
+               }
+               span.innerText = f.name + ' (' + (f.size / 1024).toFixed(1) + ' KB)';
+               span.style.color = '#fff';
+             } else {
+               span.innerText = 'Nenhum arquivo escolhido';
+               span.style.color = '#aaa';
+             }
+           ">
        </div>
      `;
     }
@@ -14900,6 +15906,15 @@ linhas.forEach((tr, index) => {
         validAnexos.push({ nome: r.anexoNome || r.nomeAnexo || "Documento", url: r.url });
       }
 
+      // Deduplica anexos pelo nome para evitar exibir o mesmo arquivo repetido
+      const anexosDeduplicados = [];
+      validAnexos.forEach(a => {
+        if (!anexosDeduplicados.some(u => u.nome === a.nome)) {
+          anexosDeduplicados.push(a);
+        }
+      });
+      validAnexos = anexosDeduplicados;
+
       if (validAnexos.length === 0) return;
 
       tableHTML += `
@@ -15192,6 +16207,197 @@ linhas.forEach((tr, index) => {
 </style>
 <script>
   // 🚀 PREMIUM RENDER JS CARREGADO - V_FINAL_POLISHED_V2
+  
+  // 📋 Abre o modal de relatório geral da I.A.
+  window.abrirModalRelatorioIA = function(idCotacao, filtroEmail = null) {
+    const idC = String(idCotacao);
+    const idLimpo = idC.replace(/#/g, "").replace(/COT-/gi, "").trim();
+    const dados = window.auditoriasIA?.[idC] || window.auditoriasIA?.[idLimpo] || 
+                  JSON.parse(localStorage.getItem("auditoria_ia_" + idC)) || 
+                  JSON.parse(localStorage.getItem("auditoria_ia_" + idLimpo));
+    
+    if (dados && Array.isArray(dados) && dados.length > 0) {
+      const cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
+      const cotacao = cotacoes.find(c => String(c.numero) === idC || String(c.id) === idC || String(c.numero) === idLimpo);
+      const produtos = cotacao ? (cotacao.produtos || cotacao.itens || []) : [];
+      
+      const modal = document.getElementById("modalAuditoriaIA");
+      if (modal) {
+        modal.style.display = "flex";
+        document.body.style.overflow = "hidden";
+        window.renderizarResultadosAuditoriaIA(cotacao, produtos, dados);
+      }
+    } else {
+      window.iniciarAuditoriaIA(idCotacao, filtroEmail);
+    }
+  };
+
+  // 🔍 Popover / Modal com Batimento Detalhado de um Item Específico
+  window.abrirDetalheAuditoriaItem = function(idCotacao, emailForn, idxItem) {
+    const idC = String(idCotacao);
+    const idLimpo = idC.replace(/#/g, "").replace(/COT-/gi, "").trim();
+    const dados = window.auditoriasIA?.[idC] || window.auditoriasIA?.[idLimpo] || 
+                  JSON.parse(localStorage.getItem("auditoria_ia_" + idC)) || 
+                  JSON.parse(localStorage.getItem("auditoria_ia_" + idLimpo));
+    
+    if (!dados) return;
+
+    const audForn = dados.find(a => (a.email || "").toLowerCase().trim() === (emailForn || "").toLowerCase().trim() || (a.fornecedor && (emailForn || "").includes(a.fornecedor)));
+    if (!audForn || !audForn.dados || !audForn.dados.itens) return;
+
+    const cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
+    const cotacao = cotacoes.find(c => String(c.numero) === idC || String(c.id) === idC || String(c.numero) === idLimpo);
+    const produtos = cotacao ? (cotacao.produtos || cotacao.itens || []) : [];
+    const prod = produtos[idxItem] || {};
+    const nomeProd = prod.nome || prod.descricao || ("Item " + (idxItem + 1));
+
+    const itemAud = audForn.dados.itens.find(it => {
+      const itN = (it.nome || "").toLowerCase().trim();
+      const n1 = (nomeProd || "").toLowerCase().trim();
+      return itN.includes(n1) || n1.includes(itN);
+    }) || audForn.dados.itens[idxItem];
+
+    if (!itemAud) return;
+
+    // Cria ou reutiliza modal de detalhe
+    let mDetalhe = document.getElementById("modalDetalheItemIA");
+    if (!mDetalhe) {
+      mDetalhe = document.createElement("div");
+      mDetalhe = document.createElement("div");
+      mDetalhe.id = "modalDetalheItemIA";
+      mDetalhe.className = "modal";
+      mDetalhe.style.cssText = "display:flex; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); backdrop-filter:blur(6px); z-index:99999999; align-items:center; justify-content:center; padding:15px;";
+      document.body.appendChild(mDetalhe);
+    }
+
+    const st = (itemAud.status || "OK").toUpperCase();
+    let corStatus = "#10b981";
+    let tituloStatus = "Item Conforme";
+    let iconeStatus = "fa-circle-check";
+
+    if (st.includes("DIVERGENCIA_QTD")) {
+      corStatus = "#ef4444";
+      tituloStatus = "Divergência de Quantidade";
+      iconeStatus = "fa-triangle-exclamation";
+    } else if (st.includes("DIVERGENCIA_PRECO")) {
+      corStatus = "#f59e0b";
+      tituloStatus = "Divergência / Desconto de Preço";
+      iconeStatus = "fa-tag";
+    } else if (st.includes("DIVERGENCIA_MARCA")) {
+      corStatus = "#a855f7";
+      tituloStatus = "Divergência de Marca";
+      iconeStatus = "fa-tag";
+    } else if (st.includes("MATERIAL_OK")) {
+      corStatus = "#3ab9b6";
+      tituloStatus = "Material Compatível";
+      iconeStatus = "fa-check";
+    } else if (st.includes("NAO_CONSTA_ANEXO") || st.includes("AUSENTE_ANEXO")) {
+      corStatus = "#f59e0b";
+      tituloStatus = "Item Cotado no Sistema (Ausente no Anexo)";
+      iconeStatus = "fa-file-circle-question";
+    }
+
+    mDetalhe.innerHTML = `
+      <div style="background:#16161d; border:1px solid ${corStatus}; border-radius:12px; width:100%; max-width:550px; overflow:hidden; box-shadow:0 15px 40px rgba(0,0,0,0.8); animation:fadeIn 0.2s ease;">
+        <div style="background:#111116; padding:15px 20px; border-bottom:1px solid #2a2a35; display:flex; justify-content:space-between; align-items:center;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <i class="fa-solid ${iconeStatus}" style="color:${corStatus}; font-size:20px;"></i>
+            <div>
+              <h3 style="margin:0; font-size:15px; color:#fff; font-weight:800;">Validação da I.A. - ${tituloStatus}</h3>
+              <div style="font-size:12px; color:#888;">Fornecedor: <b style="color:#3ab9b6;">${audForn.fornecedor || audForn.email}</b></div>
+            </div>
+          </div>
+          <button onclick="document.getElementById('modalDetalheItemIA').style.display='none'" style="background:none; border:none; color:#aaa; font-size:24px; cursor:pointer;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#aaa'">&times;</button>
+        </div>
+        <div style="padding:20px;">
+          <div style="font-weight:bold; font-size:15px; color:#fff; margin-bottom:15px; padding-bottom:8px; border-bottom:1px solid #2a2a35;">
+            📦 ${itemAud.nome || nomeProd}
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;">
+            <div style="background:#0e0e13; padding:10px; border-radius:6px; border-left:3px solid #3ab9b6;">
+              <div style="font-size:11px; color:#777; text-transform:uppercase;">Quantidade</div>
+              <div style="font-size:13px; color:#fff; margin-top:3px;">
+                Cotação: <b>${prod.quantidade || itemAud.qtdSis || '-'}</b><br>
+                No Anexo: <b style="color:${st.includes('DIVERGENCIA_QTD') ? '#ef4444' : '#10b981'};">${itemAud.qtdAnexo || '-'}</b>
+              </div>
+            </div>
+
+            <div style="background:#0e0e13; padding:10px; border-radius:6px; border-left:3px solid #f59e0b;">
+              <div style="font-size:11px; color:#777; text-transform:uppercase;">Preço Unitário</div>
+              <div style="font-size:13px; color:#fff; margin-top:3px;">
+                Digitado: <b>R$ ${itemAud.precoSis || '-'}</b><br>
+                No Anexo: <b style="color:${st.includes('DIVERGENCIA_PRECO') ? '#f59e0b' : '#10b981'};">${itemAud.precoAnexo || '-'}</b>
+              </div>
+            </div>
+          </div>
+
+          <div style="background:#0e0e13; padding:10px; border-radius:6px; border-left:3px solid #a855f7; margin-bottom:15px;">
+            <div style="font-size:11px; color:#777; text-transform:uppercase;">Marca / Material</div>
+            <div style="font-size:13px; color:#fff; margin-top:3px;">
+              Solicitada: <b>${prod.marca || itemAud.marcaSis || 'Livre / Qualquer'}</b> | 
+              No Anexo: <b>${itemAud.marcaAnexo || 'Não informada (Material Compatível)'}</b>
+            </div>
+          </div>
+
+          <div style="background:rgba(255,255,255,0.03); border:1px solid #2a2a35; padding:12px; border-radius:6px; margin-bottom:15px;">
+            <div style="font-size:11px; color:#3ab9b6; font-weight:bold; text-transform:uppercase; margin-bottom:4px;">
+              <i class="fa-solid fa-brain"></i> Parecer do Auditor I.A.:
+            </div>
+            <div style="font-size:13px; color:#ddd; line-height:1.4;">
+              ${itemAud.parecer || "Item sem divergências apontadas em relação aos dados digitados e ao anexo."}
+            </div>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <button onclick="document.getElementById('modalDetalheItemIA').style.display='none'; window.abrirModalRelatorioIA('${idCotacaoAtual}')" style="background:none; border:1px solid #3ab9b6; color:#3ab9b6; padding:8px 14px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">
+              <i class="fa-solid fa-list-check"></i> Ver Relatório Geral
+            </button>
+            <button onclick="document.getElementById('modalDetalheItemIA').style.display='none'" style="background:#3ab9b6; color:#000; border:none; padding:8px 18px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">
+              Fechar
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+    mDetalhe.style.display = "flex";
+  };
+
+  
+  // 🔍 Filtro inteligente de linhas da auditoria (Todos, Divergencias, Conformes)
+  window.filtrarLinhasAuditoria = function(tipo) {
+    const linhas = document.querySelectorAll("tr.linha-item-cotacao");
+    linhas.forEach(l => {
+      const st = l.getAttribute("data-status-auditoria");
+      if (tipo === "todos") {
+        l.style.display = "";
+      } else if (tipo === "divergencias") {
+        l.style.display = (st === "divergencia") ? "" : "none";
+      } else if (tipo === "conformes") {
+        l.style.display = (st === "conforme") ? "" : "none";
+      }
+    });
+
+    const mapaBotoes = {
+      todos: "btnFiltroIA_todos",
+      divergencias: "btnFiltroIA_divergencias",
+      conformes: "btnFiltroIA_conformes"
+    };
+
+    Object.keys(mapaBotoes).forEach(k => {
+      const b = document.getElementById(mapaBotoes[k]);
+      if (b) {
+        if (k === tipo) {
+          b.style.transform = "scale(1.05)";
+          b.style.boxShadow = "0 0 12px rgba(58,185,182,0.6)";
+        } else {
+          b.style.transform = "scale(1)";
+          b.style.boxShadow = "none";
+        }
+      }
+    });
+  };
+
   function renderizarTabelaAnalise(textoOuId, containerOverride = null) {
     console.log("🚀 PREMIUM RENDER JS EXECUTANDO...");
     const container = containerOverride || document.getElementById('analiseConteudo');
@@ -15335,6 +16541,11 @@ linhas.forEach((tr, index) => {
 
     // 1. ANÁLISE / APROVAÇÃO
     const isAnalise = (cotacao.status === "respondida" || cotacao.status === "reanalise" || cotacao.status === "analise" || cotacao.status === "aberta" || cotacao.status === "aprovacao");
+    
+    // 🧠 REGRA DE NEGÓCIO: I.A. permitida EXCLUSIVAMENTE em Análise de Respostas (Cotação Respondida/Em Análise)
+    // NÃO aparece em Publicadas (aberta), NÃO aparece em Aguardando Aprovação (aprovacao), NÃO aparece em Fechadas (fechada/finalizada).
+    const statusAtualNorm = String(cotacao.status || "").toLowerCase().trim();
+    const podeExibirIA = (statusAtualNorm === "respondida" || statusAtualNorm === "analise" || statusAtualNorm === "reanalise");
 
     // 2. Lógica de Status (Texto)
     let textoStatus = "";
@@ -15432,8 +16643,175 @@ linhas.forEach((tr, index) => {
       </div>
     `;
 
-    let html = resumoPerformanceHtml + `
-       <table class="matriz-cotacao" style="width:100%; border-collapse:collapse; margin-top:20px;">
+    // 🧠 Carrega dados de auditoria salvos para esta cotação (SÓ se for Análise de Respostas)
+    const idCotacaoAtual = String(cotacao.numero || cotacao.id);
+    const idLimpoCotacao = idCotacaoAtual.replace(/#/g, "").replace(/COT-/gi, "").trim();
+    const dadosAuditoriaSalva = podeExibirIA ? (
+                                window.auditoriasIA?.[idCotacaoAtual] || 
+                                window.auditoriasIA?.[idLimpoCotacao] ||
+                                JSON.parse(localStorage.getItem("auditoria_ia_" + idCotacaoAtual)) ||
+                                JSON.parse(localStorage.getItem("auditoria_ia_" + idLimpoCotacao)) ||
+                                null) : null;
+
+    // 🔄 Auto-reparo de auditoria em cache: reinterpreta texto da IA com o parser rigoroso
+    if (dadosAuditoriaSalva && Array.isArray(dadosAuditoriaSalva)) {
+      dadosAuditoriaSalva.forEach(audForn => {
+        if (audForn && audForn.rawTexto && typeof window.interpretarRespostaAuditoria === "function") {
+          audForn.dados = window.interpretarRespostaAuditoria(audForn.rawTexto, produtos);
+        }
+      });
+    }
+
+    // 🔍 Helper robusto para encontrar o item na auditoria (por nome flexível ou por índice direto)
+    const buscarItemAuditoriaHelper = (itensAud, pIdx, nItem, nProd) => {
+      if (!Array.isArray(itensAud) || itensAud.length === 0) return null;
+      let itFound = itensAud.find(it => {
+        const itN = normalizarTexto(it.nome || "").replace(/^\d+[\.\-\s]+/, "").trim();
+        const n1 = normalizarTexto(nItem).replace(/^\d+[\.\-\s]+/, "").trim();
+        const n2 = normalizarTexto(nProd).replace(/^\d+[\.\-\s]+/, "").trim();
+        return itN && (itN === n1 || itN.includes(n1) || n1.includes(itN) || itN === n2 || itN.includes(n2) || n2.includes(itN));
+      });
+      if (!itFound && itensAud[pIdx]) {
+        itFound = itensAud[pIdx];
+      }
+      return itFound;
+    };
+
+    // 🚦 SEMÁFORO INTELIGENTE: Pré-cálculo do status de cada linha para contadores e filtro
+    let totalLinhasComDivergencia = 0;
+    let totalLinhasConformes = 0;
+    const mapaStatusLinhas = {};
+
+    produtos.forEach((prod, pIdx) => {
+      const nomeItem = prod.nome || prod.descricao || ("Item " + (pIdx + 1));
+      const nomeProd = prod.produto || nomeItem;
+      const qtdPedida = prod.quantidade || 0;
+
+      let stLinha = "pendente";
+      let tipoDivLinha = "";
+      let motivosDiv = [];
+
+      // 🏆 Identifica o fornecedor Vencedor deste item (ou melhor preço como padrão)
+      const keyItem = `item_${pIdx}`;
+      let emailEscolhido = (window.decisoesAnalise?.[cotacao.numero || cotacao.id]?.[keyItem]) ||
+                           (cotacao.decisoes?.[keyItem]);
+
+      if (!emailEscolhido) {
+        // Encontra o fornecedor com o menor preço para este item
+        let menorVal = Infinity;
+        let melhorEmail = null;
+        respostas.forEach(r => {
+          const itR = (r.itens || []).find(it =>
+            normalizarTexto(it.produto) === normalizarTexto(nomeProd) ||
+            normalizarTexto(it.nome) === normalizarTexto(nomeProd) ||
+            normalizarTexto(it.produto) === normalizarTexto(nomeItem) ||
+            normalizarTexto(it.nome) === normalizarTexto(nomeItem)
+          );
+          if (itR) {
+            const v = Number(itR.preco || itR.valor || itR.precoUnitario || 0);
+            if (v > 0 && v < menorVal) {
+              menorVal = v;
+              melhorEmail = r.email;
+            }
+          }
+        });
+        emailEscolhido = melhorEmail;
+      }
+
+      if (dadosAuditoriaSalva && Array.isArray(dadosAuditoriaSalva) && dadosAuditoriaSalva.length > 0) {
+        // 🎯 PRIORIDADE MÁXIMA: Auditar a proposta do FORNECEDOR VENCEDOR
+        const emailVencedorNorm = normalizarEmail(emailEscolhido);
+        const audVencedor = dadosAuditoriaSalva.find(a => 
+          normalizarEmail(a.email) === emailVencedorNorm ||
+          (a.fornecedor && normalizarTexto(a.fornecedor) === normalizarTexto(emailEscolhido))
+        );
+
+        if (audVencedor && audVencedor.dados && Array.isArray(audVencedor.dados.itens)) {
+          const itemAudVenc = buscarItemAuditoriaHelper(audVencedor.dados.itens, pIdx, nomeItem, nomeProd);
+          if (itemAudVenc) {
+            const stVenc = (itemAudVenc.status || "OK").toUpperCase();
+            if (stVenc.includes("DIVERGENCIA_PRECO")) {
+              stLinha = "divergencia";
+              tipoDivLinha = "PRECO";
+              motivosDiv.push(`${audVencedor.fornecedor || 'Vencedor'}: Preço no anexo ${itemAudVenc.precoAnexo || '-'} diverge do digitado ${itemAudVenc.precoSis || '-'}`);
+            } else if (stVenc.includes("DIVERGENCIA_QTD")) {
+              stLinha = "divergencia";
+              tipoDivLinha = "QTD";
+              motivosDiv.push(`${audVencedor.fornecedor || 'Vencedor'}: Qtd no anexo ${itemAudVenc.qtdAnexo || '1'} diverge da solicitada (${qtdPedida})`);
+            } else if (stVenc.includes("DIVERGENCIA_MARCA")) {
+              stLinha = "divergencia";
+              tipoDivLinha = "MARCA";
+              motivosDiv.push(`${audVencedor.fornecedor || 'Vencedor'}: Marca no anexo ${itemAudVenc.marcaAnexo || '-'} diverge do pedido`);
+            } else if (stVenc === "OK" || stVenc === "MATERIAL_OK") {
+              stLinha = "conforme";
+              tipoDivLinha = "OK";
+            }
+          }
+        }
+
+        // Se o vencedor não teve divergência explícita ou não foi encontrado, verifica se algum outro fornecedor participante tem divergência
+        if (stLinha !== "divergencia") {
+          let temOutraDivergencia = false;
+          dadosAuditoriaSalva.forEach(audForn => {
+            if (audForn && audForn.dados && Array.isArray(audForn.dados.itens)) {
+              const itemAudOutro = buscarItemAuditoriaHelper(audForn.dados.itens, pIdx, nomeItem, nomeProd);
+              if (itemAudOutro) {
+                const stO = (itemAudOutro.status || "OK").toUpperCase();
+                if (stO.includes("DIVERGENCIA_PRECO") || stO.includes("DIVERGENCIA_QTD") || stO.includes("DIVERGENCIA_MARCA")) {
+                  temOutraDivergencia = true;
+                  const tipo = stO.includes("PRECO") ? "PRECO" : (stO.includes("QTD") ? "QTD" : "MARCA");
+                  motivosDiv.push(`${audForn.fornecedor || 'Fornecedor'}: ${itemAudOutro.resumoCelula || stO}`);
+                }
+              }
+            }
+          });
+
+          // Se o vencedor não foi auditado mas outros foram, aponta a divergência
+          if (!audVencedor && temOutraDivergencia) {
+            stLinha = "divergencia";
+            tipoDivLinha = "PRECO";
+          }
+        }
+      }
+
+      if (stLinha === "divergencia") totalLinhasComDivergencia++;
+      else if (stLinha === "conforme") totalLinhasConformes++;
+
+      mapaStatusLinhas[pIdx] = {
+        status: stLinha,
+        tipo: tipoDivLinha,
+        motivos: motivosDiv
+      };
+    });
+
+    // 🔘 BARRA DE FILTROS RÁPIDOS DE AUDITORIA (Dispostos horizontalmente lado a lado em linha única compacta)
+    let barraFiltrosHtml = "";
+    if (dadosAuditoriaSalva && Array.isArray(dadosAuditoriaSalva)) {
+      barraFiltrosHtml = `
+        <div id="barraFiltrosAuditoriaIA" style="background:#111116; border:1px solid #2a2a35; border-radius:10px; padding:8px 16px; margin:15px 0 20px 0; display:flex; align-items:center; justify-content:space-between; flex-wrap:nowrap; gap:12px; box-shadow:0 4px 15px rgba(0,0,0,0.5); overflow-x:auto;">
+          <div style="display:flex; align-items:center; gap:8px; flex-wrap:nowrap; flex-shrink:0;">
+            <span style="font-size:12px; font-weight:800; color:#3ab9b6; text-transform:uppercase; display:inline-flex; align-items:center; gap:6px; white-space:nowrap; margin-right:4px;">
+              <i class="fa-solid fa-filter" style="color:#3ab9b6;"></i> Filtro Rápido:
+            </span>
+            <button type="button" id="btnFiltroIA_todos" onclick="window.filtrarLinhasAuditoria('todos')" style="width:auto !important; max-width:none !important; flex:0 0 auto !important; white-space:nowrap !important; background:#2a2a35; color:#fff; border:1px solid #555; border-radius:8px; padding:6px 14px; font-size:11px; font-weight:800; cursor:pointer; display:inline-flex !important; align-items:center; gap:6px; transition:0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
+              <i class="fa-solid fa-list-ul"></i> Todos os Itens (${produtos.length})
+            </button>
+            <button type="button" id="btnFiltroIA_divergencias" onclick="window.filtrarLinhasAuditoria('divergencias')" style="width:auto !important; max-width:none !important; flex:0 0 auto !important; white-space:nowrap !important; background:${totalLinhasComDivergencia > 0 ? 'rgba(239,68,68,0.25)' : 'rgba(255,255,255,0.05)'}; color:${totalLinhasComDivergencia > 0 ? '#fca5a5' : '#888'}; border:1px solid ${totalLinhasComDivergencia > 0 ? '#ef4444' : '#444'}; border-radius:8px; padding:6px 14px; font-size:11px; font-weight:800; cursor:pointer; display:inline-flex !important; align-items:center; gap:6px; transition:0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
+              <i class="fa-solid fa-triangle-exclamation" style="color:${totalLinhasComDivergencia > 0 ? '#ef4444' : '#888'};"></i> 🚨 Ver Apenas Divergências (${totalLinhasComDivergencia})
+            </button>
+            <button type="button" id="btnFiltroIA_conformes" onclick="window.filtrarLinhasAuditoria('conformes')" style="width:auto !important; max-width:none !important; flex:0 0 auto !important; white-space:nowrap !important; background:rgba(16,185,129,0.15); color:#6ee7b7; border:1px solid #10b981; border-radius:8px; padding:6px 14px; font-size:11px; font-weight:800; cursor:pointer; display:inline-flex !important; align-items:center; gap:6px; transition:0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
+              <i class="fa-solid fa-circle-check" style="color:#10b981;"></i> 🟢 Apenas Conformes (${totalLinhasConformes})
+            </button>
+          </div>
+          <div style="font-size:11px; color:#888; display:flex; align-items:center; gap:6px; white-space:nowrap; flex-shrink:0; margin-left:auto;">
+            <i class="fa-solid fa-traffic-light" style="color:#3ab9b6;"></i> Semáforo por linha ativado
+          </div>
+        </div>
+      `;
+    }
+
+    let html = resumoPerformanceHtml + barraFiltrosHtml + `
+       <table class="matriz-cotacao" style="width:100%; border-collapse:collapse; margin-top:10px;">
            <thead style="background:#500a40; color:white;">
                <tr>
                    <th style="width:40px; text-align:center; padding:12px;">
@@ -15442,7 +16820,7 @@ linhas.forEach((tr, index) => {
                           onclick="toggleExpansaoColunas()"
                           title="Expandir Visualização"></i>
                    </th>
-                   <th style="width:45px; text-align:center;" class="col-idx">#</th>
+                   <th style="width:55px; text-align:center;" class="col-idx">#</th>
                    <th class="col-fixa" style="text-align:left; padding-left:10px;">Item</th>
                    <th class="col-fixa-2" style="text-align:center;">Marca</th>
                    <th class="col-fixa-emb" style="text-align:center;">Embalagem</th>
@@ -15451,8 +16829,29 @@ linhas.forEach((tr, index) => {
     // Cabeçalhos dos fornecedores
     respostas.forEach(r => {
       const temAnexo = r.anexo || (Array.isArray(r.anexos) && r.anexos.length > 0) || r.base64;
+      const emailNorm = normalizarEmail(r.email);
 
-      html += `<th style="text-align:center; min-width:120px;">
+      let badgeHeaderIA = "";
+      if (dadosAuditoriaSalva && Array.isArray(dadosAuditoriaSalva)) {
+        const audForn = dadosAuditoriaSalva.find(a => 
+          normalizarEmail(a.email) === emailNorm ||
+          (a.fornecedor && normalizarTexto(a.fornecedor) === normalizarTexto(r.fornecedor))
+        );
+        if (audForn && audForn.dados) {
+          const st = audForn.dados.statusGeral || "CONFORME";
+          if (st === "CONFORME") {
+            badgeHeaderIA = `<div onclick="abrirModalRelatorioIA('${idCotacaoAtual}', '${r.email}')" style="margin-top:5px; font-size:10px; color:#10b981; background:rgba(16,185,129,0.15); border:1px solid #10b981; border-radius:12px; padding:2px 8px; display:inline-flex; align-items:center; gap:4px; font-weight:bold; cursor:pointer;" title="Clique para ver o relatório da I.A."><i class="fa-solid fa-circle-check"></i> Proposta Conforme</div>`;
+          } else if (st === "DIVERGENCIAS") {
+            badgeHeaderIA = `<div onclick="abrirModalRelatorioIA('${idCotacaoAtual}', '${r.email}')" style="margin-top:5px; font-size:10px; color:#ef4444; background:rgba(239,68,68,0.2); border:1px solid #ef4444; border-radius:12px; padding:2px 8px; display:inline-flex; align-items:center; gap:4px; font-weight:bold; cursor:pointer;" title="Clique para ver o relatório da I.A."><i class="fa-solid fa-triangle-exclamation"></i> Divergências no Anexo</div>`;
+          } else {
+            badgeHeaderIA = `<div onclick="abrirModalRelatorioIA('${idCotacaoAtual}', '${r.email}')" style="margin-top:5px; font-size:10px; color:#f59e0b; background:rgba(245,158,11,0.2); border:1px solid #f59e0b; border-radius:12px; padding:2px 8px; display:inline-flex; align-items:center; gap:4px; font-weight:bold; cursor:pointer;" title="Clique para ver o relatório da I.A."><i class="fa-solid fa-circle-half-stroke"></i> Parcial / Anexo</div>`;
+          }
+        }
+      } else {
+        badgeHeaderIA = ""; // Sem botão individual sobre cada fornecedor
+      }
+
+      html += `<th style="text-align:center; min-width:130px; padding:10px 8px; vertical-align:middle;">
                    <div style="font-size:13px; font-weight:bold; display:flex; align-items:center; justify-content:center; gap:5px;">
                        ${temAnexo ? `
                        <i class="fa-solid fa-paperclip" 
@@ -15462,10 +16861,30 @@ linhas.forEach((tr, index) => {
                        ` : ''}
                        ${getNomeExibicao(r.email, r.fornecedor)}
                    </div>
+                   ${badgeHeaderIA}
                 </th>`;
     });
 
-    html += `<th style="text-align:center; color:#10b981; min-width:180px; font-weight:bold;">🏆 VENCEDOR</th>`;
+    // 🏆 Cabeçalho da coluna VENCEDOR (Botão de I.A. aparece EXCLUSIVAMENTE em Análise de Respostas)
+    if (podeExibirIA) {
+      const temAuditoriaProntaVencedor = !!dadosAuditoriaSalva;
+      html += `<th style="text-align:center; min-width:185px; padding:8px 8px; vertical-align:middle;">
+                 <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px;">
+                   <button onclick="iniciarAuditoriaIA('${idCotacaoAtual}')" style="background:linear-gradient(135deg, #661155, #3ab9b6); color:#fff; border:none; padding:5px 12px; border-radius:12px; cursor:pointer; font-weight:800; font-size:10px; display:inline-flex; align-items:center; gap:5px; box-shadow:0 2px 8px rgba(58,185,182,0.3); text-transform:uppercase; transition:0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
+                     <i class="fa-solid fa-wand-magic-sparkles"></i> ${temAuditoriaProntaVencedor ? 'Revalidar com I.A.' : 'Validar com I.A.'}
+                   </button>
+                   <div style="font-size:13px; color:#10b981; font-weight:bold; display:flex; align-items:center; gap:4px;">
+                     <i class="fa-solid fa-trophy" style="color:#fbbf24;"></i> VENCEDOR
+                   </div>
+                 </div>
+               </th>`;
+    } else {
+      html += `<th style="text-align:center; color:#10b981; min-width:180px; font-weight:bold; padding:12px 8px;">
+                 <div style="font-size:13px; color:#10b981; font-weight:bold; display:flex; align-items:center; justify-content:center; gap:5px;">
+                   <i class="fa-solid fa-trophy" style="color:#fbbf24;"></i> VENCEDOR
+                 </div>
+               </th>`;
+    }
     html += `</tr></thead><tbody style="background:#000;">`;
 
     produtos.forEach((prod, idx) => {
@@ -15493,10 +16912,16 @@ linhas.forEach((tr, index) => {
 
       const melhorPreco = precosRow.length > 0 ? precosRow[0] : null;
 
-      // 🏆 LÓGICA DE VENCEDOR PARA O RODAPÉ
+      // 🏆 LÓGICA DE VENCEDOR PARA O RODAPÉ (COM SUPORTE A "NÃO COMPRAR")
       const keyItem = `item_${idx}`;
       let emailEscolhido = (window.decisoesAnalise?.[cotacao.numero || cotacao.id]?.[keyItem]) ||
         (cotacao.decisoes?.[keyItem]);
+
+      const motivosArmazenados = JSON.parse(localStorage.getItem('motivosNaoComprar')) || {};
+      const motivosCotacao = cotacao.motivosNaoComprar || motivosArmazenados[cotacao.numero || cotacao.id] || {};
+      const motivoItem = motivosCotacao[keyItem] || motivosCotacao[nomeItem] || motivosCotacao[nomeProd] || "";
+
+      const ehNaoComprar = (emailEscolhido === "NAO_COMPRAR" || emailEscolhido === "nao_comprar");
 
       if (!emailEscolhido && melhorPreco) {
         emailEscolhido = melhorPreco.email;
@@ -15505,29 +16930,57 @@ linhas.forEach((tr, index) => {
         window.decisoesAnalise[cotacao.numero || cotacao.id][keyItem] = emailEscolhido;
       }
 
-      if (emailEscolhido) {
+      // Se for NÃO COMPRAR, NÃO soma nada no total do fornecedor nem no total da compra!
+      if (emailEscolhido && !ehNaoComprar) {
         const winRes = precosRow.find(p => normalizarEmail(p.email) === normalizarEmail(emailEscolhido));
         if (winRes) {
           valorGanhando[winRes.rIdx] += (winRes.val * qtd);
         }
       }
-      if (emailEscolhido) {
+      if (emailEscolhido && !ehNaoComprar) {
         const winRes2 = precosRow.find(p => normalizarEmail(p.email) === normalizarEmail(emailEscolhido));
         if (winRes2) {
           totalMenorPrecoGeral += (winRes2.val * qtd);
         }
-      } else if (melhorPreco) {
+      } else if (!emailEscolhido && melhorPreco) {
         totalMenorPrecoGeral += (melhorPreco.val * qtd);
       }
 
-      html += `<tr style="border-bottom:1px solid #222;">
+      const infoLinha = mapaStatusLinhas[idx] || { status: 'pendente', tipo: '', motivos: [] };
+      const stLinha = infoLinha.status;
+      const ehDivergenciaLinha = (stLinha === 'divergencia');
+      const ehConformeLinha = (stLinha === 'conforme');
+
+      let badgeSemaforoLinha = "";
+      if (ehDivergenciaLinha) {
+        const iconDiv = (infoLinha.tipo === 'QTD') ? 'fa-triangle-exclamation' : 'fa-tag';
+        const txtDiv = (infoLinha.tipo === 'QTD') ? '🚨 Atenção: Divergência de Quantidade' : '⚠️ Atenção: Preço Divergente';
+        badgeSemaforoLinha = `<span style="background:rgba(239,68,68,0.22); border:1px solid #ef4444; color:#fca5a5; padding:2px 8px; border-radius:12px; font-size:10px; font-weight:bold; display:inline-flex; align-items:center; gap:4px; box-shadow:0 0 8px rgba(239,68,68,0.2);" title="${infoLinha.motivos.join(' | ')}"><i class="fa-solid ${iconDiv}" style="color:#ef4444;"></i> ${txtDiv}</span>`;
+      } else if (ehConformeLinha) {
+        badgeSemaforoLinha = `<span style="background:rgba(16,185,129,0.15); border:1px solid #10b981; color:#6ee7b7; padding:2px 8px; border-radius:12px; font-size:10px; font-weight:bold; display:inline-flex; align-items:center; gap:4px;"><i class="fa-solid fa-circle-check" style="color:#10b981;"></i> 100% Conforme</span>`;
+      }
+
+      let bordaLateral = "";
+      if (ehDivergenciaLinha) bordaLateral = "border-left: 4px solid #ef4444;";
+      else if (ehConformeLinha) bordaLateral = "border-left: 4px solid #10b981;";
+
+      const rowStyle = ehNaoComprar 
+        ? "border-bottom:1px solid #331111; background:rgba(239, 68, 68, 0.05); opacity:0.8;" 
+        : (ehDivergenciaLinha ? "border-bottom:1px solid #222; background:rgba(239,68,68,0.03);" : "border-bottom:1px solid #222;");
+
+      html += `<tr class="linha-item-cotacao" data-status-auditoria="${stLinha}" style="${rowStyle} ${bordaLateral}">
                <td style="text-align:center; padding:10px;"></td>
                <td style="text-align:center;" class="col-idx">
-                 <span style="display:inline-block; padding:4px 8px; background:#000; border:1px solid #7e22ce; color:#d8b4fe; border-radius:6px; font-weight:bold; font-size:11px;">#${idx + 1}</span>
+                 <span style="display:inline-block; padding:4px 8px; background:${ehNaoComprar ? '#2a1111' : (ehDivergenciaLinha ? '#331111' : '#000')}; border:1px solid ${ehNaoComprar ? '#ef4444' : (ehDivergenciaLinha ? '#ef4444' : '#7e22ce')}; color:${ehNaoComprar ? '#fca5a5' : (ehDivergenciaLinha ? '#fca5a5' : '#d8b4fe')}; border-radius:6px; font-weight:bold; font-size:11px;">#${idx + 1} ${ehNaoComprar ? '❌' : (ehDivergenciaLinha ? '🚨' : (ehConformeLinha ? '🟢' : ''))}</span>
                </td>
                <td style="padding:12px 10px; color:white;" class="col-fixa">
-                   <div style="font-weight:bold; font-size:14px; margin-bottom:2px;">${nomeItem}</div>
+                   <div style="font-weight:bold; font-size:14px; margin-bottom:3px; display:flex; align-items:center; flex-wrap:wrap; gap:8px;">
+                     ${nomeItem}
+                     ${ehNaoComprar ? `<span style="background:rgba(239,68,68,0.2); color:#ef4444; border:1px solid #ef4444; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:bold;">NÃO COMPRAR</span>` : ''}
+                     ${badgeSemaforoLinha}
+                   </div>
                    ${(nomeProd !== nomeItem && nomeProd) ? `<div style="font-size:12px; color:#888;">${nomeProd}</div>` : ''}
+                   ${(ehNaoComprar && motivoItem) ? `<div style="font-size:11px; color:#f87171; margin-top:3px;"><i class="fa-solid fa-circle-exclamation"></i> Motivo: ${motivoItem}</div>` : ''}
                </td>
                <td style="text-align:center; color:#ccc;" class="col-fixa-2">${prod.marca || "-"}</td>
                <td style="text-align:center; color:#ccc;" class="col-fixa-emb">${prod.embalagem || "Unidade"}</td>
@@ -15553,32 +17006,93 @@ linhas.forEach((tr, index) => {
           else if (rankIndex === 2) { textColor = "#ef4444"; badge = `<div style="${baseStyle} border:2px solid #ef4444; color:#ef4444;">3º</div>`; }
         }
 
-        html += `<td style="text-align:center; padding:12px;">`;
+        // 🧠 Procura validação de auditoria correspondente para esta célula
+        let badgeAuditoriaItem = "";
+        if (dadosAuditoriaSalva && Array.isArray(dadosAuditoriaSalva)) {
+          const emailNorm = normalizarEmail(r.email);
+          const audForn = dadosAuditoriaSalva.find(a => 
+            normalizarEmail(a.email) === emailNorm ||
+            (a.fornecedor && normalizarTexto(a.fornecedor) === normalizarTexto(r.fornecedor))
+          );
+          if (audForn && audForn.dados && Array.isArray(audForn.dados.itens)) {
+            const itemAud = buscarItemAuditoriaHelper(audForn.dados.itens, idx, nomeItem, nomeProd);
+
+            if (itemAud) {
+              const st = (itemAud.status || "OK").toUpperCase();
+              const resumo = itemAud.resumoCelula || "";
+              const parecerEsc = (itemAud.parecer || "").replace(/"/g, '&quot;');
+              const clickAction = `onclick="window.abrirDetalheAuditoriaItem('${idCotacaoAtual}', '${r.email}', ${idx})"`;
+
+              if (st.includes("DIVERGENCIA_QTD")) {
+                const txt = resumo || (itemAud.qtdAnexo && itemAud.qtdAnexo !== "-" ? `Qtd anexo: ${itemAud.qtdAnexo} (pediu ${qtd})` : `Qtd diverge do pedido`);
+                badgeAuditoriaItem = `<div ${clickAction} style="margin-top:6px; background:rgba(239,68,68,0.22); border:1px solid #ef4444; color:#fca5a5; font-size:10px; font-weight:bold; padding:3px 7px; border-radius:5px; display:inline-flex; align-items:center; gap:4px; cursor:pointer; max-width:180px; text-align:left; line-height:1.2;" title="${parecerEsc}"><i class="fa-solid fa-triangle-exclamation" style="color:#ef4444;"></i> ${txt}</div>`;
+              } else if (st.includes("DIVERGENCIA_PRECO")) {
+                const txt = resumo || (itemAud.precoAnexo && itemAud.precoAnexo !== "-" ? `Anexo: ${itemAud.precoAnexo}` : `Preço difere do anexo`);
+                badgeAuditoriaItem = `<div ${clickAction} style="margin-top:6px; background:rgba(245,158,11,0.22); border:1px solid #f59e0b; color:#fde68a; font-size:10px; font-weight:bold; padding:3px 7px; border-radius:5px; display:inline-flex; align-items:center; gap:4px; cursor:pointer; max-width:180px; text-align:left; line-height:1.2;" title="${parecerEsc}"><i class="fa-solid fa-tag" style="color:#f59e0b;"></i> ${txt}</div>`;
+              } else if (st.includes("DIVERGENCIA_MARCA")) {
+                const txt = resumo || `Marca diverge`;
+                badgeAuditoriaItem = `<div ${clickAction} style="margin-top:6px; background:rgba(168,85,247,0.22); border:1px solid #a855f7; color:#d8b4fe; font-size:10px; font-weight:bold; padding:3px 7px; border-radius:5px; display:inline-flex; align-items:center; gap:4px; cursor:pointer; max-width:180px; text-align:left; line-height:1.2;" title="${parecerEsc}"><i class="fa-solid fa-tag" style="color:#c084fc;"></i> ${txt}</div>`;
+              } else if (st.includes("MATERIAL_OK") || st === "OK") {
+                const txt = resumo || `Anexo 100% OK`;
+                const isDesc = (resumo && resumo.toLowerCase().includes("desc")) || (parecerEsc && parecerEsc.toLowerCase().includes("desc"));
+                const corBadge = isDesc ? "#3ab9b6" : "#10b981";
+                const bgBadge = isDesc ? "rgba(58,185,182,0.18)" : "rgba(16,185,129,0.16)";
+                const iconeBadge = isDesc ? "fa-circle-check" : "fa-circle-check";
+                badgeAuditoriaItem = `<div ${clickAction} style="margin-top:6px; background:${bgBadge}; border:1px solid ${corBadge}; color:#fff; font-size:10px; font-weight:bold; padding:3px 7px; border-radius:5px; display:inline-flex; align-items:center; gap:4px; cursor:pointer; max-width:180px; text-align:left; line-height:1.2;" title="${parecerEsc}"><i class="fa-solid ${iconeBadge}" style="color:${corBadge};"></i> ${txt}</div>`;
+              } else if (st.includes("NAO_COTADO") || st.includes("NAO_CONSTA_ANEXO") || st.includes("AUSENTE_ANEXO")) {
+                if (valor > 0) {
+                  // O fornecedor COTOU um preço no sistema (tem valor > 0!), portanto NÃO é "Não cotado", mas sim item ausente no anexo
+                  const txt = "⚠️ Não consta no anexo";
+                  badgeAuditoriaItem = `<div ${clickAction} style="margin-top:6px; background:rgba(245,158,11,0.22); border:1px solid #f59e0b; color:#fde68a; font-size:10px; font-weight:bold; padding:3px 7px; border-radius:5px; display:inline-flex; align-items:center; gap:4px; cursor:pointer; max-width:180px; text-align:left; line-height:1.2;" title="${parecerEsc || 'Cotado no sistema, mas não localizado no anexo enviado pelo fornecedor'}"><i class="fa-solid fa-file-circle-question" style="color:#f59e0b;"></i> ${txt}</div>`;
+                } else {
+                  // Realmente NÃO COTOU (valor zerado ou traço)
+                  badgeAuditoriaItem = `<div style="margin-top:6px; background:rgba(107,114,128,0.2); border:1px solid #6b7280; color:#d1d5db; font-size:10px; font-weight:bold; padding:3px 7px; border-radius:5px; display:inline-flex; align-items:center; gap:4px;"><i class="fa-solid fa-ban" style="color:#888;"></i> Não cotado</div>`;
+                }
+              } else {
+                // OK
+                const txt = resumo || `Anexo 100% OK`;
+                badgeAuditoriaItem = `<div ${clickAction} style="margin-top:6px; background:rgba(16,185,129,0.16); border:1px solid #10b981; color:#a7f3d0; font-size:10px; font-weight:bold; padding:3px 7px; border-radius:5px; display:inline-flex; align-items:center; gap:4px; cursor:pointer; max-width:180px; text-align:left; line-height:1.2;" title="${parecerEsc}"><i class="fa-solid fa-circle-check" style="color:#10b981;"></i> ${txt}</div>`;
+              }
+            }
+          }
+        }
+
+        html += `<td style="text-align:center; padding:12px 8px; vertical-align:middle;">`;
         if (valor > 0) {
           html += `<div style="display:flex; align-items:center; justify-content:center;">${badge}<span style="color:${textColor}; font-weight:800; font-size:15px;">R$ ${valor.toFixed(2)}</span></div>`;
-        } else { html += `<span style="color:#333;">-</span>`; }
+        } else { 
+          html += `<span style="color:#333;">-</span>`; 
+        }
+        if (badgeAuditoriaItem) {
+          html += `<div>${badgeAuditoriaItem}</div>`;
+        }
         html += `</td>`;
       });
 
 
       let fornEscolhidoObj = respostas.find(r => normalizarEmail(r.email) === normalizarEmail(emailEscolhido));
-      let nomeEscolhido = fornEscolhidoObj ? getNomeExibicao(fornEscolhidoObj.email, fornEscolhidoObj.fornecedor) : "Selecione";
+      let nomeEscolhido = ehNaoComprar ? "❌ Não Comprar" : (fornEscolhidoObj ? getNomeExibicao(fornEscolhidoObj.email, fornEscolhidoObj.fornecedor) : "Selecione");
       const labelId = `label-escolhido-${idx}`;
 
+      const boxBorder = ehNaoComprar ? "#ef4444" : "#10b981";
+      const iconWinner = ehNaoComprar ? `<i class="fa-solid fa-ban" style="color:#ef4444; font-size:16px;"></i>` : `<i class="fa-solid fa-trophy" style="color:#fbbf24; font-size:16px;"></i>`;
+      const textColorWinner = ehNaoComprar ? "#ef4444" : "#10b981";
+
       html += `<td style="text-align:center; padding:12px;">
-                <div style="background:#000; border:1px solid #10b981; padding:10px 14px; border-radius:8px; display:flex; align-items:center; justify-content:space-between; cursor:pointer; min-width:180px; position:relative;">
-                   <div style="display:flex; align-items:center; gap:10px; color:#10b981; font-weight:800;">
-                      <i class="fa-solid fa-trophy" style="color:#fbbf24; font-size:16px;"></i> 
+                <div style="background:#000; border:1px solid ${boxBorder}; padding:10px 14px; border-radius:8px; display:flex; align-items:center; justify-content:space-between; cursor:pointer; min-width:180px; position:relative;">
+                   <div style="display:flex; align-items:center; gap:10px; color:${textColorWinner}; font-weight:800;">
+                      ${iconWinner}
                       <span id="${labelId}">${nomeEscolhido}</span>
                    </div>
                    ${(isAnalise && cotacao.status !== "aprovacao") ? `
                      <select onchange="atualizarDecisaoV3('${cotacao.numero || cotacao.id}', '${idx}', this.value, '${idx}')" style="position:absolute; top:0; left:0; width:100%; height:100%; opacity:0; cursor:pointer;">
+                         <option value="NAO_COMPRAR" data-nome="Não Comprar" ${ehNaoComprar ? 'selected' : ''} style="color:#ef4444; font-weight:bold; background:#111;">❌ Não Comprar (Desconsiderar Item)</option>
                          ${precosRow.map(p => {
         const n = getNomeExibicao(p.email, p.fornecedor);
-        return `<option value="${p.email}" data-nome="${n}" ${normalizarEmail(p.email) === normalizarEmail(emailEscolhido) ? 'selected' : ''}>${n} - R$ ${p.val.toFixed(2)}</option>`;
+        return `<option value="${p.email}" data-nome="${n}" ${(!ehNaoComprar && normalizarEmail(p.email) === normalizarEmail(emailEscolhido)) ? 'selected' : ''}>${n} - R$ ${p.val.toFixed(2)}</option>`;
       }).join('')}
                      </select>
-                     <i class="fa-solid fa-chevron-down" style="color:#10b981; font-size:11px;"></i>` : ''}
+                     <i class="fa-solid fa-chevron-down" style="color:${boxBorder}; font-size:11px;"></i>` : ''}
                 </div>
               </td>`;
       html += `</tr>`;
@@ -15645,6 +17159,11 @@ linhas.forEach((tr, index) => {
         // 1. Ver motivo da rejeição
         if (cotacao.motivoRejeicao) {
           html += `<button onclick="toggleMotivoRejeicao()" style="flex:1; width:auto; min-width:150px; background:#661155; color:#fff; border:none; padding:12px 8px; border-radius:8px; cursor:pointer; font-weight:800; font-size:10px; display:flex; align-items:center; justify-content:center; gap:5px; box-shadow:0 3px 0 #4a0c3e; text-transform:uppercase;"><i class="fa-solid fa-file-invoice"></i> Ver motivo da rejeição</button>`;
+        }
+
+                // 🧠 1.5. Botão de Auditar Proposta com I.A. (EXCLUSIVO para Análise de Respostas)
+        if (podeExibirIA) {
+          html += `<button onclick="abrirModalRelatorioIA('${cotacao.numero || cotacao.id}')" style="flex:1.2; width:auto; min-width:170px; background:linear-gradient(135deg, #661155, #3ab9b6); color:#fff; border:none; padding:12px 10px; border-radius:8px; cursor:pointer; font-weight:800; font-size:10px; display:flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 3px 12px rgba(58,185,182,0.4); text-transform:uppercase; transition:0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'"><i class="fa-solid fa-brain"></i> Auditar Propostas com I.A. (Histórico)</button>`;
         }
 
         // 2. Ver todos os anexos
@@ -15959,12 +17478,33 @@ linhas.forEach((tr, index) => {
   window.atualizarDecisaoV3 = function (numeroCotacao, itemIndex, emailFornecedor, labelIndex) {
     console.log(`✏️ Decisão Manual (Index): ${numeroCotacao} | Item #${itemIndex} -> ${emailFornecedor}`);
 
+    const keyItem = `item_${itemIndex}`;
+
+    // Se selecionou Não Comprar, solicita motivo opcional para enviar ao aprovador
+    let motivos = JSON.parse(localStorage.getItem('motivosNaoComprar')) || {};
+    if (!motivos[numeroCotacao]) motivos[numeroCotacao] = {};
+
+    if (emailFornecedor === "NAO_COMPRAR") {
+      const motivoAtual = motivos[numeroCotacao][keyItem] || "";
+      const motivo = prompt("Informe o motivo para NÃO comprar este item (opcional - será exibido ao aprovador):", motivoAtual);
+      if (motivo !== null) {
+        motivos[numeroCotacao][keyItem] = motivo.trim() || "Item cancelado / desconsiderado na compra";
+      } else {
+        motivos[numeroCotacao][keyItem] = "Item cancelado / desconsiderado na compra";
+      }
+      localStorage.setItem('motivosNaoComprar', JSON.stringify(motivos));
+    } else {
+      if (motivos[numeroCotacao][keyItem]) {
+        delete motivos[numeroCotacao][keyItem];
+        localStorage.setItem('motivosNaoComprar', JSON.stringify(motivos));
+      }
+    }
+
     // 1. Carrega decisões atuais
     let decisoes = JSON.parse(localStorage.getItem('decisoesAnalise')) || {};
     if (!decisoes[numeroCotacao]) decisoes[numeroCotacao] = {};
 
     // 2. Salva usando a chave por INDEX (item_0, item_1...)
-    const keyItem = `item_${itemIndex}`;
     decisoes[numeroCotacao][keyItem] = emailFornecedor;
     localStorage.setItem('decisoesAnalise', JSON.stringify(decisoes));
 
@@ -16055,6 +17595,9 @@ linhas.forEach((tr, index) => {
 
         // 3. Monta a lista de ADJUDICACAO (Vencedores)
     const adjudicacao = [];
+    const motivosArmazenados = JSON.parse(localStorage.getItem('motivosNaoComprar')) || {};
+    const motivosCotacao = motivosArmazenados[numeroCotacao] || {};
+    const itensNaoComprados = [];
 
     if (cotacao.tipo === "web" && Array.isArray(cotacao.adjudicacao) && cotacao.adjudicacao.length > 0) {
         adjudicacao.push(...cotacao.adjudicacao);
@@ -16073,6 +17616,18 @@ linhas.forEach((tr, index) => {
         vencedorEmail = norm(decisoesCotacao[keyItem]);
       } else if (decisoesCotacao[prod.nome]) {
         vencedorEmail = norm(decisoesCotacao[prod.nome]);
+      }
+
+      // ❌ Se foi marcado como NÃO COMPRAR:
+      if (vencedorEmail === "nao_comprar") {
+        itensNaoComprados.push({
+          produto: prod.nome || prod.descricao || ("Item " + (idx + 1)),
+          quantidade: prod.quantidade || 0,
+          marca: prod.marca || "-",
+          embalagem: prod.embalagem || "-",
+          motivo: motivosCotacao[keyItem] || motivosCotacao[prod.nome] || "Item desconsiderado na compra pelo comprador"
+        });
+        return; // Não adjudica para nenhum fornecedor!
       }
 
       // Se há decisão manual, valida se o fornecedor tem preço para este item
@@ -16141,6 +17696,8 @@ linhas.forEach((tr, index) => {
 
     // Salva na cotação
     cotacao.adjudicacao = adjudicacao;
+    cotacao.itensNaoComprados = itensNaoComprados;
+    cotacao.motivosNaoComprar = motivosCotacao;
     cotacao.status = "aprovacao"; // Avança workflow
 
     cotacoes[index] = cotacao;
@@ -16165,6 +17722,8 @@ linhas.forEach((tr, index) => {
         await db.collection("cotacoes").doc(docId).update({
           status: "aprovacao",
           adjudicacao: adjudicacao,
+          itensNaoComprados: itensNaoComprados || [],
+          motivosNaoComprar: motivosCotacao || {},
           decisoes: decisoesCotacao || {}
         });
         console.log("✅ Cotação salva na nuvem com status 'aprovacao'.");
@@ -16181,6 +17740,8 @@ linhas.forEach((tr, index) => {
       rtdb.ref("cotacoes/" + cotacao.numero).update({
         status: "aprovacao",
         adjudicacao: adjudicacao,
+        itensNaoComprados: itensNaoComprados || [],
+        motivosNaoComprar: motivosCotacao || {},
         decisoes: decisoesCotacao || {}
       }).then(() => console.log("☁️ Aprovação sincronizada no RTDB."))
         .catch(e => console.error("❌ Erro sync aprovacao analise:", e));
@@ -17176,6 +18737,569 @@ linhas.forEach((tr, index) => {
     
     document.getElementById("listaEconomiaCotacaoCorpo").innerHTML = html;
     document.getElementById("modalEconomiaCotacao").style.display = "flex";
+  };
+
+  /* ======================================================
+     📦 HISTÓRICO INTELIGENTE DE PREÇOS (PRODUTOS & SERVIÇOS)
+  ====================================================== */
+  window.historicoPrecosCache = {
+    tipoAtual: 'produto',
+    itensProdutos: [],
+    itensServicos: [],
+    itensFiltrados: []
+  };
+
+  window.extrairHistoricoComprasCompleto = function() {
+    let localCotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
+    if (window.cotacoes && Array.isArray(window.cotacoes)) {
+      const ids = new Set(localCotacoes.map(c => String(c.id || c.numero)));
+      window.cotacoes.forEach(c => {
+        if (c && (c.id || c.numero) && !ids.has(String(c.id || c.numero))) {
+          localCotacoes.push(c);
+        }
+      });
+    }
+
+    let fechadas = localCotacoes.filter(c => c && (c.status === "fechada" || c.status === "finalizada" || (c.adjudicacao && c.adjudicacao.length > 0)));
+
+    const mapaProdutos = {};
+    const mapaServicos = {};
+
+    fechadas.forEach(c => {
+      let tipoStr = (c.tipo || "").toLowerCase();
+      let ehServico = tipoStr === "servicos" || tipoStr === "serviço" || tipoStr === "serviços";
+      let destinoMapa = ehServico ? mapaServicos : mapaProdutos;
+
+      let numCot = c.numero || c.id || "S/N";
+      let descCot = c.descricao || "";
+      let dataFim = c.dataFechamento || c.criadoEm || "";
+      let dataObj = new Date();
+      if (dataFim) {
+        let clean = dataFim.replace(',', '').split(' ')[0];
+        let parts = clean.split('/');
+        if (parts.length === 3) dataObj = new Date(parts[2], parts[1] - 1, parts[0]);
+        else dataObj = new Date(dataFim);
+      }
+      if (isNaN(dataObj.getTime())) dataObj = new Date(0);
+
+      let dataFormatada = dataObj.getTime() > 0 ? dataObj.toLocaleDateString('pt-BR') : "-";
+
+      // 1. Itens Adjudicados (Vencedores Oficiais)
+      if (c.adjudicacao && Array.isArray(c.adjudicacao) && c.adjudicacao.length > 0) {
+        c.adjudicacao.forEach(adj => {
+          let nome = (adj.produto || adj.nomeItem || adj.nome || "").trim();
+          if (!nome) return;
+          let precoUnit = Number(adj.preco) || 0;
+          let qtd = Number(adj.quantidade) || 1;
+          let total = Number(adj.total) || (precoUnit * qtd);
+          if (precoUnit === 0 && total > 0 && qtd > 0) precoUnit = total / qtd;
+
+          if (precoUnit <= 0 && total <= 0) return;
+
+          let chave = nome.toLowerCase();
+          if (!destinoMapa[chave]) {
+            destinoMapa[chave] = {
+              nome: nome,
+              tipo: ehServico ? 'servico' : 'produto',
+              embalagem: adj.embalagem || adj.unidade || "-",
+              marca: adj.marca || "-",
+              compras: []
+            };
+          }
+
+          destinoMapa[chave].compras.push({
+            cotacaoId: c.id || c.numero,
+            cotacaoNumero: numCot,
+            cotacaoDescricao: descCot,
+            dataObj: dataObj,
+            dataStr: dataFormatada,
+            fornecedor: adj.fornecedor || adj.fornecedorNome || "Fornecedor Vencedor",
+            emailFornecedor: adj.emailFornecedor || "",
+            marca: adj.marca || "-",
+            embalagem: adj.embalagem || adj.unidade || "-",
+            quantidade: qtd,
+            precoUnitario: precoUnit,
+            total: total
+          });
+        });
+      } else {
+        // 2. Fallback: Cotação fechada com decisões/respostas
+        const respostas = Array.isArray(c.respostasFornecedores) ? c.respostasFornecedores : Object.values(c.respostasFornecedores || {});
+        let itensList = c.itens || c.produtos || [];
+        if (itensList.length > 0 && respostas.length > 0) {
+          itensList.forEach((it, idx) => {
+            let nome = (it.nome || it.produto || "").trim();
+            if (!nome) return;
+            let qtd = Number(it.quantidade) || 1;
+            let emailVencedor = c.decisoes ? c.decisoes['item_' + idx] : null;
+
+            let precoVencedor = 0;
+            let fornecedorNome = "Vencedor";
+            let fornecedorEmail = "";
+            let itemMarca = it.marca || "-";
+            let itemEmb = it.embalagem || it.unidade || "-";
+
+            if (emailVencedor) {
+              let rWin = respostas.find(r => r.email === emailVencedor);
+              if (rWin) {
+                fornecedorNome = rWin.fornecedor || rWin.nome || rWin.email;
+                fornecedorEmail = rWin.email;
+                let rItem = (rWin.itens || []).find(i => (i.produto || i.nome || "").trim().toLowerCase() === nome.toLowerCase());
+                if (rItem && Number(rItem.preco) > 0) {
+                  precoVencedor = Number(rItem.preco);
+                  if (rItem.marca) itemMarca = rItem.marca;
+                  if (rItem.embalagem) itemEmb = rItem.embalagem;
+                }
+              }
+            } else {
+              let menores = [];
+              respostas.forEach(r => {
+                let rItem = (r.itens || []).find(i => (i.produto || i.nome || "").trim().toLowerCase() === nome.toLowerCase());
+                if (rItem && Number(rItem.preco) > 0) {
+                  menores.push({
+                    preco: Number(rItem.preco),
+                    forn: r.fornecedor || r.nome || r.email,
+                    email: r.email,
+                    marca: rItem.marca || it.marca,
+                    emb: rItem.embalagem || it.embalagem
+                  });
+                }
+              });
+              if (menores.length > 0) {
+                menores.sort((a,b) => a.preco - b.preco);
+                precoVencedor = menores[0].preco;
+                fornecedorNome = menores[0].forn;
+                fornecedorEmail = menores[0].email;
+                if (menores[0].marca) itemMarca = menores[0].marca;
+                if (menores[0].emb) itemEmb = menores[0].emb;
+              }
+            }
+
+            if (precoVencedor > 0) {
+              let chave = nome.toLowerCase();
+              if (!destinoMapa[chave]) {
+                destinoMapa[chave] = {
+                  nome: nome,
+                  tipo: ehServico ? 'servico' : 'produto',
+                  embalagem: itemEmb,
+                  marca: itemMarca,
+                  compras: []
+                };
+              }
+
+              destinoMapa[chave].compras.push({
+                cotacaoId: c.id || c.numero,
+                cotacaoNumero: numCot,
+                cotacaoDescricao: descCot,
+                dataObj: dataObj,
+                dataStr: dataFormatada,
+                fornecedor: fornecedorNome,
+                emailFornecedor: fornecedorEmail,
+                marca: itemMarca,
+                embalagem: itemEmb,
+                quantidade: qtd,
+                precoUnitario: precoVencedor,
+                total: precoVencedor * qtd
+              });
+            }
+          });
+        }
+      }
+    });
+
+    function processarMapa(mapa) {
+      return Object.values(mapa).map(item => {
+        item.compras.sort((a, b) => a.dataObj.getTime() - b.dataObj.getTime());
+
+        let qtdTotal = 0;
+        let valorTotal = 0;
+        let precos = [];
+
+        item.compras.forEach((compra, index) => {
+          qtdTotal += compra.quantidade;
+          valorTotal += compra.total;
+          precos.push(compra.precoUnitario);
+
+          if (index > 0) {
+            let anterior = item.compras[index - 1].precoUnitario;
+            compra.variacaoAnterior = anterior > 0 ? ((compra.precoUnitario - anterior) / anterior) * 100 : 0;
+          } else {
+            compra.variacaoAnterior = 0;
+          }
+        });
+
+        let menorPreco = Math.min(...precos);
+        let maiorPreco = Math.max(...precos);
+        let precoMedio = qtdTotal > 0 ? (valorTotal / qtdTotal) : (precos.reduce((a, b) => a + b, 0) / precos.length);
+        let ultimaCompra = item.compras[item.compras.length - 1];
+        let ultimoPreco = ultimaCompra ? ultimaCompra.precoUnitario : 0;
+        let penultimoPreco = item.compras.length > 1 ? item.compras[item.compras.length - 2].precoUnitario : null;
+
+        let variacaoUltima = 0;
+        if (penultimoPreco && penultimoPreco > 0) {
+          variacaoUltima = ((ultimoPreco - penultimoPreco) / penultimoPreco) * 100;
+        }
+
+        return {
+          chave: item.nome.toLowerCase(),
+          nome: item.nome,
+          tipo: item.tipo,
+          embalagem: ultimaCompra ? (ultimaCompra.embalagem || "-") : (item.embalagem || "-"),
+          marca: ultimaCompra ? (ultimaCompra.marca || "-") : (item.marca || "-"),
+          totalCompras: item.compras.length,
+          qtdTotalAcumulada: qtdTotal,
+          valorTotalGasto: valorTotal,
+          menorPreco: menorPreco,
+          maiorPreco: maiorPreco,
+          precoMedio: precoMedio,
+          ultimoPreco: ultimoPreco,
+          penultimoPreco: penultimoPreco,
+          variacaoUltima: variacaoUltima,
+          dataUltimaCompra: ultimaCompra ? ultimaCompra.dataStr : "-",
+          timestampUltimaCompra: ultimaCompra ? ultimaCompra.dataObj.getTime() : 0,
+          fornecedorUltimaCompra: ultimaCompra ? ultimaCompra.fornecedor : "-",
+          compras: item.compras
+        };
+      });
+    }
+
+    return {
+      produtos: processarMapa(mapaProdutos),
+      servicos: processarMapa(mapaServicos)
+    };
+  };
+
+  window.abrirHistoricoPrecos = function(tipo) {
+    window.historicoPrecosCache.tipoAtual = tipo || 'produto';
+    const dados = window.extrairHistoricoComprasCompleto();
+    window.historicoPrecosCache.itensProdutos = dados.produtos;
+    window.historicoPrecosCache.itensServicos = dados.servicos;
+
+    const modal = document.getElementById("modalHistoricoPrecos");
+    if (!modal) return;
+
+    modal.style.display = "flex";
+    document.body.style.overflow = "hidden";
+
+    const inputBusca = document.getElementById("histFiltroBusca");
+    if (inputBusca) inputBusca.value = "";
+    const selectOrdem = document.getElementById("histFiltroOrdem");
+    if (selectOrdem) selectOrdem.value = "maisComprados";
+
+    window.atualizarVisualizacaoHistorico();
+  };
+
+  window.alternarTabHistorico = function(tipo) {
+    window.historicoPrecosCache.tipoAtual = tipo;
+    window.atualizarVisualizacaoHistorico();
+  };
+
+  window.atualizarVisualizacaoHistorico = function() {
+    const tipo = window.historicoPrecosCache.tipoAtual;
+    const isProd = tipo === 'produto';
+
+    const elTituloTexto = document.getElementById("histPrecosTituloTexto");
+    const elIcone = document.getElementById("histPrecosIcone");
+    const elSubtitulo = document.getElementById("histPrecosSubtitulo");
+
+    if (elTituloTexto) elTituloTexto.innerText = isProd ? "Histórico de Preços - Produtos" : "Histórico de Preços - Serviços";
+    if (elIcone) elIcone.className = isProd ? "fa-solid fa-boxes-stacked" : "fa-solid fa-screwdriver-wrench";
+    if (elSubtitulo) elSubtitulo.innerText = isProd 
+      ? "Mapeamento de todos os produtos comprados, evolução de preços e comparativo de mercado."
+      : "Mapeamento de serviços contratados, taxas de mão de obra e histórico de fornecedores.";
+
+    const btnProd = document.getElementById("btnTabProdutos");
+    const btnServ = document.getElementById("btnTabServicos");
+    if (btnProd && btnServ) {
+      if (isProd) {
+        btnProd.style.background = "#00ff99";
+        btnProd.style.color = "#000";
+        btnProd.style.border = "none";
+        btnServ.style.background = "#222";
+        btnServ.style.color = "#ccc";
+        btnServ.style.border = "1px solid #444";
+      } else {
+        btnServ.style.background = "#f39c12";
+        btnServ.style.color = "#000";
+        btnServ.style.border = "none";
+        btnProd.style.background = "#222";
+        btnProd.style.color = "#ccc";
+        btnProd.style.border = "1px solid #444";
+      }
+    }
+
+    const itensBase = isProd ? window.historicoPrecosCache.itensProdutos : window.historicoPrecosCache.itensServicos;
+    let totalItens = itensBase.length;
+    let emAlta = 0;
+    let emQuedaOuEstavel = 0;
+    let totalComprasGeral = 0;
+
+    itensBase.forEach(it => {
+      totalComprasGeral += it.totalCompras;
+      if (it.penultimoPreco !== null) {
+        if (it.variacaoUltima > 0.5) emAlta++;
+        else emQuedaOuEstavel++;
+      } else {
+        emQuedaOuEstavel++;
+      }
+    });
+
+    const elKpiTotal = document.getElementById("histKpiTotalItens");
+    const elKpiQueda = document.getElementById("histKpiEmQueda");
+    const elKpiAlta = document.getElementById("histKpiEmAlta");
+    const elKpiCompras = document.getElementById("histKpiTotalCompras");
+
+    if (elKpiTotal) elKpiTotal.innerText = totalItens;
+    if (elKpiQueda) elKpiQueda.innerHTML = `${emQuedaOuEstavel} <span style="font-size:14px;">📉</span>`;
+    if (elKpiAlta) elKpiAlta.innerHTML = `${emAlta} <span style="font-size:14px;">📈</span>`;
+    if (elKpiCompras) elKpiCompras.innerText = totalComprasGeral;
+
+    window.filtrarTabelaHistorico();
+  };
+
+  window.filtrarTabelaHistorico = function() {
+    const tipo = window.historicoPrecosCache.tipoAtual;
+    const itensBase = tipo === 'produto' ? window.historicoPrecosCache.itensProdutos : window.historicoPrecosCache.itensServicos;
+
+    const termo = (document.getElementById("histFiltroBusca") ? document.getElementById("histFiltroBusca").value : "").trim().toLowerCase();
+    const ordem = document.getElementById("histFiltroOrdem") ? document.getElementById("histFiltroOrdem").value : "maisComprados";
+
+    let filtrados = itensBase.filter(it => {
+      if (!termo) return true;
+      const matchNome = it.nome.toLowerCase().includes(termo);
+      const matchFornecedor = it.compras.some(c => (c.fornecedor || "").toLowerCase().includes(termo));
+      const matchMarca = (it.marca || "").toLowerCase().includes(termo);
+      return matchNome || matchFornecedor || matchMarca;
+    });
+
+    if (ordem === "maisComprados") {
+      filtrados.sort((a, b) => b.totalCompras - a.totalCompras);
+    } else if (ordem === "maiorAlta") {
+      filtrados.sort((a, b) => b.variacaoUltima - a.variacaoUltima);
+    } else if (ordem === "maiorQueda") {
+      filtrados.sort((a, b) => a.variacaoUltima - b.variacaoUltima);
+    } else if (ordem === "nomeAsc") {
+      filtrados.sort((a, b) => a.nome.localeCompare(b.nome));
+    } else if (ordem === "recente") {
+      filtrados.sort((a, b) => b.timestampUltimaCompra - a.timestampUltimaCompra);
+    }
+
+    window.historicoPrecosCache.itensFiltrados = filtrados;
+    window.renderizarCorpoTabelaHistorico(filtrados);
+  };
+
+  window.renderizarCorpoTabelaHistorico = function(itens) {
+    const tbody = document.getElementById("histTabelaCorpo");
+    if (!tbody) return;
+
+    if (itens.length === 0) {
+      const tipo = window.historicoPrecosCache.tipoAtual;
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="8" style="text-align:center; padding:40px 20px; color:#777;">
+            <i class="fa-solid fa-folder-open" style="font-size:32px; margin-bottom:10px; display:block; color:#444;"></i>
+            Nenhum ${tipo === 'produto' ? 'produto' : 'serviço'} encontrado com os filtros aplicados.<br>
+            <span style="font-size:12px; color:#555;">Assim que você finalizar e aprovar cotações, os dados históricos de preços aparecerão aqui.</span>
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    let html = "";
+    itens.forEach(it => {
+      let badgeTendencia = "";
+      if (it.penultimoPreco !== null) {
+        if (it.variacaoUltima > 0.5) {
+          badgeTendencia = `<span style="background:rgba(255,85,85,0.18); color:#ff5555; border:1px solid rgba(255,85,85,0.4); padding:3px 8px; border-radius:12px; font-weight:bold; font-size:11px; white-space:nowrap;">📈 +${it.variacaoUltima.toFixed(1)}%</span>`;
+        } else if (it.variacaoUltima < -0.5) {
+          badgeTendencia = `<span style="background:rgba(0,255,153,0.18); color:#00ff99; border:1px solid rgba(0,255,153,0.4); padding:3px 8px; border-radius:12px; font-weight:bold; font-size:11px; white-space:nowrap;">📉 ${it.variacaoUltima.toFixed(1)}%</span>`;
+        } else {
+          badgeTendencia = `<span style="background:#222; color:#aaa; border:1px solid #444; padding:3px 8px; border-radius:12px; font-size:11px; white-space:nowrap;">⚪ Estável</span>`;
+        }
+      } else {
+        badgeTendencia = `<span style="background:#222; color:#888; border:1px solid #333; padding:3px 8px; border-radius:12px; font-size:11px; white-space:nowrap;">1ª Compra</span>`;
+      }
+
+      const chaveEscapada = encodeURIComponent(it.chave);
+
+      html += `
+        <tr style="border-bottom:1px solid #262626; transition:0.2s;" onmouseover="this.style.background='rgba(58,185,182,0.06)';" onmouseout="this.style.background='transparent';">
+          <td style="padding:12px 14px; color:#fff;">
+            <strong style="font-size:14px; color:#fff;">${it.nome}</strong><br>
+            <span style="font-size:11px; color:#888;">Último Fornecedor: <span style="color:#ccc;">${it.fornecedorUltimaCompra}</span> • Última Compra: ${it.dataUltimaCompra}</span>
+          </td>
+          <td style="padding:12px; text-align:center; color:#aaa; font-size:12px;">${it.embalagem || "-"}</td>
+          <td style="padding:12px; text-align:center; color:#fff; font-weight:bold;">
+            <span style="background:#222; border:1px solid #444; padding:3px 8px; border-radius:10px; font-size:12px;">${it.totalCompras}x</span>
+          </td>
+          <td style="padding:12px; text-align:right; color:#00ff99; font-weight:600; font-size:13px;">
+            R$ ${it.menorPreco.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}
+          </td>
+          <td style="padding:12px; text-align:right; color:#ccc; font-size:13px;">
+            R$ ${it.precoMedio.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}
+          </td>
+          <td style="padding:12px; text-align:right; color:var(--secundaria); font-weight:bold; font-size:14px;">
+            R$ ${it.ultimoPreco.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}
+          </td>
+          <td style="padding:12px; text-align:center;">${badgeTendencia}</td>
+          <td style="padding:12px; text-align:center;">
+            <button onclick="verDetalhesItemHistorico('${chaveEscapada}')" style="background:#1a1a1a; border:1px solid var(--secundaria); color:var(--secundaria); padding:6px 12px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:600; transition:0.2s;" onmouseover="this.style.background='var(--secundaria)'; this.style.color='#000';" onmouseout="this.style.background='#1a1a1a'; this.style.color='var(--secundaria)';">
+              <i class="fa-solid fa-clock-rotate-left"></i> Ver Histórico
+            </button>
+          </td>
+        </tr>
+      `;
+    });
+
+    tbody.innerHTML = html;
+  };
+
+  window.verDetalhesItemHistorico = function(chaveEncoded) {
+    const chave = decodeURIComponent(chaveEncoded);
+    const tipo = window.historicoPrecosCache.tipoAtual;
+    const lista = tipo === 'produto' ? window.historicoPrecosCache.itensProdutos : window.historicoPrecosCache.itensServicos;
+    const item = lista.find(i => i.chave === chave);
+    if (!item) return alert("Item não encontrado.");
+
+    const modal = document.getElementById("modalDetalheItemHistorico");
+    if (!modal) return;
+
+    const badge = document.getElementById("detItemBadgeTipo");
+    if (badge) {
+      badge.innerText = item.tipo === 'servico' ? 'SERVIÇO' : 'PRODUTO';
+      badge.style.color = item.tipo === 'servico' ? '#f39c12' : '#00ff99';
+    }
+
+    const titulo = document.getElementById("detItemTitulo");
+    if (titulo) titulo.innerText = item.nome;
+
+    const sub = document.getElementById("detItemSubtitulo");
+    if (sub) sub.innerText = `Total de ${item.totalCompras} compra(s) registrada(s) • Quantidade acumulada: ${item.qtdTotalAcumulada} ${item.embalagem || ''}`;
+
+    const elMenor = document.getElementById("detItemMenor");
+    const elMedio = document.getElementById("detItemMedio");
+    const elUltimo = document.getElementById("detItemUltimo");
+    const elMaior = document.getElementById("detItemMaior");
+
+    if (elMenor) elMenor.innerText = `R$ ${item.menorPreco.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+    if (elMedio) elMedio.innerText = `R$ ${item.precoMedio.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+    if (elUltimo) elUltimo.innerText = `R$ ${item.ultimoPreco.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+    if (elMaior) elMaior.innerText = `R$ ${item.maiorPreco.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+
+    const comprasOrdenadas = [...item.compras].reverse();
+    let rowsHtml = "";
+
+    comprasOrdenadas.forEach(c => {
+      let variacaoHtml = `<span style="color:#888; font-size:11px;">1ª Compra</span>`;
+      if (c.variacaoAnterior !== undefined && c.variacaoAnterior !== 0) {
+        if (c.variacaoAnterior > 0.5) {
+          variacaoHtml = `<span style="color:#ff5555; font-weight:bold; font-size:12px;">+${c.variacaoAnterior.toFixed(1)}% 📈</span>`;
+        } else if (c.variacaoAnterior < -0.5) {
+          variacaoHtml = `<span style="color:#00ff99; font-weight:bold; font-size:12px;">${c.variacaoAnterior.toFixed(1)}% 📉</span>`;
+        } else {
+          variacaoHtml = `<span style="color:#aaa; font-size:12px;">0.0% ⚪</span>`;
+        }
+      }
+
+      rowsHtml += `
+        <tr style="border-bottom:1px solid #262626; font-size:13px;">
+          <td style="padding:10px; color:#ccc;">${c.dataStr}</td>
+          <td style="padding:10px;">
+            <a href="javascript:void(0)" onclick="abrirPremiumDaEconomia('${c.cotacaoId}')" style="color:var(--secundaria); font-weight:bold; text-decoration:none;">
+              #${c.cotacaoNumero} <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:10px;"></i>
+            </a>
+          </td>
+          <td style="padding:10px; color:#fff;">
+            <strong>${c.fornecedor}</strong>
+            ${c.emailFornecedor ? `<br><span style="font-size:11px; color:#777;">${c.emailFornecedor}</span>` : ''}
+          </td>
+          <td style="padding:10px; text-align:center; color:#aaa;">${c.marca || '-'} / ${c.embalagem || '-'}</td>
+          <td style="padding:10px; text-align:center; color:#fff; font-weight:bold;">${c.quantidade}</td>
+          <td style="padding:10px; text-align:right; color:#fff; font-weight:600;">
+            R$ ${c.precoUnitario.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}
+          </td>
+          <td style="padding:10px; text-align:right; color:#ccc;">
+            R$ ${c.total.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}
+          </td>
+          <td style="padding:10px; text-align:center;">${variacaoHtml}</td>
+        </tr>
+      `;
+    });
+
+    const tbody = document.getElementById("detItemTabelaCorpo");
+    if (tbody) tbody.innerHTML = rowsHtml;
+
+    modal.style.display = "flex";
+  };
+
+  window.fecharModalHistoricoPrecos = function() {
+    const modal = document.getElementById("modalHistoricoPrecos");
+    if (modal) modal.style.display = "none";
+    document.body.style.overflow = "auto";
+  };
+
+  window.fecharModalDetalheItem = function() {
+    const modal = document.getElementById("modalDetalheItemHistorico");
+    if (modal) modal.style.display = "none";
+  };
+
+  window.exportarHistoricoExcel = function() {
+    const tipo = window.historicoPrecosCache.tipoAtual;
+    const itens = window.historicoPrecosCache.itensFiltrados && window.historicoPrecosCache.itensFiltrados.length > 0 
+      ? window.historicoPrecosCache.itensFiltrados 
+      : (tipo === 'produto' ? window.historicoPrecosCache.itensProdutos : window.historicoPrecosCache.itensServicos);
+
+    if (!itens || itens.length === 0) {
+      return alert("Nenhum dado para exportar.");
+    }
+
+    const nomeArquivo = `Historico_Precos_${tipo === 'produto' ? 'Produtos' : 'Servicos'}_${new Date().toISOString().slice(0,10)}`;
+
+    if (typeof XLSX !== "undefined") {
+      try {
+        const rows = [
+          ["Item / Descrição", "Tipo", "Unidade/Embalagem", "Marca", "Total de Compras", "Qtd Total Comprada", "Valor Total Gasto (R$)", "Menor Preço Pago (R$)", "Preço Médio Ponderado (R$)", "Último Preço Pago (R$)", "Variação Última Compra (%)", "Último Fornecedor", "Data Última Compra"]
+        ];
+
+        itens.forEach(it => {
+          rows.push([
+            it.nome,
+            it.tipo === 'produto' ? 'Produto' : 'Serviço',
+            it.embalagem || "-",
+            it.marca || "-",
+            it.totalCompras,
+            it.qtdTotalAcumulada,
+            it.valorTotalGasto,
+            it.menorPreco,
+            it.precoMedio,
+            it.ultimoPreco,
+            it.penultimoPreco !== null ? Number(it.variacaoUltima.toFixed(2)) : 0,
+            it.fornecedorUltimaCompra,
+            it.dataUltimaCompra
+          ]);
+        });
+
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.aoa_to_sheet(rows);
+        XLSX.utils.book_append_sheet(wb, ws, "Histórico de Preços");
+        XLSX.writeFile(wb, `${nomeArquivo}.xlsx`);
+        return;
+      } catch (err) {
+        console.warn("Falha no XLSX, gerando CSV...", err);
+      }
+    }
+
+    let csv = "\uFEFFItem;Tipo;Unidade/Embalagem;Total Compras;Menor Preço;Preço Médio;Último Preço;Variação (%);Último Fornecedor;Data\n";
+    itens.forEach(it => {
+      csv += `"${it.nome.replace(/"/g, '""')}";"${it.tipo}";"${it.embalagem || '-'}";${it.totalCompras};"${it.menorPreco.toFixed(2)}";"${it.precoMedio.toFixed(2)}";"${it.ultimoPreco.toFixed(2)}";"${it.variacaoUltima.toFixed(2)}%";"${(it.fornecedorUltimaCompra || '').replace(/"/g, '""')}";"${it.dataUltimaCompra}"\n`;
+    });
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `${nomeArquivo}.csv`;
+    link.click();
   };
 
   window.exportarPlanilhaRespostaParaExcel = function() {
