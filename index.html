@@ -2250,63 +2250,136 @@
   🔢 COLUNA ÍNDICE (#)
 ====================================================== */
     /* ======================================================
-      🔢 COLUNAS FIXAS (OPTIMIZED)
+      🔢 COLUNAS FIXAS DA MATRIZ (ALINHAMENTO DEFINITIVO SEM SOBREPOSIÇÃO)
    ====================================================== */
-    .matriz-cotacao th:first-child,
-    .matriz-cotacao td:first-child {
+    .wrapper-tabela-matriz .matriz-cotacao th.col-expand,
+    .wrapper-tabela-matriz .matriz-cotacao td.col-expand,
+    .matriz-cotacao th.col-expand,
+    .matriz-cotacao td.col-expand {
       position: sticky;
-      left: 0;
-      z-index: 31;
+      left: 0 !important;
+      z-index: 35;
       background: #0a0a0a;
-      width: 40px;
-      min-width: 40px;
+      width: 50px !important;
+      min-width: 50px !important;
+      max-width: 50px !important;
+      box-sizing: border-box;
+      text-align: center;
+      padding: 6px 2px !important;
+    }
+
+    .wrapper-tabela-matriz .matriz-cotacao thead th.col-expand,
+    .matriz-cotacao thead th.col-expand {
+      background: #500a40 !important;
+      z-index: 500 !important;
     }
 
     .matriz-cotacao th.col-idx,
     .matriz-cotacao td.col-idx {
       position: sticky;
-      left: 40px;
-      z-index: 31;
+      left: 50px !important;
+      z-index: 35;
       background: #0a0a0a;
-      min-width: 50px;
-      width: 50px;
+      width: 70px !important;
+      min-width: 70px !important;
+      max-width: 70px !important;
+      box-sizing: border-box;
+      text-align: center;
+      padding: 6px 2px !important;
+      border-right: 1px solid #222;
     }
 
-    .matriz-cotacao .col-fixa {
-      position: sticky;
-      left: 90px;
-      z-index: 31;
-      background: #0a0a0a;
-      min-width: 180px;
-      max-width: 220px;
+    .matriz-cotacao thead th.col-idx {
+      background: #500a40 !important;
+      z-index: 490 !important;
     }
 
-    .matriz-cotacao .col-fixa-2 {
+    .matriz-cotacao th.col-fixa,
+    .matriz-cotacao td.col-fixa,
+    .matriz-cotacao th.col-item,
+    .matriz-cotacao td.col-item {
       position: sticky;
-      left: 270px;
-      z-index: 31;
+      left: 120px !important;
+      z-index: 34;
       background: #0a0a0a;
-      min-width: 80px;
-      width: 80px;
+      width: 250px !important;
+      min-width: 250px !important;
+      max-width: 280px !important;
+      box-sizing: border-box;
+      text-align: left;
+      padding-left: 14px !important;
+      padding-right: 10px !important;
+      border-right: 1px solid #222;
     }
 
-    .matriz-cotacao .col-fixa-emb {
-      position: sticky;
-      left: 350px;
-      z-index: 31;
-      background: #0a0a0a;
-      min-width: 100px;
-      width: 100px;
+    .matriz-cotacao thead th.col-fixa,
+    .matriz-cotacao thead th.col-item {
+      background: #500a40 !important;
+      z-index: 480 !important;
+      padding-left: 14px !important;
     }
 
-    .matriz-cotacao .col-fixa-3 {
+    .matriz-cotacao th.col-fixa-2,
+    .matriz-cotacao td.col-fixa-2 {
       position: sticky;
-      left: 450px;
+      left: 370px !important;
+      z-index: 33;
+      background: #0a0a0a;
+      width: 80px !important;
+      min-width: 80px !important;
+      max-width: 80px !important;
+      box-sizing: border-box;
+      text-align: center;
+      border-right: 1px solid #222;
+    }
+
+    .matriz-cotacao thead th.col-fixa-2 {
+      background: #500a40 !important;
+      z-index: 470 !important;
+    }
+
+    .matriz-cotacao th.col-fixa-emb,
+    .matriz-cotacao td.col-fixa-emb {
+      position: sticky;
+      left: 450px !important;
+      z-index: 32;
+      background: #0a0a0a;
+      width: 90px !important;
+      min-width: 90px !important;
+      max-width: 90px !important;
+      box-sizing: border-box;
+      text-align: center;
+      border-right: 1px solid #222;
+    }
+
+    .matriz-cotacao thead th.col-fixa-emb {
+      background: #500a40 !important;
+      z-index: 460 !important;
+    }
+
+    .matriz-cotacao th.col-fixa-3,
+    .matriz-cotacao td.col-fixa-3,
+    .matriz-cotacao th.col-qtd,
+    .matriz-cotacao td.col-qtd {
+      position: sticky;
+      left: 540px !important;
       z-index: 31;
       background: #0a0a0a;
-      min-width: 60px;
-      width: 60px;
-      border-right: 2px solid #333;
+      width: 60px !important;
+      min-width: 60px !important;
+      max-width: 60px !important;
+      box-sizing: border-box;
+      text-align: center;
+      border-right: 2px solid #444;
+      box-shadow: 4px 0 8px rgba(0, 0, 0, 0.4);
+    }
+
+    .matriz-cotacao thead th.col-fixa-3,
+    .matriz-cotacao thead th.col-qtd {
+      background: #500a40 !important;
+      z-index: 450 !important;
+      border-right: 2px solid #444;
+      box-shadow: 4px 0 8px rgba(0, 0, 0, 0.4);
     }
 
 
@@ -2560,40 +2633,53 @@
       overflow-y: auto !important;
     }
 
-    .compact-mode .matriz-cotacao .col-fixa {
-      min-width: 180px !important;
-      left: 80px !important;
-    }
-
-    .compact-mode .matriz-cotacao .col-fixa-2 {
-      min-width: 90px !important;
-      width: 90px !important;
-      left: 260px !important;
-    }
-
-    .compact-mode .matriz-cotacao .col-fixa-emb {
-      min-width: 100px !important;
-      width: 100px !important;
-      left: 350px !important;
-    }
-
-    .compact-mode .matriz-cotacao .col-fixa-3 {
-      min-width: 60px !important;
-      width: 60px !important;
-      left: 450px !important;
-    }
-
+    .compact-mode .matriz-cotacao th.col-expand,
+    .compact-mode .matriz-cotacao td.col-expand,
     .compact-mode .matriz-cotacao th:first-child,
     .compact-mode .matriz-cotacao td:first-child {
-      width: 30px !important;
-      min-width: 30px !important;
+      width: 35px !important;
+      min-width: 35px !important;
+      max-width: 35px !important;
+      left: 0 !important;
     }
 
     .compact-mode .matriz-cotacao th.col-idx,
     .compact-mode .matriz-cotacao td.col-idx {
+      width: 65px !important;
+      min-width: 65px !important;
+      max-width: 65px !important;
+      left: 35px !important;
+    }
+
+    .compact-mode .matriz-cotacao .col-fixa,
+    .compact-mode .matriz-cotacao .col-item {
+      width: 200px !important;
+      min-width: 200px !important;
+      max-width: 200px !important;
+      left: 100px !important;
+      padding-left: 10px !important;
+    }
+
+    .compact-mode .matriz-cotacao .col-fixa-2 {
+      width: 75px !important;
+      min-width: 75px !important;
+      max-width: 75px !important;
+      left: 300px !important;
+    }
+
+    .compact-mode .matriz-cotacao .col-fixa-emb {
+      width: 85px !important;
+      min-width: 85px !important;
+      max-width: 85px !important;
+      left: 375px !important;
+    }
+
+    .compact-mode .matriz-cotacao .col-fixa-3,
+    .compact-mode .matriz-cotacao .col-qtd {
       width: 50px !important;
       min-width: 50px !important;
-      left: 30px !important;
+      max-width: 50px !important;
+      left: 460px !important;
     }
 
     .compact-mode .badge-idx {
@@ -3402,92 +3488,7 @@
       display: none;
     }
 
-    /* ======================================================
-   🔘 COLUNA DO BOTÃO EXPANDIR (FIXA NO ZERO)
-====================================================== */
-    .matriz-cotacao th.col-expand,
-    .matriz-cotacao td.col-expand {
-      position: sticky;
-      left: 0;
-      z-index: 400;
-      /* O maior de todos para ficar por cima */
-      background: #111;
-      width: 15px;
-      min-width: 15px;
-      max-width: 15px;
-      text-align: center;
-      border-right: 1px solid #333;
-    }
-
-    /* No cabeçalho, o fundo deve ser roxo */
-    .matriz-cotacao thead th.col-expand {
-      background: #661155;
-      z-index: 500;
-    }
-
-    /* ======================================================
-   🔢 COLUNA # (FIXA APÓS O BOTÃO)
-====================================================== */
-    .matriz-cotacao th.col-idx,
-    .matriz-cotacao td.col-idx {
-      position: sticky;
-      left: 50px;
-      /* Largura da col-expand */
-      z-index: 390;
-      background: #111;
-      min-width: 70px;
-      max-width: 70px;
-      text-align: center;
-      border-right: 1px solid #333;
-    }
-
-    .matriz-cotacao thead th.col-idx {
-      background: #661155;
-      z-index: 490;
-    }
-
-    /* ======================================================
-   📄 COLUNA ITEM (FIXA APÓS O #)
-====================================================== */
-    .matriz-cotacao th.col-item,
-    .matriz-cotacao td.col-item {
-      position: sticky;
-      left: 120px;
-      /* 50 (expand) + 70 (#) */
-      z-index: 380;
-      background: #111;
-      min-width: 300px;
-      max-width: 300px;
-      text-align: left;
-      border-right: 1px solid #333;
-    }
-
-    .matriz-cotacao thead th.col-item {
-      background: #661155;
-      z-index: 480;
-    }
-
-    /* ======================================================
-   🔢 COLUNA QTD (FIXA APÓS O ITEM)
-====================================================== */
-    .matriz-cotacao th.col-qtd,
-    .matriz-cotacao td.col-qtd {
-      position: sticky;
-      left: 420px;
-      /* 50 + 70 + 300 */
-      z-index: 370;
-      background: #111;
-      min-width: 50px;
-      max-width: 50px;
-      text-align: center;
-      box-shadow: 4px 0 6px rgba(0, 0, 0, 0.5);
-      /* Sombra final da parte fixa */
-    }
-
-    .matriz-cotacao thead th.col-qtd {
-      background: #661155;
-      z-index: 470;
-    }
+    /* Colunas fixas gerenciadas pelo bloco COLUNAS FIXAS DA MATRIZ acima */
 
     /* Ajuste do botão dentro da célula */
     .btn-expand {
@@ -4051,6 +4052,373 @@
         0% { box-shadow: 0 0 10px 5px rgba(0, 255, 0, 0.8) !important; transform: scale(1.05); }
         50% { box-shadow: 0 0 2px 1px rgba(0, 255, 0, 0.2) !important; transform: scale(1); }
         100% { box-shadow: 0 0 10px 5px rgba(0, 255, 0, 0.8) !important; transform: scale(1.05); }
+    }
+        /* ======================================================
+       🏆 TABELA DE SCORECARD (VENDOR RATING - RANKING GERAL)
+       ====================================================== */
+    .tabela-scorecard-ranking {
+      width: 100% !important;
+      border-collapse: collapse !important;
+      margin-top: 10px !important;
+      background: #111 !important;
+    }
+
+    .tabela-scorecard-ranking thead tr {
+      background: #661155 !important;
+      color: #ffffff !important;
+    }
+
+    .tabela-scorecard-ranking thead th {
+      padding: 14px 15px !important;
+      font-size: 14px !important;
+      font-weight: 700 !important;
+      text-align: center !important;
+      border: none !important;
+      position: static !important;
+      white-space: nowrap !important;
+    }
+
+    .tabela-scorecard-ranking thead th:first-child {
+      text-align: left !important;
+      width: 38% !important;
+      min-width: 260px !important;
+      max-width: none !important;
+      padding-left: 20px !important;
+    }
+
+    .tabela-scorecard-ranking tbody tr {
+      background: transparent !important;
+      transition: background 0.2s ease !important;
+    }
+
+    .tabela-scorecard-ranking tbody tr:hover {
+      background: rgba(102, 17, 85, 0.2) !important;
+    }
+
+    .tabela-scorecard-ranking tbody td {
+      padding: 16px 15px !important;
+      border-bottom: 1px solid #222 !important;
+      text-align: center !important;
+      position: static !important;
+      background: transparent !important;
+      font-size: 14px !important;
+    }
+
+    .tabela-scorecard-ranking tbody td:first-child {
+      text-align: left !important;
+      width: 38% !important;
+      min-width: 260px !important;
+      max-width: none !important;
+      position: static !important;
+      padding-left: 20px !important;
+      white-space: normal !important;
+      word-break: break-word !important;
+    }
+
+    #gestaoScorecards table th:first-child,
+    #gestaoScorecards table td:first-child {
+      position: static !important;
+      width: 38% !important;
+      min-width: 260px !important;
+      max-width: none !important;
+      text-align: left !important;
+      padding-left: 20px !important;
+    }
+
+    /* Suporte a Temas Claros */
+    html:not([data-tema="original"]) .tabela-scorecard-ranking {
+      background: #ffffff !important;
+    }
+    html:not([data-tema="original"]) .tabela-scorecard-ranking thead tr {
+      background: var(--primaria) !important;
+    }
+    html:not([data-tema="original"]) .tabela-scorecard-ranking thead th {
+      color: #ffffff !important;
+    }
+    html:not([data-tema="original"]) .tabela-scorecard-ranking tbody td {
+      border-bottom: 1px solid #e2e8f0 !important;
+      color: var(--texto, #0f172a) !important;
+    }
+    html:not([data-tema="original"]) .tabela-scorecard-ranking tbody tr:hover {
+      background: #f8fafc !important;
+    }
+
+</style>
+
+    <style id="estilos-mobile-responsivo">
+    /* ========================================================
+       📱 RESPONSIVIDADE MOBILE GLOBAL (SMARTPHONES E TABLETS)
+       ======================================================== */
+    @media (max-width: 768px) {
+      /* 1. RESET E CONTAINERS GERAIS */
+      body, html {
+        overflow-x: hidden !important;
+        width: 100% !important;
+        max-width: 100vw !important;
+      }
+
+      /* 2. CABEÇALHOS (SUB-TELAS E MENU PRINCIPAL) */
+      section:not(#dashboard) header {
+        padding: 10px 12px !important;
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        gap: 10px !important;
+        min-height: 52px !important;
+        box-sizing: border-box !important;
+      }
+
+      section:not(#dashboard) header .btn-sair {
+        position: static !important;
+        flex-shrink: 0 !important;
+        margin: 0 !important;
+        padding: 6px 10px !important;
+        font-size: 11px !important;
+        white-space: nowrap !important;
+      }
+
+      section:not(#dashboard) header h1 {
+        font-size: 1.1rem !important;
+        text-align: left !important;
+        flex: 1 !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        margin: 0 !important;
+      }
+
+      /* 3. CARDS DO DASHBOARD */
+      .dashboard {
+        padding: 15px 10px !important;
+        gap: 12px !important;
+        justify-content: center !important;
+      }
+
+      .card {
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        padding: 20px 15px !important;
+        margin: 0 0 10px 0 !important;
+      }
+
+      /* 4. SEÇÕES INTERNAS */
+      section > div,
+      section > div[style*="width:90%"],
+      section > div[style*="width: 90%"] {
+        width: 96% !important;
+        max-width: 96% !important;
+        padding: 15px 10px !important;
+        margin: 15px auto !important;
+        box-sizing: border-box !important;
+      }
+
+      /* 5. CARDS DE COTAÇÃO (.linha-cotacao) */
+      .linha-cotacao {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 12px !important;
+        padding: 14px 12px !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+      }
+
+      .linha-cotacao .info {
+        width: 100% !important;
+        word-break: break-word !important;
+      }
+
+      .linha-cotacao .acoes {
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 8px !important;
+      }
+
+      .linha-cotacao .acoes button {
+        width: 100% !important;
+        min-width: 0 !important;
+        box-sizing: border-box !important;
+        padding: 10px 12px !important;
+        font-size: 13px !important;
+        text-align: center !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 6px !important;
+      }
+
+      /* 6. MODAIS DO SISTEMA */
+      .modal {
+        padding: 10px 5px !important;
+        box-sizing: border-box !important;
+      }
+
+      .modal-content,
+      #modalAnaliseCotacao .modal-content,
+      #modalResponder .modal-content,
+      #modalRelatorioAuditoriaIA .modal-content {
+        width: 96vw !important;
+        max-width: 96vw !important;
+        max-height: 92vh !important;
+        overflow-y: auto !important;
+        padding: 15px 10px !important;
+        box-sizing: border-box !important;
+        margin: 10px auto !important;
+      }
+
+      /* 7. PAINEL DE PERFORMANCE DO SCORECARD (MODAL ANÁLISE) */
+      #painelPerformanceScorecard {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 12px !important;
+        padding: 12px !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+        overflow-x: hidden !important;
+      }
+
+      #painelPerformanceScorecard > div:first-child {
+        border-right: none !important;
+        border-bottom: 1px solid #333 !important;
+        padding-right: 0 !important;
+        padding-bottom: 8px !important;
+      }
+
+      #painelPerformanceScorecard > div:last-child {
+        display: flex !important;
+        flex-direction: column !important;
+        width: 100% !important;
+        gap: 8px !important;
+      }
+
+      #painelPerformanceScorecard > div:last-child > div {
+        min-width: 0 !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+      }
+
+      /* 8. BARRA DE FILTROS RÁPIDOS DA AUDITORIA I.A. */
+      #barraFiltrosAuditoriaIA {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 10px !important;
+        padding: 10px !important;
+      }
+
+      #barraFiltrosAuditoriaIA > div:first-child {
+        flex-wrap: wrap !important;
+        gap: 6px !important;
+        width: 100% !important;
+      }
+
+      #barraFiltrosAuditoriaIA > div:first-child button {
+        flex: 1 1 calc(50% - 6px) !important;
+        font-size: 10px !important;
+        padding: 6px 8px !important;
+        justify-content: center !important;
+      }
+
+      /* 9. MATRIZ DE COTAÇÃO E TABELAS COM ROLAGEM HORIZONTAL */
+      .wrapper-tabela-matriz,
+      .tabela-responsiva-wrapper,
+      .wrapper-matriz {
+        width: 100% !important;
+        max-width: 100% !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        display: block !important;
+        margin-bottom: 15px !important;
+      }
+
+      .matriz-cotacao,
+      .tabela-responsiva-wrapper table {
+        min-width: 580px !important;
+      }
+
+      /* 10. BOTÕES DE AÇÃO NA MATRIZ DE ANÁLISE */
+      .botoes-acao-container {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 10px !important;
+        width: 100% !important;
+        padding: 10px 0 !important;
+        box-sizing: border-box !important;
+      }
+
+      .botoes-acao-container button {
+        width: 100% !important;
+        min-width: 0 !important;
+        flex: 1 1 auto !important;
+        font-size: 12px !important;
+        padding: 12px 10px !important;
+        box-sizing: border-box !important;
+        justify-content: center !important;
+      }
+
+      /* 11. TELA DE APROVAÇÃO (BOTÕES DE AÇÃO INFERIORES) */
+      .acoes-aprovacao-grid,
+      div:has(> .btn-rejeitar) {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 10px !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+      }
+
+      .acoes-aprovacao-grid button,
+      div:has(> .btn-rejeitar) button {
+        width: 100% !important;
+        min-width: 0 !important;
+        box-sizing: border-box !important;
+        padding: 12px 16px !important;
+        font-size: 13px !important;
+        justify-content: center !important;
+        margin: 0 !important;
+      }
+
+      /* 12. ABAS DE NAVEGAÇÃO DE STATUS COM ROLAGEM SUAVE */
+      .tabs-status-container,
+      div:has(> .btn-status) {
+        max-width: 100% !important;
+        width: 100% !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        padding-bottom: 6px !important;
+      }
+
+      .tabs-status-container > div,
+      div:has(> .btn-status) > div {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        justify-content: flex-start !important;
+        width: max-content !important;
+        gap: 8px !important;
+        padding: 0 4px !important;
+      }
+
+      .btn-status {
+        flex-shrink: 0 !important;
+        white-space: nowrap !important;
+        font-size: 12px !important;
+        padding: 8px 12px !important;
+      }
+
+      /* 13. GRIDS DE FORMULÁRIO (INPUTS 2 COLUNAS -> 1 COLUNA) */
+      div[style*="grid-template-columns:1fr 1fr"],
+      div[style*="grid-template-columns: 1fr 1fr"] {
+        grid-template-columns: 1fr !important;
+        column-gap: 12px !important;
+        row-gap: 12px !important;
+      }
+
+      .cabecalho-cotacao .linha-datas {
+        flex-direction: column !important;
+        gap: 8px !important;
+      }
     }
     </style>
     </head>
@@ -4766,7 +5134,7 @@
             </select>
           </div>
           <div style="overflow-x: auto;">
-            <table class="matriz-cotacao" style="width: 100%;">
+            <table class="tabela-scorecard-ranking" style="width: 100%;">
               <thead>
                 <tr>
                   <th>Fornecedor</th>
@@ -6118,8 +6486,8 @@
    box-shadow:0 0 15px rgba(102,17,85,0.6);
  ">
 
-      <div style="max-width: fit-content; margin: 0 auto;">
-        <div style="display:flex; gap:10px; margin-bottom:15px; flex-wrap:nowrap; justify-content:center;">
+      <div class="tabs-status-container" style="max-width: 100%; margin: 0 auto; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 6px;">
+        <div style="display:flex; gap:10px; margin-bottom:15px; flex-wrap:nowrap; justify-content:center; width: max-content; min-width: 100%;">
           <button class="btn-status" id="btnPublicadas" onclick="toggleListaRespondidas('publicadas')">
             📢 Publicadas
           </button>
@@ -8138,8 +8506,10 @@
 
       const perfil = perfilSnap.data();
 
-      if (perfil.tipo !== "administrador") {
-        esconderCardUsuarios();
+      if (perfil.tipo !== "administrador" && perfil.tipo !== "comprador") {
+        if (typeof esconderCardUsuarios === "function") {
+          esconderCardUsuarios();
+        }
       }
 
     } catch (erro) {
@@ -8446,6 +8816,7 @@
       mostrar("Cadastrar Material");
       mostrar("Cadastrar Serviço");
       mostrar("Cotações Respondidas");
+      mostrar("Gerenciar Usuários");
       mostrar("Gestão Financeira");
       
       // mostrar("Configurações");
@@ -14834,7 +15205,8 @@ FORMATO OBRIGATÓRIO DE RESPOSTA (NÃO USE NEGRITO NAS CHAVES):
     const arquivosCotacao = JSON.parse(localStorage.getItem(idDoc)) || [];
 
     let html = `
-       <table style="width:100%;border-collapse:collapse;margin-bottom:15px;">
+       <div class="tabela-responsiva-wrapper" style="width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; margin-bottom:15px;">
+       <table style="width:100%; min-width:620px; border-collapse:collapse; margin-bottom:0;">
      <thead style="background:#661155;">
        <tr>
          <th style="width: 40px; text-align: center; padding:8px;">
@@ -14889,15 +15261,16 @@ FORMATO OBRIGATÓRIO DE RESPOSTA (NÃO USE NEGRITO NAS CHAVES):
     html += `
      </tbody>
    </table>
+   </div>
 
    <h3 style="margin:10px 0;">
      💰 Total Geral: R$ ${total.toFixed(2)}
    </h3>
 
    <!-- 🔘 AÇÕES -->
-       <div style="
-     display:grid !important;
-     grid-template-columns: auto auto auto auto !important;
+       <div class="acoes-aprovacao-grid" style="
+     display:grid;
+     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
      gap:10px;
      margin-top:20px;
      justify-content:center;
@@ -14919,7 +15292,7 @@ FORMATO OBRIGATÓRIO DE RESPOSTA (NÃO USE NEGRITO NAS CHAVES):
          cursor:pointer;
          font-weight:bold;
          display:flex; align-items:center; gap:6px;
-         width: auto !important;
+         width: auto;
        ">
            <i class="fa-solid fa-folder-open"></i> Ver Anexos
          </button>
@@ -14935,7 +15308,7 @@ FORMATO OBRIGATÓRIO DE RESPOSTA (NÃO USE NEGRITO NAS CHAVES):
          padding:10px 22px;
          border-radius:6px;
          cursor:pointer;
-         width: auto !important;
+         width: auto;
        ">
            🗺️ Mapa de Preços
          </button>
@@ -14951,7 +15324,7 @@ FORMATO OBRIGATÓRIO DE RESPOSTA (NÃO USE NEGRITO NAS CHAVES):
          padding:10px 22px;
          border-radius:6px;
          cursor:pointer;
-         width: auto !important;
+         width: auto;
        ">
            ✔ Aprovar Itens Selecionados
          </button>
@@ -14968,7 +15341,7 @@ FORMATO OBRIGATÓRIO DE RESPOSTA (NÃO USE NEGRITO NAS CHAVES):
          padding:10px 22px;
          border-radius:6px;
          cursor:pointer;
-         width: auto !important;
+         width: auto;
        ">
            ❌ Rejeitar
          </button>
@@ -15406,9 +15779,9 @@ FORMATO OBRIGATÓRIO DE RESPOSTA (NÃO USE NEGRITO NAS CHAVES):
          <table class="matriz-cotacao">
            <thead>
              <tr>
-               <th style="width:40px; text-align:center;"></th>
-               <th class="col-idx" style="width:60px; text-align:center;">#</th>
-               <th class="col-fixa">Item</th>
+               <th style="width:50px; text-align:center;" class="col-expand"></th>
+               <th class="col-idx" style="width:70px; text-align:center;">#</th>
+               <th class="col-fixa" style="text-align:left; padding-left:14px;">Item</th>
                
 
                <th class="col-fixa-2" style="text-align:center;">Marca</th>
@@ -15444,11 +15817,11 @@ FORMATO OBRIGATÓRIO DE RESPOSTA (NÃO USE NEGRITO NAS CHAVES):
 
       html += `
              <tr>
-               <td style="text-align:center;"></td>
+               <td style="text-align:center;" class="col-expand"></td>
                <td class="col-idx" style="text-align:center;">
                  <span class="badge-idx">#${idx + 1}</span>
                </td>
-               <td class="col-fixa item">${nomeProd}</td>
+               <td class="col-fixa item" style="padding-left:14px;">${nomeProd}</td>
                <td class="col-fixa-2 marca" style="text-align:center;">
                  <input type="text" class="input-edit-marca" data-idx="${idx}" data-nome="${nomeProd}" value="${prod.marca && prod.marca !== '-' ? prod.marca : ''}" placeholder="-" style="width:90%; background:#1a1a1a; color:#fff; border:1px solid #444; border-radius:3px; padding:4px; text-align:center;">
                </td>
@@ -19408,17 +19781,18 @@ linhas.forEach((tr, index) => {
     }
 
     let html = resumoPerformanceHtml + barraFiltrosHtml + `
-       <table class="matriz-cotacao" style="width:100%; border-collapse:collapse; margin-top:10px;">
+       <div class="wrapper-tabela-matriz" style="width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; margin-top:10px;">
+       <table class="matriz-cotacao" style="width:100%; min-width:650px; border-collapse:collapse;">
            <thead style="background:#500a40; color:white;">
                <tr>
-                   <th style="width:40px; text-align:center; padding:12px;">
+                   <th style="width:50px; text-align:center; padding:8px 4px;" class="col-expand">
                        <i id="iconExpandirGlobal" class="fa-solid fa-expand" 
                           style="cursor:pointer; font-size:14px; color:#3ab9b6;" 
                           onclick="toggleExpansaoColunas()"
                           title="Expandir Visualização"></i>
                    </th>
-                   <th style="width:55px; text-align:center;" class="col-idx">#</th>
-                   <th class="col-fixa" style="text-align:left; padding-left:10px;">Item</th>
+                   <th style="width:70px; text-align:center; padding:8px 2px;" class="col-idx">#</th>
+                   <th class="col-fixa" style="text-align:left; padding-left:14px;">Item</th>
                    <th class="col-fixa-2" style="text-align:center;">Marca</th>
                    <th class="col-fixa-emb" style="text-align:center;">Embalagem</th>
                    <th class="col-fixa-3" style="text-align:center;">Qtd</th>`;
@@ -19566,11 +19940,11 @@ linhas.forEach((tr, index) => {
         : (ehDivergenciaLinha ? "border-bottom:1px solid #222; background:rgba(239,68,68,0.03);" : "border-bottom:1px solid #222;");
 
       html += `<tr class="linha-item-cotacao" data-status-auditoria="${stLinha}" style="${rowStyle} ${bordaLateral}">
-               <td style="text-align:center; padding:10px;"></td>
+               <td style="text-align:center; padding:8px 4px;" class="col-expand"></td>
                <td style="text-align:center;" class="col-idx">
                  <span style="display:inline-block; padding:4px 8px; background:${ehNaoComprar ? '#2a1111' : (ehDivergenciaLinha ? '#331111' : '#000')}; border:1px solid ${ehNaoComprar ? '#ef4444' : (ehDivergenciaLinha ? '#ef4444' : '#7e22ce')}; color:${ehNaoComprar ? '#fca5a5' : (ehDivergenciaLinha ? '#fca5a5' : '#d8b4fe')}; border-radius:6px; font-weight:bold; font-size:11px;">#${idx + 1} ${ehNaoComprar ? '❌' : (ehDivergenciaLinha ? '🚨' : (ehConformeLinha ? '🟢' : ''))}</span>
                </td>
-               <td style="padding:12px 10px; color:white;" class="col-fixa">
+               <td style="padding:12px 14px; color:white;" class="col-fixa">
                    <div style="font-weight:bold; font-size:14px; margin-bottom:3px; display:flex; align-items:center; flex-wrap:wrap; gap:8px;">
                      ${nomeItem}
                      ${ehNaoComprar ? `<span style="background:rgba(239,68,68,0.2); color:#ef4444; border:1px solid #ef4444; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:bold;">NÃO COMPRAR</span>` : ''}
@@ -19732,7 +20106,7 @@ linhas.forEach((tr, index) => {
             </tr>
         </tfoot>`;
 
-    html += `</table>`;
+    html += `</table></div>`;
 
 
     // 🏆 STATUS (Se for override/accordion, adiciona aqui no final do HTML)
@@ -19745,7 +20119,7 @@ linhas.forEach((tr, index) => {
     const isAprovador = (usuarioLogado.tipo === "aprovador" || usuarioLogado.tipo === "administrador");
 
     if (isAnalise) {
-      html += `<div class="botoes-acao-container" style="margin-top:30px; display:flex; gap:10px; flex-direction: row; justify-content: center; align-items: center; flex-wrap: nowrap; width: 100%; padding: 10px 0;">`;
+      html += `<div class="botoes-acao-container" style="margin-top:30px; display:flex; gap:10px; flex-direction: row; justify-content: center; align-items: center; flex-wrap: wrap; width: 100%; padding: 10px 0;">`;
 
       if (cotacao.status === "aprovacao") {
         // No status de aprovação, não mostramos botões de ação na matriz de análise.
@@ -20130,6 +20504,7 @@ linhas.forEach((tr, index) => {
   window.enviarParaAprovacao = async function () {
     // Tenta pegar o número da cotação do título ou do contexto
     let numeroCotacao = null;
+    const modal = document.getElementById("modalAnaliseCotacao");
 
     // Tenta IDs conhecidos do H1
     const titleEl = document.getElementById("analiseNumero") || document.getElementById("cotacaoNumero");
@@ -20140,66 +20515,172 @@ linhas.forEach((tr, index) => {
 
     if (!numeroCotacao) {
       // Fallback: Tenta pegar do atributo do modal se houver
-      const modal = document.getElementById("modalAnaliseCotacao");
       if (modal && modal.getAttribute("data-cotacao")) {
         numeroCotacao = modal.getAttribute("data-cotacao");
       }
+    }
+
+    if (!numeroCotacao && window.cotacaoAtualPDF) {
+      numeroCotacao = String(window.cotacaoAtualPDF.numero || window.cotacaoAtualPDF.id || "").trim();
     }
 
     if (!numeroCotacao) return alert("Erro ao identificar cotação. Tente reabrir a análise.");
 
     if (!confirm("Confirma o envio desta cotação para aprovação final?")) return;
 
+    const idSemPrefixo = String(numeroCotacao).replace(/^COT-/i, "").trim();
+    const idComPrefixo = "COT-" + idSemPrefixo;
+    const modalCotacaoAttr = (modal && modal.getAttribute("data-cotacao")) ? String(modal.getAttribute("data-cotacao")).trim() : "";
+    const candidatosId = [...new Set([String(numeroCotacao).trim(), idSemPrefixo, idComPrefixo, modalCotacaoAttr].filter(Boolean))];
+
     // 1. Carrega dados
     let cotacoes = JSON.parse(localStorage.getItem("cotacoes")) || [];
-    const index = cotacoes.findIndex(c => c.numero === numeroCotacao || c.id === numeroCotacao);
+    let index = cotacoes.findIndex(c =>
+      c && (candidatosId.includes(String(c.numero || "").trim()) || candidatosId.includes(String(c.id || "").trim()))
+    );
+
+    if (index === -1 && window.cotacaoAtualPDF) {
+      cotacoes.push(window.cotacaoAtualPDF);
+      index = cotacoes.length - 1;
+    }
 
     if (index === -1) return alert("Cotação não encontrada na base.");
     let cotacao = cotacoes[index];
 
+    const chavesCotacao = [...new Set([
+      ...candidatosId,
+      String(cotacao.numero || "").trim(),
+      String(cotacao.id || "").trim()
+    ].filter(Boolean))];
+
     const decisoes = JSON.parse(localStorage.getItem("decisoesAnalise")) || {};
-    const decisoesCotacao = decisoes[numeroCotacao] || {};
+    const decisoesMem = window.decisoesAnalise || {};
+    const decisoesCotacao = { ...(cotacao.decisoes || {}) };
+    chavesCotacao.forEach(k => {
+      if (decisoes[k] && typeof decisoes[k] === "object") Object.assign(decisoesCotacao, decisoes[k]);
+      if (decisoesMem[k] && typeof decisoesMem[k] === "object") Object.assign(decisoesCotacao, decisoesMem[k]);
+    });
 
-    // 2. Carrega respostas — merge de LocalStorage + cotacao.respostasFornecedores (RTDB)
-    const norm = (s) => (s || "").toLowerCase().trim();
-    const listaFornecedoresLocal = JSON.parse(localStorage.getItem("fornecedores")) || [];
-    let respostas = [];
-    const emailsJaAdicionados = new Set();
-
-    // A. Varredura no LocalStorage (chaves individuais)
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key.includes(`res_${cotacao.id}_`) || key.includes(`resposta_${cotacao.numero}_`) || key.includes(`res_${cotacao.numero}_`)) {
-        try {
-          const r = JSON.parse(localStorage.getItem(key));
-          if (r && (r.email || r.emailFornecedor)) {
-            const em = norm(r.email || r.emailFornecedor);
-            if (!emailsJaAdicionados.has(em)) { respostas.push(r); emailsJaAdicionados.add(em); }
+    // Captura também o que está selecionado nos <select> visíveis no modal de análise
+    const selectsDom = {};
+    if (modal) {
+      modal.querySelectorAll("select[onchange*='atualizarDecisaoV3']").forEach((sel, sIdx) => {
+        const onchangeAttr = sel.getAttribute("onchange") || "";
+        const m = onchangeAttr.match(/atualizarDecisaoV3\([^,]+,\s*['"]?(\d+)['"]?/);
+        const itemIdx = m ? Number(m[1]) : sIdx;
+        const opt = sel.options[sel.selectedIndex];
+        if (sel.value) {
+          if (!decisoesCotacao[`item_${itemIdx}`]) {
+            decisoesCotacao[`item_${itemIdx}`] = sel.value;
           }
-        } catch (e) { }
-      }
-    }
-
-    // B. Merge com cotacao.respostasFornecedores (fonte principal do RTDB)
-    if (Array.isArray(cotacao.respostasFornecedores)) {
-      cotacao.respostasFornecedores.forEach(r => {
-        if (r && (r.email || r.emailFornecedor)) {
-          const em = norm(r.email || r.emailFornecedor);
-          if (!emailsJaAdicionados.has(em)) { respostas.push(r); emailsJaAdicionados.add(em); }
+          selectsDom[itemIdx] = {
+            value: sel.value,
+            nome: opt ? (opt.getAttribute("data-nome") || opt.text.split(" - R$")[0].trim()) : "",
+            texto: opt ? opt.text : ""
+          };
         }
       });
     }
 
-        // 3. Monta a lista de ADJUDICACAO (Vencedores)
+    // 2. Carrega respostas — merge de LocalStorage + cotacao.respostasFornecedores (RTDB)
+    const norm = (s) => String(s || "").toLowerCase().trim();
+    const normalizarTexto = (t) => String(t || "").toLowerCase().replace(/\s+/g, " ").trim();
+    const getFornKey = (r) => norm(r?.email || r?.emailFornecedor || r?.fornecedor || r?.fornecedorNome || "");
+    const extrairPreco = (rawVal) => {
+      if (typeof rawVal === "number") return isNaN(rawVal) ? 0 : rawVal;
+      if (typeof rawVal === "string") {
+        const limpo = rawVal.replace(/[R$\s]/g, "");
+        if (limpo.includes(",")) {
+          return parseFloat(limpo.replace(/\./g, "").replace(",", ".")) || 0;
+        }
+        return parseFloat(limpo) || 0;
+      }
+      return Number(rawVal) || 0;
+    };
+
+    const listaFornecedoresLocal = JSON.parse(localStorage.getItem("fornecedores")) || [];
+    let respostas = [];
+    const emailsJaAdicionados = new Set();
+
+    const adicionarResposta = (r) => {
+      if (!r || typeof r !== "object") return;
+      const em = getFornKey(r);
+      if (em && !emailsJaAdicionados.has(em)) {
+        respostas.push(r);
+        emailsJaAdicionados.add(em);
+      }
+    };
+
+    // A. Merge com cotacao.respostasFornecedores (suporta Array e Object do RTDB)
+    if (Array.isArray(cotacao.respostasFornecedores)) {
+      cotacao.respostasFornecedores.forEach(adicionarResposta);
+    } else if (cotacao.respostasFornecedores && typeof cotacao.respostasFornecedores === "object") {
+      Object.values(cotacao.respostasFornecedores).forEach(adicionarResposta);
+    }
+
+    // Fallback caso respostasFornecedores esteja em window.cotacaoAtualPDF
+    if (respostas.length === 0 && window.cotacaoAtualPDF && window.cotacaoAtualPDF.respostasFornecedores) {
+      const rf = window.cotacaoAtualPDF.respostasFornecedores;
+      (Array.isArray(rf) ? rf : Object.values(rf)).forEach(adicionarResposta);
+    }
+
+    // B. Varredura no LocalStorage (chaves individuais)
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key) continue;
+      if (chavesCotacao.some(idK => key.includes(`res_${idK}_`) || key.includes(`resposta_${idK}_`) || key.includes(`RESPOSTA_${idK}_`))) {
+        try {
+          const r = JSON.parse(localStorage.getItem(key));
+          adicionarResposta(r);
+        } catch (e) { }
+      }
+    }
+
+    // 3. Monta a lista de ADJUDICACAO (Vencedores)
     const adjudicacao = [];
     const motivosArmazenados = JSON.parse(localStorage.getItem('motivosNaoComprar')) || {};
-    const motivosCotacao = motivosArmazenados[numeroCotacao] || {};
+    const motivosCotacao = { ...(cotacao.motivosNaoComprar || {}) };
+    chavesCotacao.forEach(k => {
+      if (motivosArmazenados[k]) Object.assign(motivosCotacao, motivosArmazenados[k]);
+    });
     const itensNaoComprados = [];
+    const produtos = cotacao.produtos || cotacao.itens || [];
+
+    const acharItemNaResposta = (r, prod, idx) => {
+      if (!r) return null;
+      const itensArr = Array.isArray(r.itens)
+        ? r.itens
+        : (r.itens && typeof r.itens === "object" ? Object.values(r.itens) : []);
+      const nomeItem = prod.nome || prod.descricao || ("Item " + (idx + 1));
+      const nomeProd = prod.produto || nomeItem;
+
+      let pItem = itensArr.find(it =>
+        it && (
+          normalizarTexto(it.produto) === normalizarTexto(nomeProd) ||
+          normalizarTexto(it.nome) === normalizarTexto(nomeProd) ||
+          normalizarTexto(it.descricao) === normalizarTexto(nomeProd) ||
+          normalizarTexto(it.produto) === normalizarTexto(nomeItem) ||
+          normalizarTexto(it.nome) === normalizarTexto(nomeItem) ||
+          normalizarTexto(it.descricao) === normalizarTexto(nomeItem)
+        )
+      );
+      if (!pItem) {
+        pItem = itensArr.find(it => it && it.index !== undefined && Number(it.index) === idx);
+      }
+      if (!pItem && itensArr.length === produtos.length) {
+        pItem = itensArr[idx];
+      }
+      return pItem || null;
+    };
 
     if (cotacao.tipo === "web" && Array.isArray(cotacao.adjudicacao) && cotacao.adjudicacao.length > 0) {
         adjudicacao.push(...cotacao.adjudicacao);
     } else {
-    cotacao.produtos.forEach((prod, idx) => {
+    produtos.forEach((prod, idx) => {
+      const nomeItem = prod.nome || prod.descricao || ("Item " + (idx + 1));
+      const nomeProd = prod.produto || nomeItem;
+      const qtd = Number(prod.quantidade) || 0;
+
       let vencedorEmail = null;
       let vencedorNome = "Sem Oferta";
       let menorPreco = Infinity;
@@ -20211,36 +20692,41 @@ linhas.forEach((tr, index) => {
       // A. Decisão manual (por index ou por nome — retrocompatibilidade)
       if (decisoesCotacao[keyItem]) {
         vencedorEmail = norm(decisoesCotacao[keyItem]);
-      } else if (decisoesCotacao[prod.nome]) {
-        vencedorEmail = norm(decisoesCotacao[prod.nome]);
+      } else if (decisoesCotacao[nomeItem]) {
+        vencedorEmail = norm(decisoesCotacao[nomeItem]);
+      } else if (decisoesCotacao[nomeProd]) {
+        vencedorEmail = norm(decisoesCotacao[nomeProd]);
       }
 
       // ❌ Se foi marcado como NÃO COMPRAR:
       if (vencedorEmail === "nao_comprar") {
         itensNaoComprados.push({
-          produto: prod.nome || prod.descricao || ("Item " + (idx + 1)),
-          quantidade: prod.quantidade || 0,
+          produto: nomeItem,
+          quantidade: qtd,
           marca: prod.marca || "-",
           embalagem: prod.embalagem || "-",
-          motivo: motivosCotacao[keyItem] || motivosCotacao[prod.nome] || "Item desconsiderado na compra pelo comprador"
+          motivo: motivosCotacao[keyItem] || motivosCotacao[nomeItem] || motivosCotacao[nomeProd] || "Item desconsiderado na compra pelo comprador"
         });
         return; // Não adjudica para nenhum fornecedor!
       }
 
       // Se há decisão manual, valida se o fornecedor tem preço para este item
       if (vencedorEmail) {
-        const resp = respostas.find(r => norm(r.email || r.emailFornecedor) === vencedorEmail);
+        const resp = respostas.find(r =>
+          getFornKey(r) === vencedorEmail ||
+          normalizarTexto(r.fornecedor || r.fornecedorNome) === normalizarTexto(vencedorEmail)
+        );
 
         if (resp) {
-          const itemResp = (resp.itens || []).find(i =>
-            norm(i.produto || i.descricao) === norm(prod.nome)
-          );
-          const preco = itemResp ? parseFloat(itemResp.preco || itemResp.precoUnitario || itemResp.valor || 0) : 0;
+          const itemResp = acharItemNaResposta(resp, prod, idx);
+          const preco = itemResp ? extrairPreco(itemResp.preco ?? itemResp.precoUnitario ?? itemResp.valor ?? 0) : 0;
 
           if (preco > 0) {
             // ✅ Fornecedor manual tem preço para este item
-            const fornLocal = listaFornecedoresLocal.find(f => norm(f.email) === vencedorEmail);
-            vencedorNome = fornLocal ? fornLocal.nome : (resp.fornecedor || resp.fornecedorNome || vencedorEmail);
+            const emailReal = norm(resp.email || resp.emailFornecedor || vencedorEmail);
+            const fornLocal = listaFornecedoresLocal.find(f => norm(f.email) === emailReal);
+            vencedorNome = fornLocal ? fornLocal.nome : (resp.fornecedor || resp.fornecedorNome || emailReal);
+            vencedorEmail = emailReal || norm(vencedorNome);
             precoFinal = preco;
             winningItem = itemResp;
           } else {
@@ -20256,14 +20742,15 @@ linhas.forEach((tr, index) => {
       // B. Automático: menor preço disponível (quando não há decisão manual válida)
       if (!vencedorEmail) {
         respostas.forEach(r => {
-          const item = (r.itens || []).find(i => norm(i.produto || i.descricao) === norm(prod.nome));
+          const item = acharItemNaResposta(r, prod, idx);
           if (item) {
-            const val = parseFloat(item.preco || item.precoUnitario || item.valor || 0);
+            const val = extrairPreco(item.preco ?? item.precoUnitario ?? item.valor ?? 0);
             if (val > 0 && val < menorPreco) {
               menorPreco = val;
-              vencedorEmail = norm(r.email || r.emailFornecedor);
-              const fornLocal = listaFornecedoresLocal.find(f => norm(f.email) === vencedorEmail);
-              vencedorNome = fornLocal ? fornLocal.nome : (r.fornecedor || r.fornecedorNome || vencedorEmail);
+              const emailReal = norm(r.email || r.emailFornecedor || r.fornecedor || r.fornecedorNome);
+              const fornLocal = listaFornecedoresLocal.find(f => norm(f.email) === emailReal);
+              vencedorNome = fornLocal ? fornLocal.nome : (r.fornecedor || r.fornecedorNome || emailReal);
+              vencedorEmail = emailReal || norm(vencedorNome);
               precoFinal = val;
               winningItem = item;
             }
@@ -20271,23 +20758,35 @@ linhas.forEach((tr, index) => {
         });
       }
 
-      if (vencedorEmail) {
+      // C. Fallback direto da opção selecionada no modal caso a resposta esteja renderizada no DOM
+      if ((!vencedorEmail || precoFinal <= 0) && selectsDom[idx] && norm(selectsDom[idx].value) !== "nao_comprar") {
+        const domInfo = selectsDom[idx];
+        const matchPreco = domInfo.texto.match(/R\$\s*([\d.,]+)/);
+        const precoDom = matchPreco ? extrairPreco(matchPreco[1]) : 0;
+        if (precoDom > 0) {
+          vencedorEmail = norm(domInfo.value || domInfo.nome);
+          vencedorNome = domInfo.nome || domInfo.value;
+          precoFinal = precoDom;
+        }
+      }
+
+      if (vencedorEmail && precoFinal > 0) {
         adjudicacao.push({
-          produto: prod.nome,
+          produto: nomeItem,
           marca: (winningItem && winningItem.marca) ? winningItem.marca : (prod.marca || "-"),
           embalagem: (winningItem && winningItem.embalagem) ? winningItem.embalagem : (prod.embalagem || "-"),
-          quantidade: prod.quantidade,
+          quantidade: qtd,
           fornecedor: vencedorNome,
           emailFornecedor: vencedorEmail,
           preco: precoFinal,
-          total: precoFinal * prod.quantidade
+          total: precoFinal * qtd
         });
       }
     });
     }
 
     // 4. Salva e Atualiza Status
-    if (adjudicacao.length === 0) {
+    if (adjudicacao.length === 0 && itensNaoComprados.length === 0) {
       return alert("⚠️ Nenhum vencedor identificado. Verifique se há respostas válidas antes de aprovar.");
     }
 
@@ -20347,7 +20846,6 @@ linhas.forEach((tr, index) => {
     alert(`✅ Cotação enviada para aprovação com ${adjudicacao.length} itens adjudicados!`);
 
     // Atualiza UI sem recarregar (evita logout)
-    const modal = document.getElementById('modalAnaliseCotacao');
     if (modal) modal.style.display = "none";
     document.body.style.overflow = "auto";
 
