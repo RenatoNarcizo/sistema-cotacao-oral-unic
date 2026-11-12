@@ -14369,26 +14369,80 @@
     document.body.style.overflow = "auto";
   };
 
-  // 🔍 Extrai anexo (PDF, Imagem, Excel) associado a este fornecedor
+  // 🔍 Extrai anexo (PDF, Imagem, Excel) associado a este fornecedor (com busca profunda local/Firestore e bypass de CORS)
   window.obterAnexoFornecedorIA = async function(cotacao, resposta) {
     const num = cotacao.numero || cotacao.id;
     const idLimpo = String(num).replace(/#/g, "").replace(/COT-/gi, "").trim();
     const emailForn = (resposta.email || resposta.fornecedor || "").toLowerCase().trim();
+    const nomeFornNorm = (resposta.fornecedor || resposta.fornecedorNome || "").toLowerCase().trim();
 
     let anexo = resposta.anexo || (Array.isArray(resposta.anexos) && resposta.anexos.length > 0 ? resposta.anexos[0] : null);
 
-    if (!anexo) {
-      // Varre docs_${num}
-      for (const k of [`docs_${num}`, `docs_${idLimpo}`]) {
-        const docs = JSON.parse(localStorage.getItem(k)) || [];
-        const match = docs.find(d => {
-          const u = (d.usuario || d.fornecedor || d.email || "").toLowerCase().trim();
-          return u === emailForn || (resposta.fornecedor && u.includes((resposta.fornecedor || "").toLowerCase().trim()));
-        });
-        if (match) {
-          anexo = match;
-          break;
+    // 1. Busca complementar em localStorage (res_${num}_${email} e docs_${num}) para encontrar base64 completo caso tenha sido omitido do array principal
+    const tentarExtrairMelhorAnexo = (cand) => {
+      if (!cand) return;
+      const b64Cand = cand.base64 || cand.dados || "";
+      const urlCand = cand.url || cand.link || "";
+      if (!anexo) {
+        anexo = cand;
+      } else {
+        if (!(anexo.base64 || anexo.dados) && b64Cand) {
+          anexo = Object.assign({}, anexo, { base64: b64Cand });
         }
+        if (!(anexo.url || anexo.link) && urlCand) {
+          anexo = Object.assign({}, anexo, { url: urlCand });
+        }
+      }
+    };
+
+    for (const kRes of [`res_${num}_${emailForn}`, `res_${idLimpo}_${emailForn}`]) {
+      try {
+        const resLocal = JSON.parse(localStorage.getItem(kRes));
+        if (resLocal) {
+          const anxLocal = resLocal.anexo || (Array.isArray(resLocal.anexos) && resLocal.anexos.length > 0 ? resLocal.anexos[0] : null);
+          tentarExtrairMelhorAnexo(anxLocal);
+        }
+      } catch (e) {}
+    }
+
+    if (!anexo || !(anexo.base64 || anexo.dados)) {
+      for (const k of [`docs_${num}`, `docs_${idLimpo}`, `docs_COT-${idLimpo}`]) {
+        try {
+          const docs = JSON.parse(localStorage.getItem(k)) || [];
+          const match = docs.find(d => {
+            const u = (d.usuario || d.fornecedor || d.email || "").toLowerCase().trim();
+            return (emailForn && u === emailForn) || (nomeFornNorm && (u === nomeFornNorm || u.includes(nomeFornNorm) || nomeFornNorm.includes(u)));
+          });
+          if (match) tentarExtrairMelhorAnexo(match);
+        } catch (e) {}
+      }
+    }
+
+    // 2. Se ainda não tiver base64, consulta subcoleção respostas e documentos_cotacao no Firestore
+    if ((!anexo || !(anexo.base64 || anexo.dados)) && typeof db !== "undefined") {
+      try {
+        if (emailForn) {
+          const docSub = await db.collection("cotacoes").doc(String(num)).collection("respostas").doc(emailForn).get();
+          if (docSub.exists) {
+            const dSub = docSub.data();
+            const anxSub = dSub.anexo || (Array.isArray(dSub.anexos) && dSub.anexos.length > 0 ? dSub.anexos[0] : null);
+            tentarExtrairMelhorAnexo(anxSub);
+          }
+        }
+      } catch (e) {}
+
+      if (!anexo || !(anexo.base64 || anexo.dados)) {
+        try {
+          const docSnap = await db.collection("documentos_cotacao").doc(`docs_${num}`).get();
+          if (docSnap.exists) {
+            const lista = docSnap.data().lista || [];
+            const matchDoc = lista.find(d => {
+              const u = (d.usuario || d.fornecedor || d.email || "").toLowerCase().trim();
+              return (emailForn && u === emailForn) || (nomeFornNorm && (u === nomeFornNorm || u.includes(nomeFornNorm) || nomeFornNorm.includes(u)));
+            });
+            if (matchDoc) tentarExtrairMelhorAnexo(matchDoc);
+          }
+        } catch (e) {}
       }
     }
 
@@ -14398,34 +14452,72 @@
     let base64 = anexo.base64 || anexo.dados || "";
     let url = anexo.url || anexo.link || "";
 
-    // Se tiver URL remota e não tiver base64, tenta converter via fetch
+    // Cache em memória para evitar múltiplos downloads do mesmo PDF
+    window._cacheAnexosIA = window._cacheAnexosIA || {};
+    if (!base64 && url && window._cacheAnexosIA[url]) {
+      base64 = window._cacheAnexosIA[url];
+    }
+
+    // 3. Se tiver URL remota e não tiver base64, tenta baixar diretamente ou via proxies CORS de contingência
     if (!base64 && url && url.startsWith("http")) {
-      try {
-        const resp = await fetch(url);
-        const blob = await resp.blob();
-        base64 = await new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            const resStr = String(reader.result || "");
-            resolve(resStr.includes(",") ? resStr.split(",")[1] : resStr);
-          };
-          reader.readAsDataURL(blob);
-        });
-      } catch(e) {
-        console.warn("Aviso: Falha ao baixar arquivo remoto do anexo:", e);
+      const converterBlobParaBase64 = (blob) => new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const resStr = String(reader.result || "");
+          resolve(resStr.includes(",") ? resStr.split(",")[1] : resStr);
+        };
+        reader.onerror = () => resolve("");
+        reader.readAsDataURL(blob);
+      });
+
+      const urlsTentativa = [
+        url,
+        `https://corsproxy.io/?${encodeURIComponent(url)}`,
+        `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+        `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`
+      ];
+
+      for (const uTent of urlsTentativa) {
+        try {
+          const ctrl = new AbortController();
+          const timer = setTimeout(() => ctrl.abort(), 8000);
+          const resp = await fetch(uTent, { signal: ctrl.signal });
+          clearTimeout(timer);
+          if (resp && resp.ok) {
+            const blob = await resp.blob();
+            if (blob && blob.size > 100) {
+              const b64Extraido = await converterBlobParaBase64(blob);
+              if (b64Extraido && b64Extraido.length > 100) {
+                base64 = b64Extraido;
+                window._cacheAnexosIA[url] = base64;
+                break;
+              }
+            }
+          }
+        } catch (e) {
+          console.warn("Aviso: Tentativa de leitura do anexo remoto falhou para:", uTent);
+        }
       }
     }
 
+    let mimePrefix = "";
     if (base64 && base64.includes(",")) {
-      base64 = base64.split(",")[1];
+      const partesB64 = base64.split(",");
+      mimePrefix = partesB64[0] || "";
+      base64 = partesB64[1] || "";
     }
 
     let mimeType = "image/jpeg";
-    const nLower = nome.toLowerCase();
-    if (nLower.endsWith(".pdf")) mimeType = "application/pdf";
-    else if (nLower.endsWith(".png")) mimeType = "image/png";
-    else if (nLower.endsWith(".webp")) mimeType = "image/webp";
-    else if (nLower.endsWith(".xlsx") || nLower.endsWith(".xls")) mimeType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+    const nLower = (nome + " " + url + " " + mimePrefix).toLowerCase();
+    if (nLower.includes(".pdf") || nLower.includes("application/pdf") || (base64 && base64.startsWith("JVBERi0"))) {
+      mimeType = "application/pdf";
+    } else if (nLower.includes(".png") || nLower.includes("image/png") || (base64 && base64.startsWith("iVBORw0KGgo"))) {
+      mimeType = "image/png";
+    } else if (nLower.includes(".webp") || nLower.includes("image/webp")) {
+      mimeType = "image/webp";
+    } else if (nLower.includes(".xlsx") || nLower.includes(".xls") || nLower.includes("sheet") || nLower.includes("excel")) {
+      mimeType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+    }
 
     return { nome, base64, url, mimeType };
   };
@@ -14439,25 +14531,31 @@
 
     // Formata itens da cotação solicitada
     const listaItensCotacaoTexto = produtos.map((p, i) => {
-      return `${i + 1}. Item: "${p.nome || p.descricao || ('Item ' + (i+1))}" | Qtd: ${p.quantidade || 1} ${p.embalagem || 'UN'} | Marca Solicitada: "${p.marca || 'Livre / Qualquer'}"`;
+      const marcaLimpa = (p.marca && p.marca !== "undefined" && p.marca !== "null" && String(p.marca).trim() !== "") ? String(p.marca).trim() : "Livre / Qualquer";
+      return `${i + 1}. Item: "${p.nome || p.descricao || ('Item ' + (i+1))}" | Qtd Solicitada: ${p.quantidade || 1} ${p.embalagem || 'UN'} | Marca Solicitada pelo Comprador: "${marcaLimpa}"`;
     }).join("\n");
 
-    // Formata itens preenchidos pelo fornecedor (Busca robusta com suporte a nome, descricao, produto e índice)
+    // Formata itens preenchidos pelo fornecedor (Busca robusta com suporte a index, nome, descricao e produto)
     const itensResp = resposta.itens || [];
     const respostasFormatadas = produtos.map((p, i) => {
       const nomeItem = p.nome || p.descricao || p.produto || ("Item " + (i + 1));
       const nomeProd = p.produto || p.nome || p.descricao || nomeItem;
-      const respItem = itensResp.find(it => {
-        const n1 = (it.produto || it.nome || it.descricao || "").toLowerCase().trim();
-        const nItemNorm = (nomeItem || "").toLowerCase().trim();
-        const nProdNorm = (nomeProd || "").toLowerCase().trim();
-        return (n1 && (n1 === nItemNorm || n1.includes(nItemNorm) || nItemNorm.includes(n1) ||
-                       n1 === nProdNorm || n1.includes(nProdNorm) || nProdNorm.includes(n1)));
-      }) || (itensResp[i] && (itensResp.length === produtos.length) ? itensResp[i] : null);
+      const marcaSolicitada = (p.marca && p.marca !== "undefined" && p.marca !== "null" && String(p.marca).trim() !== "") ? String(p.marca).trim() : "Livre / Qualquer";
 
-      const preco = respItem ? (Number(respItem.preco || respItem.valor || respItem.precoUnitario || 0)) : 0;
-      const marca = respItem ? (respItem.marca || "Não informada") : (preco > 0 ? "Não informada" : "Não cotado");
-      return `${i + 1}. Item: "${nomeItem}" -> Preço Digitado: R$ ${preco.toFixed(2)} | Marca Digitada: "${marca}"`;
+      let respItem = itensResp.find(it => it && typeof it.index === "number" && it.index === i);
+      if (!respItem) {
+        respItem = itensResp.find(it => {
+          const n1 = (it.produto || it.nome || it.descricao || "").toLowerCase().trim();
+          const nItemNorm = (nomeItem || "").toLowerCase().trim();
+          const nProdNorm = (nomeProd || "").toLowerCase().trim();
+          return (n1 && (n1 === nItemNorm || n1.includes(nItemNorm) || nItemNorm.includes(n1) ||
+                         n1 === nProdNorm || n1.includes(nProdNorm) || nProdNorm.includes(n1)));
+        }) || (itensResp[i] && (itensResp.length === produtos.length) ? itensResp[i] : null);
+      }
+
+      const preco = respItem ? (Number(respItem.preco ?? respItem.valor ?? respItem.precoUnitario ?? 0)) : 0;
+      const marcaDigitada = (respItem && respItem.marca && respItem.marca !== "undefined") ? respItem.marca : marcaSolicitada;
+      return `${i + 1}. Item: "${nomeItem}" -> Preço Unitário Digitado no Sistema: R$ ${preco.toFixed(2)} | Qtd Solicitada: ${p.quantidade || 1} | Marca Solicitada: "${marcaSolicitada}" (Marca ref: "${marcaDigitada}")`;
     }).join("\n");
 
     // Conteúdo adicional se for planilha Excel
@@ -14472,8 +14570,10 @@
       }
     }
 
+    const temConteudoAnexo = !!(anexoObj && (anexoObj.base64 || excelTextoExtra));
+
     const promptAuditoria = `
-Você é um Auditor Sênior de Compras e Suprimentos.
+Você é um Auditor Sênior de Compras e Suprimentos implacável e preciso.
 Sua missão é auditar a proposta comercial do fornecedor: "${nomeForn}" (${emailForn}) para a cotação #${cotacao.numero || cotacao.id}.
 
 ITENS SOLICITADOS PELO COMPRADOR:
@@ -14484,52 +14584,54 @@ ${respostasFormatadas}
 
 ${excelTextoExtra}
 
-ANEXO DO FORNECEDOR: ${anexoObj ? `Arquivo "${anexoObj.nome}" (${anexoObj.mimeType})` : "Nenhum anexo encontrado."}
+ANEXO DO FORNECEDOR: ${temConteudoAnexo ? `Arquivo "${anexoObj.nome}" (${anexoObj.mimeType}) anexado para leitura visual completa.` : (anexoObj ? `Arquivo "${anexoObj.nome}" registrado, porém sem imagem/PDF legível inline.` : "Nenhum anexo encontrado.")}
 
-DIRETRIZES DE AUDITORIA CRÍTICA E RIGOROSA:
-1. BATIMENTO DE PREÇOS COM DESCONTO COMERCIAL (REGRA CRUCIAL DE RECONCILIAÇÃO):
-Muitos fornecedores emitem orçamentos contendo: "Vlr.Unitário" bruto, desconto do item e coluna "Total R$" (ex: Orçamento Total Mix Embalagens onde Saco 20L tem Vlr.Unitário R$ 16,50, Desc -0,90 e Total R$ 32,10 para 2 unidades).
-No sistema, o fornecedor preenche o VALOR UNITÁRIO LÍQUIDO RATEADO (Total Líquido dividido pela Quantidade):
-Exemplos reais:
-- Total R$ 32,10 / 2 un = R$ 16,05 unitário líquido. O fornecedor digitou exatamente R$ 16,05 no sistema.
-- Total R$ 50,30 / 2 un = R$ 25,15 unitário líquido. O fornecedor digitou exatamente R$ 25,15 no sistema.
-- Total R$ 68,90 / 2 un = R$ 34,45 unitário líquido. O fornecedor digitou exatamente R$ 34,45 no sistema.
-- Total R$ 98,80 / 2 un = R$ 49,40 unitário líquido. O fornecedor digitou exatamente R$ 49,40 no sistema.
-- Total R$ 160,92 / 1 un = R$ 160,92 unitário líquido. O fornecedor digitou exatamente R$ 160,92 no sistema.
-- Total R$ 52,09 / 1 un = R$ 52,09 unitário líquido. O fornecedor digitou exatamente R$ 52,09 no sistema.
-BATIMENTO DE PREÇO: Se o valor digitado no sistema conferir com o valor unitário bruto OU conferir exatamente com o valor unitário líquido com desconto do anexo:
--> CONSIDERE O PREÇO 100% CORRETO (STATUS: OK ou MATERIAL_OK se marca livre)!
--> Em PRECO_ANEXO informe: R$ 16,05 (líq)
--> Em RESUMO_CELULA informe: "✓ Anexo OK (c/ desc)" ou "✓ 100% OK"
--> Em PARECER explique: "Preço digitado confere com o valor unitário líquido do anexo (Total do item no anexo dividido pela quantidade considerando o desconto comercial)."
-APENAS se o preço digitado NÃO conferir nem com o bruto nem com o líquido com desconto do anexo, aponte STATUS: DIVERGENCIA_PRECO!
+DIRETRIZES DE AUDITORIA CRÍTICA E RIGOROSA (LEIA COM ATENÇÃO MÁXIMA):
+1. ASSOCIAÇÃO CORRETA DO ITEM NO ANEXO (ATENÇÃO A PREÇOS TROCADOS / INVERTIDOS PELO FORNECEDOR!):
+   - O PDF/anexo do fornecedor pode ter os itens em outra ordem ou incluir linhas extras (ex: brindes no topo).
+   - Localize cada item solicitado pela DESCRIÇÃO / NOME DO PRODUTO no anexo (ex: "PALACEAL / PALASEAL" corresponde a "SELANTE DE SUPERFICIE PALASEAL - 2X15ML KULZER"; "METAL FIT CATS / FIT CAST" corresponde a "LIGA METALICA FIT CAST-2NIOBIO - 250G TALMAX").
+   - NUNCA associe um item do sistema a uma linha do PDF apenas porque o preço bate! Associe SEMPRE pelo NOME/DESCRIÇÃO DO PRODUTO e depois compare o preço digitado no sistema com o preço daquele produto no PDF!
+   - DETECÇÃO DE VALORES TROCADOS (CRÍTICO): Muitas vezes o fornecedor inverte os preços ao digitar no sistema (exemplo real: no PDF o "PALASEAL KULZER" custa R$ 179,90 e a "LIGA METALICA FIT CAST TALMAX" custa R$ 459,90, mas o fornecedor digitou R$ 459,90 no PALACEAL e R$ 179,90 no METAL FIT CAST!).
+   - Quando isso ocorrer, aponte IMEDIATAMENTE STATUS: DIVERGENCIA_PRECO (ou DIVERGENCIA_PRECO_MARCA se a marca também divergir), informe em PRECO_ANEXO o valor real que consta para AQUELE produto no PDF e explique no PARECER que o fornecedor digitou o preço trocado/invertido com outro item!
 
-2. BATIMENTO DE QUANTIDADE (CRÍTICO): Compare a quantidade que consta no anexo com a quantidade solicitada pelo comprador. Se a quantidade no anexo for diferente da solicitada (ex: pediu 2 pacotes e no anexo tem apenas 1 pacote), aponte IMEDIATAMENTE: STATUS: DIVERGENCIA_QTD!
+2. BATIMENTO DE PREÇOS COM DESCONTO COMERCIAL:
+   - Se no anexo aquele MESMO produto tiver desconto explícito na linha e o "Total R$" daquele item dividido pela "Qtde" daquele item for exatamente igual ao preço digitado no sistema (ex: Total R$ 32,10 / 2 un = R$ 16,05), considere o preço correto (STATUS: OK ou MATERIAL_OK) e em RESUMO_CELULA informe "✓ Anexo OK (c/ desc)".
+   - Caso contrário, se o preço digitado no sistema for diferente do preço unitário daquele produto no anexo, aponte OBRIGATORIAMENTE STATUS: DIVERGENCIA_PRECO!
 
-3. BATIMENTO DE MARCA / ESPECIFICAÇÃO: Compare a marca e especificação técnica do produto. Se a marca informada no anexo for incompatível ou diferente da solicitada, aponte: STATUS: DIVERGENCIA_MARCA! Se a cotação for marca livre e o material atender plenamente, aponte: STATUS: MATERIAL_OK.
+3. BATIMENTO RIGOROSO DE MARCA (COLUNA "MARCA" DO ANEXO vs MARCA SOLICITADA):
+   - Leia atentamente a coluna "Marca" na tabela do anexo/PDF para cada item!
+   - Compare a Marca Solicitada pelo comprador com a coluna "Marca" do anexo.
+   - CUIDADO COM PEGADINHAS DE DESCRIÇÃO vs MARCA: Por exemplo, se o comprador pediu o item "METAL FIT CATS AZUL" com Marca Solicitada "FIT CAST", e no PDF a descrição diz "LIGA METALICA FIT CAST-2NIOBIO - 250G TALMAX" mas na coluna Marca está escrito "TALMAX", a marca cotada pelo fornecedor é "TALMAX" (diferente de "FIT CAST")!
+   - Sempre que a Marca Solicitada for uma marca específica (diferente de "Livre / Qualquer", "-" ou vazia) e a coluna Marca no anexo trouxer outra marca (ex: pediu "FIT CAST" e cotou "TALMAX"), você DEVE apontar divergência de marca (STATUS: DIVERGENCIA_MARCA, ou STATUS: DIVERGENCIA_PRECO_MARCA se o preço também estiver divergente)!
+   - Preencha sempre MARCA_SIS com a Marca Solicitada pelo comprador e MARCA_ANEXO com o nome exato que está na coluna Marca do PDF/anexo.
 
-4. REGRA DE CONFORMIDADE TOTAL: Um item SÓ PODE ser considerado STATUS: OK ou MATERIAL_OK se o PREÇO (bruto ou líquido rateado), a MARCA e a QUANTIDADE estiverem 100% corretos e confirmados!
+4. BATIMENTO DE QUANTIDADE (CRÍTICO):
+   - Compare a quantidade no anexo com a quantidade solicitada pelo comprador (ignorando itens de brinde com valor R$ 0,00). Se a quantidade cotada do produto no anexo for diferente da solicitada, aponte STATUS: DIVERGENCIA_QTD!
 
-5. ITENS COTADOS NO SISTEMA MAS AUSENTES NO ANEXO: Se o fornecedor digitou um valor no sistema (Preço Digitado > 0), mas o item NÃO consta no anexo (ou não foi localizado no PDF), marque: STATUS: NAO_CONSTA_ANEXO e RESUMO_CELULA: "⚠️ Não consta no anexo". NUNCA use "Não cotado" quando houver preço digitado no sistema!
+5. REGRA DE CONFORMIDADE TOTAL:
+   - Um item SÓ PODE receber STATUS: OK ou MATERIAL_OK se PREÇO, MARCA e QUANTIDADE daquele exato produto conferirem 100% com o anexo!
 
-6. ITENS REALMENTE NÃO COTADOS: Apenas marque STATUS: NAO_COTADO se o fornecedor NÃO digitou preço no sistema (Preço Digitado R$ 0,00 ou traço).
+6. ITENS COTADOS NO SISTEMA MAS AUSENTES NO ANEXO:
+   - Se Preço Digitado > 0 mas o produto não consta no anexo, marque STATUS: NAO_CONSTA_ANEXO e RESUMO_CELULA: "⚠️ Não consta no anexo".
+   - Se Preço Digitado for R$ 0,00, marque STATUS: NAO_COTADO e RESUMO_CELULA: "🚫 Não cotado".
 
-7. RESUMO PARA A CÉLULA (RESUMO_CELULA): Crie uma frase curta (2 a 5 palavras).
-Exemplos:
-- "✓ Anexo 100% OK"
-- "✓ Anexo OK (c/ desc)"
-- "⚠️ Anexo difere: R$ 25,90"
-- "⚠️ Qtd anexo: 1 (pediu 2)"
-- "⚠️ Marca difere"
-- "⚠️ Não consta no anexo"
-- "ℹ️ Material OK"
-- "🚫 Não cotado" (APENAS se Preço Digitado for R$ 0,00)
+7. RESUMO PARA A CÉLULA (RESUMO_CELULA): Crie uma frase curta (2 a 5 palavras):
+   - "✓ Anexo 100% OK"
+   - "✓ Anexo OK (c/ desc)"
+   - "⚠️ Trocado! Anexo: R$ 179,90"
+   - "⚠️ Anexo: R$ 459,90 + Marca: TALMAX"
+   - "⚠️ Anexo difere: R$ 25,90"
+   - "⚠️ Qtd anexo: 1 (pediu 2)"
+   - "⚠️ Marca: TALMAX (pediu FIT CAST)"
+   - "⚠️ Não consta no anexo"
+   - "ℹ️ Material OK"
+   - "🚫 Não cotado"
 
-FORMATO OBRIGATÓRIO DE RESPOSTA (NÃO USE NEGRITO NAS CHAVES):
+FORMATO OBRIGATÓRIO DE RESPOSTA (NÃO USE NEGRITO NAS CHAVES, 1 LINHA POR ITEM NA MESMA ORDEM DOS ITENS SOLICITADOS):
 [STATUS_GERAL]: (CONFORME, DIVERGENCIAS, PARCIAL ou SEM_ANEXO)
-[RESUMO_EXECUTIVO]: (2 a 3 frases práticas para o comprador)
+[RESUMO_EXECUTIVO]: (2 a 3 frases práticas detalhando preços trocados, marcas divergentes ou conformidade)
 [ITENS_AUDITADOS]:
-- ITEM: <Nome> | QTD_SIS: <qtd> | QTD_ANEXO: <qtd ou "-"> | PRECO_SIS: <valor> | PRECO_ANEXO: <valor ou "-"> | MARCA_SIS: <marca> | MARCA_ANEXO: <marca ou "-"> | STATUS: <OK, DIVERGENCIA_QTD, DIVERGENCIA_PRECO, DIVERGENCIA_MARCA, MATERIAL_OK ou NAO_COTADO> | RESUMO_CELULA: <frase curta> | PARECER: <explicação detalhada>
+- ITEM: <Nome Exato do Item Solicitado> | QTD_SIS: <qtd> | QTD_ANEXO: <qtd ou "-"> | PRECO_SIS: <valor> | PRECO_ANEXO: <valor ou "-"> | MARCA_SIS: <marca solicitada> | MARCA_ANEXO: <marca no anexo ou "-"> | STATUS: <OK, DIVERGENCIA_PRECO, DIVERGENCIA_MARCA, DIVERGENCIA_PRECO_MARCA, DIVERGENCIA_QTD, MATERIAL_OK, NAO_CONSTA_ANEXO ou NAO_COTADO> | RESUMO_CELULA: <frase curta> | PARECER: <explicação detalhada>
 [RECOMENDACAO_COMPRADOR]: (Orientação final para o comprador)
 `;
 
@@ -14549,7 +14651,7 @@ FORMATO OBRIGATÓRIO DE RESPOSTA (NÃO USE NEGRITO NAS CHAVES):
       email: emailForn,
       anexo: anexoObj,
       rawTexto: respostaTextoIA,
-      dados: window.interpretarRespostaAuditoria(respostaTextoIA, produtos, respostasFormatadas)
+      dados: window.interpretarRespostaAuditoria(respostaTextoIA, produtos, respostasFormatadas, resposta)
     };
   };
 
@@ -14636,10 +14738,11 @@ FORMATO OBRIGATÓRIO DE RESPOSTA (NÃO USE NEGRITO NAS CHAVES):
     throw lastError || new Error("Falha na comunicação com os servidores do Google Gemini.");
   };
 
-  // 📝 Parser inteligente da resposta da I.A. (com suporte a markdown e validação determinística de valores)
-  window.interpretarRespostaAuditoria = function(texto, produtos, respostasFormatadas) {
+  // 📝 Parser inteligente da resposta da I.A. (com validação determinística de Preço, Troca de Valores, Marca e Quantidade)
+  window.interpretarRespostaAuditoria = function(texto, produtos, respostasFormatadas, respostaFornecedor = null) {
     if (!texto) texto = "";
-    
+    produtos = Array.isArray(produtos) ? produtos : [];
+
     let statusGeral = "CONFORME";
     const mStatusGeral = texto.match(/\[STATUS_GERAL\]:?\s*([A-Z_]+)/i);
     if (mStatusGeral) {
@@ -14662,10 +14765,40 @@ FORMATO OBRIGATÓRIO DE RESPOSTA (NÃO USE NEGRITO NAS CHAVES):
 
     // Helper para converter valores monetários/quantidades em números reais
     const extrairNumeroAud = (v) => {
-      if (!v || v === "-") return null;
-      const s = String(v).replace(/[^\d.,]/g, "").replace(/\.(?=\d{3})/g, "").replace(",", ".");
-      const n = parseFloat(s);
+      if (v === null || v === undefined || v === "-") return null;
+      let s = String(v).trim();
+      // Captura o primeiro número monetário/decimal válido da string (ex: "R$ 179,90 (líq)" -> "179,90")
+      const m = s.match(/-?\d[\d.,]*/);
+      if (!m) return null;
+      let numStr = m[0];
+      if (numStr.includes(",") && numStr.includes(".")) {
+        numStr = numStr.replace(/\./g, "").replace(",", ".");
+      } else if (numStr.includes(",")) {
+        numStr = numStr.replace(",", ".");
+      }
+      const n = parseFloat(numStr);
       return isNaN(n) ? null : n;
+    };
+
+    const normalizarMarcaAud = (m) => {
+      if (!m) return "";
+      const s = String(m).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/[^A-Z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+      if (!s || s === "-" || s === "UNDEFINED" || s === "NULL" || s === "NAO INFORMADA" || s === "NAO COTADO" || s.includes("LIVRE") || s.includes("QUALQUER") || s.includes("SEM MARCA")) {
+        return "";
+      }
+      return s;
+    };
+
+    const marcasSaoCompativeis = (marcaSolicitada, marcaAnexo) => {
+      const mSol = normalizarMarcaAud(marcaSolicitada);
+      const mAnx = normalizarMarcaAud(marcaAnexo);
+      if (!mSol || !mAnx) return true; // Se o comprador não exigiu marca específica ou anexo não informou marca
+      if (mSol === mAnx || mSol.includes(mAnx) || mAnx.includes(mSol)) return true;
+      const tSol = mSol.split(" ").filter(t => t.length >= 2);
+      const tAnx = mAnx.split(" ").filter(t => t.length >= 2);
+      if (tSol.length > 0 && tSol.every(t => tAnx.includes(t))) return true;
+      if (tAnx.length > 0 && tAnx.every(t => tSol.includes(t))) return true;
+      return false;
     };
 
     // Extrai Itens
@@ -14678,7 +14811,6 @@ FORMATO OBRIGATÓRIO DE RESPOSTA (NÃO USE NEGRITO NAS CHAVES):
           nome: "", precoSis: "-", precoAnexo: "-", qtdSis: "-", qtdAnexo: "-", marcaSis: "-", marcaAnexo: "-", status: "OK", resumoCelula: "", parecer: ""
         };
         partes.forEach(p => {
-          // Remove marcadores markdown como "-", "*", "**", "1.", etc. do início
           const pLimpo = p.replace(/^[\s\*\-\#\d\.\>]+/, "").replace(/\*\*/g, "").trim();
           const pUpper = pLimpo.toUpperCase();
           if (pUpper.startsWith("ITEM:")) objItem.nome = pLimpo.substring(5).trim();
@@ -14694,46 +14826,116 @@ FORMATO OBRIGATÓRIO DE RESPOSTA (NÃO USE NEGRITO NAS CHAVES):
         });
 
         if (objItem.nome) {
-          // 🛡️ VALIDAÇÃO DETERMINÍSTICA AUTOMÁTICA (Sem depender apenas do texto da IA):
+          const idxItem = itens.length;
+          // Associa ao produto correspondente da cotação para garantir a Marca Solicitada real e Quantidade real
+          const prodMatch = produtos.find(pr => {
+            const nPr = (pr.nome || pr.descricao || pr.produto || "").toLowerCase().trim();
+            const nIt = (objItem.nome || "").toLowerCase().trim();
+            return nPr && nIt && (nPr === nIt || nPr.includes(nIt) || nIt.includes(nPr));
+          }) || produtos[idxItem] || {};
+
+          const marcaSolicitadaReal = (prodMatch.marca && prodMatch.marca !== "undefined" && prodMatch.marca !== "null") ? String(prodMatch.marca).trim() : "";
+          if (marcaSolicitadaReal && (!objItem.marcaSis || objItem.marcaSis === "-" || objItem.marcaSis === "Não informada" || objItem.marcaSis === "undefined")) {
+            objItem.marcaSis = marcaSolicitadaReal;
+          }
+
+          // 🛡️ VALIDAÇÃO DETERMINÍSTICA AUTOMÁTICA (Independente de alucinação de status da IA):
           const numP_Sis = extrairNumeroAud(objItem.precoSis);
           const numP_Anexo = extrairNumeroAud(objItem.precoAnexo);
-          const numQ_Sis = extrairNumeroAud(objItem.qtdSis);
+          const numQ_Sis = extrairNumeroAud(objItem.qtdSis) ?? (prodMatch.quantidade ? Number(prodMatch.quantidade) : null);
           const numQ_Anexo = extrairNumeroAud(objItem.qtdAnexo);
 
-          // 1. Batimento de Preço (com suporte inteligente a descontos comerciais validados pela IA)
-          const iaAprovouPreco = (objItem.status === "OK" || objItem.status === "MATERIAL_OK");
-          const parecerComDesconto = (objItem.parecer || "").toLowerCase().includes("desc") || (objItem.resumoCelula || "").toLowerCase().includes("desc");
+          objItem._numP_Sis = numP_Sis;
+          objItem._numP_Anexo = numP_Anexo;
+          objItem._numQ_Sis = numQ_Sis;
+          objItem._numQ_Anexo = numQ_Anexo;
 
-          if ((!iaAprovouPreco && !parecerComDesconto) && numP_Sis !== null && numP_Anexo !== null && Math.abs(numP_Sis - numP_Anexo) > 0.009) {
-            objItem.status = "DIVERGENCIA_PRECO";
-            objItem.resumoCelula = `⚠️ Anexo: R$ ${numP_Anexo.toFixed(2).replace('.', ',')}`;
-            statusGeral = "DIVERGENCIAS";
+          // Verifica se o parecer comprova genuinamente um desconto comercial (e NÃO palavras como "descrição" ou "descartáveis"!)
+          const textoParecerNorm = ((objItem.parecer || "") + " " + (objItem.resumoCelula || "") + " " + (objItem.precoAnexo || "")).toLowerCase();
+          const mencionaDescontoReal = (
+            /\bc\/\s*desc\b/.test(textoParecerNorm) ||
+            /\bcom\s+desconto\b/.test(textoParecerNorm) ||
+            /\bdesconto\s+comercial\b/.test(textoParecerNorm) ||
+            /\bvalor\s+l[ií]quido\b/.test(textoParecerNorm) ||
+            /\bunit[aá]rio\s+l[ií]quido\b/.test(textoParecerNorm) ||
+            /\bl[ií]q\b/.test(textoParecerNorm)
+          ) && !/\bsem\s+desconto\b/.test(textoParecerNorm) && !/\bn[aã]o\s+confere\b/.test(textoParecerNorm) && !/\btrocad[oa]\b/.test(textoParecerNorm) && !/\binvertid[oa]\b/.test(textoParecerNorm);
+
+          // Desconto comercial só pode reduzir o preço unitário (numP_Sis <= numP_Anexo), nunca aumentar!
+          const descontoValido = mencionaDescontoReal && (numP_Sis !== null && numP_Anexo !== null ? numP_Sis <= numP_Anexo + 0.01 : true);
+
+          let temDivPreco = false;
+          let temDivQtd = false;
+          let temDivMarca = false;
+
+          // 1. Batimento Determinístico de Preço:
+          if (numP_Sis !== null && numP_Anexo !== null && Math.abs(numP_Sis - numP_Anexo) > 0.015) {
+            if (!descontoValido) {
+              temDivPreco = true;
+            }
+          } else if (objItem.status.includes("PRECO") && !descontoValido) {
+            temDivPreco = true;
           }
-          // 2. Batimento de Quantidade:
-          else if (numQ_Sis !== null && numQ_Anexo !== null && Math.abs(numQ_Sis - numQ_Anexo) > 0.001) {
-            objItem.status = "DIVERGENCIA_QTD";
-            objItem.resumoCelula = `⚠️ Qtd anexo: ${numQ_Anexo} (pediu ${numQ_Sis})`;
-            statusGeral = "DIVERGENCIAS";
+
+          // 2. Batimento Determinístico de Quantidade:
+          if (numQ_Sis !== null && numQ_Anexo !== null && Math.abs(numQ_Sis - numQ_Anexo) > 0.001) {
+            temDivQtd = true;
+          } else if (objItem.status.includes("QTD")) {
+            temDivQtd = true;
           }
-          // 3. Batimento de Marca:
-          else if (objItem.status.includes("MARCA")) {
-            objItem.status = "DIVERGENCIA_MARCA";
-            if (!objItem.resumoCelula || objItem.resumoCelula.includes("OK")) {
-              objItem.resumoCelula = `⚠️ Marca difere`;
+
+          // 3. Batimento Determinístico de Marca:
+          const marcaRefComparacao = marcaSolicitadaReal || objItem.marcaSis;
+          if (!marcasSaoCompativeis(marcaRefComparacao, objItem.marcaAnexo)) {
+            temDivMarca = true;
+          } else if (objItem.status.includes("MARCA") && normalizarMarcaAud(marcaRefComparacao) !== "") {
+            temDivMarca = true;
+          }
+
+          objItem._temDivPreco = temDivPreco;
+          objItem._temDivQtd = temDivQtd;
+          objItem._temDivMarca = temDivMarca;
+          objItem._marcaSolicitadaReal = marcaRefComparacao;
+
+          // Classificação combinada de Status e Resumo da Célula
+          if (temDivPreco && temDivMarca) {
+            objItem.status = "DIVERGENCIA_PRECO_MARCA";
+            const strP = numP_Anexo !== null ? `R$ ${numP_Anexo.toFixed(2).replace('.', ',')}` : objItem.precoAnexo;
+            objItem.resumoCelula = `⚠️ Anexo: ${strP} | Marca: ${objItem.marcaAnexo}`;
+            if (!objItem.parecer || !objItem.parecer.toLowerCase().includes("marca")) {
+              objItem.parecer = `Divergência dupla: Preço no anexo (${strP}) difere do digitado (R$ ${numP_Sis !== null ? numP_Sis.toFixed(2).replace('.', ',') : objItem.precoSis}) e a marca no anexo (${objItem.marcaAnexo}) difere da solicitada (${marcaRefComparacao}). ` + (objItem.parecer || "");
             }
             statusGeral = "DIVERGENCIAS";
-          }
-          // 4. Se tem preço digitado no sistema (numP_Sis > 0), NUNCA é "Não cotado", mas sim ausente no anexo
-          else if (numP_Sis !== null && numP_Sis > 0 && (objItem.status.includes("NAO_COTADO") || objItem.status.includes("SEM_ANEXO") || objItem.status.includes("AUSENTE"))) {
+          } else if (temDivPreco && temDivQtd) {
+            objItem.status = "DIVERGENCIA_PRECO_QTD";
+            const strP = numP_Anexo !== null ? `R$ ${numP_Anexo.toFixed(2).replace('.', ',')}` : objItem.precoAnexo;
+            objItem.resumoCelula = `⚠️ Anexo: ${strP} | Qtd: ${numQ_Anexo ?? objItem.qtdAnexo}`;
+            statusGeral = "DIVERGENCIAS";
+          } else if (temDivPreco) {
+            objItem.status = "DIVERGENCIA_PRECO";
+            const strP = numP_Anexo !== null ? `R$ ${numP_Anexo.toFixed(2).replace('.', ',')}` : objItem.precoAnexo;
+            if (!objItem.resumoCelula || objItem.resumoCelula.includes("OK") || !objItem.resumoCelula.includes("R$")) {
+              objItem.resumoCelula = `⚠️ Anexo: ${strP}`;
+            }
+            statusGeral = "DIVERGENCIAS";
+          } else if (temDivQtd) {
+            objItem.status = "DIVERGENCIA_QTD";
+            objItem.resumoCelula = `⚠️ Qtd anexo: ${numQ_Anexo ?? objItem.qtdAnexo} (pediu ${numQ_Sis ?? objItem.qtdSis})`;
+            statusGeral = "DIVERGENCIAS";
+          } else if (temDivMarca) {
+            objItem.status = "DIVERGENCIA_MARCA";
+            objItem.resumoCelula = `⚠️ Marca: ${objItem.marcaAnexo || 'Difere'} (pediu ${marcaRefComparacao})`;
+            if (!objItem.parecer || objItem.parecer.includes("100%") || objItem.parecer.includes("conforme")) {
+              objItem.parecer = `A marca ofertada no anexo (${objItem.marcaAnexo || 'não informada'}) diverge da marca solicitada na cotação (${marcaRefComparacao}).`;
+            }
+            statusGeral = "DIVERGENCIAS";
+          } else if (numP_Sis !== null && numP_Sis > 0 && (objItem.status.includes("NAO_COTADO") || objItem.status.includes("SEM_ANEXO") || objItem.status.includes("AUSENTE") || objItem.status.includes("NAO_CONSTA"))) {
             objItem.status = "NAO_CONSTA_ANEXO";
             objItem.resumoCelula = "⚠️ Não consta no anexo";
             if (!objItem.parecer || objItem.parecer.toLowerCase().includes("não cotado")) {
               objItem.parecer = `Item cotado no sistema por R$ ${numP_Sis.toFixed(2).replace('.', ',')}, porém não foi identificado no anexo enviado pelo fornecedor.`;
             }
-          }
-
-          // Se o item tinha sido classificado provisoriamente como divergência de preço mas o parecer/resumo comprovou desconto:
-          if (objItem.status === "DIVERGENCIA_PRECO" && parecerComDesconto) {
+          } else if (descontoValido && objItem.status === "DIVERGENCIA_PRECO") {
             objItem.status = "MATERIAL_OK";
             objItem.resumoCelula = "✓ Anexo OK (c/ desc)";
           }
@@ -14742,6 +14944,33 @@ FORMATO OBRIGATÓRIO DE RESPOSTA (NÃO USE NEGRITO NAS CHAVES):
         }
       }
     });
+
+    // 🔄 DETECÇÃO AUTOMÁTICA DE PREÇOS TROCADOS / INVERTIDOS ENTRE ITENS (Ex: Item A digitou preço do Item B e vice-versa)
+    for (let i = 0; i < itens.length; i++) {
+      const itA = itens[i];
+      if (!itA._temDivPreco || itA._numP_Sis === null || itA._numP_Anexo === null) continue;
+
+      for (let j = 0; j < itens.length; j++) {
+        if (i === j) continue;
+        const itB = itens[j];
+        if (itB._numP_Anexo !== null && Math.abs(itA._numP_Sis - itB._numP_Anexo) <= 0.02) {
+          const strRealA = `R$ ${itA._numP_Anexo.toFixed(2).replace('.', ',')}`;
+          const strDigitadoA = `R$ ${itA._numP_Sis.toFixed(2).replace('.', ',')}`;
+          itA._precoTrocadoCom = itB.nome;
+
+          if (itA._temDivMarca) {
+            itA.status = "DIVERGENCIA_PRECO_MARCA";
+            itA.resumoCelula = `⚠️ Trocado (${strRealA}) + Marca: ${itA.marcaAnexo}`;
+            itA.parecer = `🚨 VALORES TROCADOS + MARCA DIVERGENTE: O fornecedor digitou ${strDigitadoA} (que é o preço do item "${itB.nome}"), mas no anexo o valor unitário correto deste item é ${strRealA}. Além disso, a marca cotada no anexo é "${itA.marcaAnexo}" (solicitada: "${itA._marcaSolicitadaReal}").`;
+          } else {
+            itA.status = "DIVERGENCIA_PRECO";
+            itA.resumoCelula = `⚠️ Trocado! Anexo: ${strRealA}`;
+            itA.parecer = `🚨 VALORES TROCADOS: O fornecedor digitou ${strDigitadoA} neste item (valor pertencente ao item "${itB.nome}"), porém no anexo o preço unitário correto deste produto é ${strRealA}.`;
+          }
+          break;
+        }
+      }
+    }
 
     // Reconciliação final do status geral com base no batimento dos itens auditados
     if (itens.length > 0) {
@@ -14888,10 +15117,17 @@ FORMATO OBRIGATÓRIO DE RESPOSTA (NÃO USE NEGRITO NAS CHAVES):
                     let corItem = "#fff";
                     let badgeItem = `<span style="color:#10b981; font-weight:bold;">✅ Bate 100%</span>`;
 
-                    if (it.status.includes("DIVERGENCIA_PRECO") || it.status.includes("DIVERGENTE")) {
+                    if (it.status.includes("DIVERGENCIA_PRECO") && it.status.includes("MARCA")) {
                       corItem = "#fca5a5";
-                      badgeItem = `<span style="background:rgba(239,68,68,0.2); color:#ef4444; padding:2px 8px; border-radius:8px; font-weight:bold;">🚨 Preço Divergente</span>`;
+                      badgeItem = `<span style="background:rgba(239,68,68,0.2); color:#ef4444; padding:2px 8px; border-radius:8px; font-weight:bold;">🚨 Preço + Marca Divergentes</span>`;
+                    } else if (it.status.includes("DIVERGENCIA_PRECO") || it.status.includes("DIVERGENTE")) {
+                      corItem = "#fca5a5";
+                      badgeItem = `<span style="background:rgba(239,68,68,0.2); color:#ef4444; padding:2px 8px; border-radius:8px; font-weight:bold;">🚨 ${it._precoTrocadoCom ? 'Preço Trocado' : 'Preço Divergente'}</span>`;
+                    } else if (it.status.includes("QTD")) {
+                      corItem = "#fca5a5";
+                      badgeItem = `<span style="background:rgba(239,68,68,0.2); color:#ef4444; padding:2px 8px; border-radius:8px; font-weight:bold;">🚨 Qtd Divergente</span>`;
                     } else if (it.status.includes("MARCA")) {
+                      corItem = "#fde68a";
                       badgeItem = `<span style="background:rgba(245,158,11,0.2); color:#f59e0b; padding:2px 8px; border-radius:8px; font-weight:bold;">⚠️ Marca Incompatível</span>`;
                     } else if (it.status.includes("NAO_COTADO") || it.status.includes("NAO_CONSTA_ANEXO") || it.status.includes("AUSENTE_ANEXO")) {
                       const temPrecoSis = it.precoSis && it.precoSis !== "-" && !it.precoSis.includes("0.00") && !it.precoSis.includes("0,00");
@@ -14915,7 +15151,7 @@ FORMATO OBRIGATÓRIO DE RESPOSTA (NÃO USE NEGRITO NAS CHAVES):
                           ${it.precoAnexo.startsWith("R$") ? it.precoAnexo : (it.precoAnexo !== '-' ? "R$ " + it.precoAnexo : "-")}
                         </td>
                         <td style="padding:10px; text-align:center; color:#ccc;">
-                          ${it.marcaSis || '-'} / <strong style="color:#fff;">${it.marcaAnexo || '-'}</strong>
+                          ${it.marcaSis || '-'} / <strong style="color:${it.status.includes('MARCA') ? '#ef4444' : '#fff'};">${it.marcaAnexo || '-'}</strong>
                         </td>
                         <td style="padding:10px; text-align:center;">
                           ${badgeItem}
@@ -18151,6 +18387,13 @@ linhas.forEach((tr, index) => {
 
           console.log(`📤 Perfilando upload: ${file.name} -> ${nomeLimpo} (${(file.size / 1024).toFixed(1)} KB)`);
 
+          // Sempre gera base64 para arquivos até 750KB para garantir leitura imediata pela Auditoria I.A. mesmo se o Storage tiver bloqueio de CORS
+          if (file.size < 750 * 1024) {
+            try {
+              anexoIndividual.base64 = await fileToBase64(file);
+            } catch (eb) {}
+          }
+
           if (typeof storage !== "undefined") {
             try {
               const timestamp = Date.now();
@@ -18175,8 +18418,9 @@ linhas.forEach((tr, index) => {
               // Fallback automático e silencioso — sem perguntar ao fornecedor
               if (file.size < 1024 * 1024) {
                 try {
-                  const base64Data = await fileToBase64(file);
-                  anexoIndividual.base64 = base64Data;
+                  if (!anexoIndividual.base64) {
+                    anexoIndividual.base64 = await fileToBase64(file);
+                  }
                   anexosArray.push(anexoIndividual);
                   console.log(`OK: Fallback base64 aplicado: ${file.name}`);
                 } catch (e2) {
@@ -18189,6 +18433,8 @@ linhas.forEach((tr, index) => {
                 anexosArray.push(anexoIndividual);
               }
             }
+          } else if (anexoIndividual.base64) {
+            anexosArray.push(anexoIndividual);
           }
         }
       }
@@ -19042,6 +19288,26 @@ linhas.forEach((tr, index) => {
       cot.prazoEncerrado = false;
       cot.reaberta = true; // 🟢 FLAG REABERTA
       cot.dataFechamento = agora.toLocaleString();
+      delete cot.decisoes;
+      delete cot.adjudicacao;
+
+      // 🧹 Limpa decisões antigas em cache para forçar recálculo automático de menor preço quando novos fornecedores responderem
+      const idCotReaberta = String(cot.numero || cot.id);
+      if (window.decisoesAnalise && window.decisoesAnalise[idCotReaberta]) {
+        delete window.decisoesAnalise[idCotReaberta];
+      }
+      try {
+        const decSalvas = JSON.parse(localStorage.getItem("decisoesAnalise")) || {};
+        if (decSalvas[idCotReaberta]) {
+          delete decSalvas[idCotReaberta];
+          localStorage.setItem("decisoesAnalise", JSON.stringify(decSalvas));
+        }
+        const decManuais = JSON.parse(localStorage.getItem("decisoesManuaisAnalise")) || {};
+        if (decManuais[idCotReaberta]) {
+          delete decManuais[idCotReaberta];
+          localStorage.setItem("decisoesManuaisAnalise", JSON.stringify(decManuais));
+        }
+      } catch (eDec) {}
 
               try {
             localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
@@ -19218,14 +19484,18 @@ linhas.forEach((tr, index) => {
     let tituloStatus = "Item Conforme";
     let iconeStatus = "fa-circle-check";
 
-    if (st.includes("DIVERGENCIA_QTD")) {
+    if (st.includes("DIVERGENCIA_PRECO") && st.includes("MARCA")) {
+      corStatus = "#ef4444";
+      tituloStatus = itemAud._precoTrocadoCom ? "Valores Trocados + Marca Divergente" : "Divergência de Preço e Marca";
+      iconeStatus = "fa-triangle-exclamation";
+    } else if (st.includes("DIVERGENCIA_QTD")) {
       corStatus = "#ef4444";
       tituloStatus = "Divergência de Quantidade";
       iconeStatus = "fa-triangle-exclamation";
     } else if (st.includes("DIVERGENCIA_PRECO")) {
-      corStatus = "#f59e0b";
-      tituloStatus = "Divergência / Desconto de Preço";
-      iconeStatus = "fa-tag";
+      corStatus = "#ef4444";
+      tituloStatus = itemAud._precoTrocadoCom ? "Valores Trocados / Invertidos" : "Divergência de Preço";
+      iconeStatus = "fa-triangle-exclamation";
     } else if (st.includes("DIVERGENCIA_MARCA")) {
       corStatus = "#a855f7";
       tituloStatus = "Divergência de Marca";
@@ -19652,6 +19922,82 @@ linhas.forEach((tr, index) => {
     let totalLinhasConformes = 0;
     const mapaStatusLinhas = {};
 
+    // 🔍 Helpers unificados para localizar item/preço do fornecedor e definir o vencedor real (1º lugar automático vs escolha manual explícita)
+    const parsePrecoItemHelper = (pItem) => {
+      if (!pItem) return 0;
+      const raw = pItem.preco !== undefined && pItem.preco !== "" ? pItem.preco : (pItem.valor !== undefined && pItem.valor !== "" ? pItem.valor : (pItem.precoUnitario || 0));
+      if (typeof raw === "number") return isNaN(raw) ? 0 : raw;
+      const limpo = String(raw).replace(/R\$/gi, "").replace(/\s/g, "");
+      const num = limpo.includes(",") && limpo.includes(".")
+        ? parseFloat(limpo.replace(/\./g, "").replace(",", "."))
+        : parseFloat(limpo.replace(",", "."));
+      return isNaN(num) ? 0 : num;
+    };
+
+    const buscarItemRespostaHelper = (r, idxItem, nItem, nProd) => {
+      const listaItens = r?.itens || [];
+      if (!Array.isArray(listaItens) || listaItens.length === 0) return null;
+      const nProdNorm = normalizarTexto(nProd);
+      const nItemNorm = normalizarTexto(nItem);
+      let achou = listaItens.find(it => {
+        const itProd = normalizarTexto(it.produto || "");
+        const itNome = normalizarTexto(it.nome || "");
+        const itDesc = normalizarTexto(it.descricao || "");
+        return (nProdNorm && (itProd === nProdNorm || itNome === nProdNorm || itDesc === nProdNorm)) ||
+               (nItemNorm && (itProd === nItemNorm || itNome === nItemNorm || itDesc === nItemNorm));
+      });
+      if (!achou) {
+        achou = listaItens.find(it => it.index !== undefined && Number(it.index) === Number(idxItem));
+      }
+      if (!achou && listaItens.length === produtos.length) {
+        achou = listaItens[idxItem] || null;
+      }
+      return achou || null;
+    };
+
+    const decisoesManuaisTodas = JSON.parse(localStorage.getItem("decisoesManuaisAnalise")) || {};
+    const decisoesManuaisCotacao = decisoesManuaisTodas[idCotacaoAtual] || {};
+    const statusTravadoDecisao = (cotacao.status === "aprovacao" || cotacao.status === "fechada" || cotacao.status === "finalizada");
+    if (!window._qtdRespostasAnalise) window._qtdRespostasAnalise = {};
+    window._qtdRespostasAnalise[idCotacaoAtual] = respostas.length;
+
+    const resolverEmailVencedorItem = (idxItem, precosOrdenados) => {
+      const keyIt = `item_${idxItem}`;
+      const melhor = precosOrdenados && precosOrdenados.length > 0 ? precosOrdenados[0] : null;
+      const decSalva = (window.decisoesAnalise?.[idCotacaoAtual]?.[keyIt]) || (cotacao.decisoes?.[keyIt]);
+      const metaManual = decisoesManuaisCotacao[keyIt];
+
+      let escolhido = null;
+      if (statusTravadoDecisao) {
+        escolhido = decSalva || (melhor ? melhor.email : null);
+      } else {
+        // Na Análise, só mantém uma escolha diferente do 1º colocado se o comprador alterou manualmente para o conjunto atual de respostas (ou marcou NAO_COMPRAR)
+        const manualValidoAtual = metaManual && metaManual.manual === true && Number(metaManual.qtdRespostas) === respostas.length;
+        if (manualValidoAtual && metaManual.email) {
+          escolhido = metaManual.email;
+        } else if ((decSalva === "NAO_COMPRAR" || decSalva === "nao_comprar") && (!cotacao.reaberta || manualValidoAtual)) {
+          escolhido = "NAO_COMPRAR";
+        } else {
+          escolhido = melhor ? melhor.email : null;
+        }
+
+        // Se o fornecedor escolhido não possui preço válido neste item (ex: não cotou), volta para o menor preço (1º colocado)
+        if (escolhido && escolhido !== "NAO_COMPRAR" && escolhido !== "nao_comprar") {
+          const existePrecoValido = (precosOrdenados || []).some(p => normalizarEmail(p.email) === normalizarEmail(escolhido));
+          if (!existePrecoValido) {
+            escolhido = melhor ? melhor.email : null;
+          }
+        }
+      }
+
+      if (escolhido) {
+        if (!window.decisoesAnalise) window.decisoesAnalise = {};
+        if (!window.decisoesAnalise[idCotacaoAtual]) window.decisoesAnalise[idCotacaoAtual] = {};
+        window.decisoesAnalise[idCotacaoAtual][keyIt] = escolhido;
+      }
+      return escolhido;
+    };
+
     produtos.forEach((prod, pIdx) => {
       const nomeItem = prod.nome || prod.descricao || ("Item " + (pIdx + 1));
       const nomeProd = prod.produto || nomeItem;
@@ -19661,32 +20007,17 @@ linhas.forEach((tr, index) => {
       let tipoDivLinha = "";
       let motivosDiv = [];
 
-      // 🏆 Identifica o fornecedor Vencedor deste item (ou melhor preço como padrão)
-      const keyItem = `item_${pIdx}`;
-      let emailEscolhido = (window.decisoesAnalise?.[cotacao.numero || cotacao.id]?.[keyItem]) ||
-                           (cotacao.decisoes?.[keyItem]);
-
-      if (!emailEscolhido) {
-        // Encontra o fornecedor com o menor preço para este item
-        let menorVal = Infinity;
-        let melhorEmail = null;
-        respostas.forEach(r => {
-          const itR = (r.itens || []).find(it =>
-            normalizarTexto(it.produto) === normalizarTexto(nomeProd) ||
-            normalizarTexto(it.nome) === normalizarTexto(nomeProd) ||
-            normalizarTexto(it.produto) === normalizarTexto(nomeItem) ||
-            normalizarTexto(it.nome) === normalizarTexto(nomeItem)
-          );
-          if (itR) {
-            const v = Number(itR.preco || itR.valor || itR.precoUnitario || 0);
-            if (v > 0 && v < menorVal) {
-              menorVal = v;
-              melhorEmail = r.email;
-            }
-          }
-        });
-        emailEscolhido = melhorEmail;
-      }
+      // 🏆 Identifica o fornecedor Vencedor deste item (menor preço 1º lugar por padrão, ou decisão manual válida)
+      const precosLinhaSemaforo = [];
+      respostas.forEach((r, rIdx) => {
+        const itR = buscarItemRespostaHelper(r, pIdx, nomeItem, nomeProd);
+        const v = parsePrecoItemHelper(itR);
+        if (v > 0) {
+          precosLinhaSemaforo.push({ fornecedor: r.fornecedor, email: r.email, val: v, rIdx });
+        }
+      });
+      precosLinhaSemaforo.sort((a, b) => a.val - b.val);
+      let emailEscolhido = resolverEmailVencedorItem(pIdx, precosLinhaSemaforo);
 
       if (dadosAuditoriaSalva && Array.isArray(dadosAuditoriaSalva) && dadosAuditoriaSalva.length > 0) {
         // 🎯 PRIORIDADE MÁXIMA: Auditar a proposta do FORNECEDOR VENCEDOR
@@ -19700,7 +20031,11 @@ linhas.forEach((tr, index) => {
           const itemAudVenc = buscarItemAuditoriaHelper(audVencedor.dados.itens, pIdx, nomeItem, nomeProd);
           if (itemAudVenc) {
             const stVenc = (itemAudVenc.status || "OK").toUpperCase();
-            if (stVenc.includes("DIVERGENCIA_PRECO")) {
+            if (stVenc.includes("DIVERGENCIA_PRECO") && stVenc.includes("MARCA")) {
+              stLinha = "divergencia";
+              tipoDivLinha = "PRECO_MARCA";
+              motivosDiv.push(`${audVencedor.fornecedor || 'Vencedor'}: Preço (${itemAudVenc.precoAnexo || '-'}) e Marca (${itemAudVenc.marcaAnexo || '-'}) divergem no anexo`);
+            } else if (stVenc.includes("DIVERGENCIA_PRECO")) {
               stLinha = "divergencia";
               tipoDivLinha = "PRECO";
               motivosDiv.push(`${audVencedor.fornecedor || 'Vencedor'}: Preço no anexo ${itemAudVenc.precoAnexo || '-'} diverge do digitado ${itemAudVenc.precoSis || '-'}`);
@@ -19719,28 +20054,30 @@ linhas.forEach((tr, index) => {
           }
         }
 
-        // Se o vencedor não teve divergência explícita ou não foi encontrado, verifica se algum outro fornecedor participante tem divergência
-        if (stLinha !== "divergencia") {
-          let temOutraDivergencia = false;
-          dadosAuditoriaSalva.forEach(audForn => {
-            if (audForn && audForn.dados && Array.isArray(audForn.dados.itens)) {
-              const itemAudOutro = buscarItemAuditoriaHelper(audForn.dados.itens, pIdx, nomeItem, nomeProd);
-              if (itemAudOutro) {
-                const stO = (itemAudOutro.status || "OK").toUpperCase();
-                if (stO.includes("DIVERGENCIA_PRECO") || stO.includes("DIVERGENCIA_QTD") || stO.includes("DIVERGENCIA_MARCA")) {
-                  temOutraDivergencia = true;
-                  const tipo = stO.includes("PRECO") ? "PRECO" : (stO.includes("QTD") ? "QTD" : "MARCA");
-                  motivosDiv.push(`${audForn.fornecedor || 'Fornecedor'}: ${itemAudOutro.resumoCelula || stO}`);
-                }
+        // Verifica também se qualquer outro fornecedor participante na linha possui divergência para alertar o comprador no semáforo da linha
+        let temOutraDivergencia = false;
+        let tipoOutraDiv = "PRECO";
+        dadosAuditoriaSalva.forEach(audForn => {
+          if (audForn && audForn.dados && Array.isArray(audForn.dados.itens)) {
+            if (audVencedor && audForn === audVencedor) return;
+            const itemAudOutro = buscarItemAuditoriaHelper(audForn.dados.itens, pIdx, nomeItem, nomeProd);
+            if (itemAudOutro) {
+              const stO = (itemAudOutro.status || "OK").toUpperCase();
+              if (stO.includes("DIVERGENCIA_PRECO") || stO.includes("DIVERGENCIA_QTD") || stO.includes("DIVERGENCIA_MARCA")) {
+                temOutraDivergencia = true;
+                if (stO.includes("PRECO") && stO.includes("MARCA")) tipoOutraDiv = "PRECO_MARCA";
+                else if (stO.includes("PRECO")) tipoOutraDiv = "PRECO";
+                else if (stO.includes("QTD")) tipoOutraDiv = "QTD";
+                else if (stO.includes("MARCA")) tipoOutraDiv = "MARCA";
+                motivosDiv.push(`${audForn.fornecedor || 'Fornecedor'}: ${itemAudOutro.resumoCelula || stO}`);
               }
             }
-          });
-
-          // Se o vencedor não foi auditado mas outros foram, aponta a divergência
-          if (!audVencedor && temOutraDivergencia) {
-            stLinha = "divergencia";
-            tipoDivLinha = "PRECO";
           }
+        });
+
+        if (stLinha !== "divergencia" && temOutraDivergencia) {
+          stLinha = "divergencia";
+          tipoDivLinha = tipoOutraDiv;
         }
       }
 
@@ -19865,14 +20202,9 @@ linhas.forEach((tr, index) => {
 
       let precosRow = [];
       respostas.forEach((r, rIdx) => {
-        const pItem = (r.itens || []).find(it =>
-          normalizarTexto(it.produto) === normalizarTexto(nomeProd) ||
-          normalizarTexto(it.nome) === normalizarTexto(nomeProd) ||
-          normalizarTexto(it.produto) === normalizarTexto(nomeItem) ||
-          normalizarTexto(it.nome) === normalizarTexto(nomeItem)
-        );
+        const pItem = buscarItemRespostaHelper(r, idx, nomeItem, nomeProd);
         if (pItem) {
-          let valor = Number(pItem.preco || pItem.valor || pItem.precoUnitario || 0);
+          let valor = parsePrecoItemHelper(pItem);
           if (valor > 0) {
             precosRow.push({ fornecedor: r.fornecedor, email: r.email, val: valor, rIdx: rIdx });
             totaisBrutos[rIdx] += (valor * qtd);
@@ -19883,10 +20215,9 @@ linhas.forEach((tr, index) => {
 
       const melhorPreco = precosRow.length > 0 ? precosRow[0] : null;
 
-      // 🏆 LÓGICA DE VENCEDOR PARA O RODAPÉ (COM SUPORTE A "NÃO COMPRAR")
+      // 🏆 LÓGICA DE VENCEDOR PARA O RODAPÉ (1º COLOCADO AUTOMÁTICO OU ESCOLHA MANUAL VÁLIDA)
       const keyItem = `item_${idx}`;
-      let emailEscolhido = (window.decisoesAnalise?.[cotacao.numero || cotacao.id]?.[keyItem]) ||
-        (cotacao.decisoes?.[keyItem]);
+      let emailEscolhido = resolverEmailVencedorItem(idx, precosRow);
 
       const motivosArmazenados = JSON.parse(localStorage.getItem('motivosNaoComprar')) || {};
       const motivosCotacao = cotacao.motivosNaoComprar || motivosArmazenados[cotacao.numero || cotacao.id] || {};
@@ -19894,24 +20225,12 @@ linhas.forEach((tr, index) => {
 
       const ehNaoComprar = (emailEscolhido === "NAO_COMPRAR" || emailEscolhido === "nao_comprar");
 
-      if (!emailEscolhido && melhorPreco) {
-        emailEscolhido = melhorPreco.email;
-        if (!window.decisoesAnalise) window.decisoesAnalise = {};
-        if (!window.decisoesAnalise[cotacao.numero || cotacao.id]) window.decisoesAnalise[cotacao.numero || cotacao.id] = {};
-        window.decisoesAnalise[cotacao.numero || cotacao.id][keyItem] = emailEscolhido;
-      }
-
       // Se for NÃO COMPRAR, NÃO soma nada no total do fornecedor nem no total da compra!
       if (emailEscolhido && !ehNaoComprar) {
         const winRes = precosRow.find(p => normalizarEmail(p.email) === normalizarEmail(emailEscolhido));
         if (winRes) {
           valorGanhando[winRes.rIdx] += (winRes.val * qtd);
-        }
-      }
-      if (emailEscolhido && !ehNaoComprar) {
-        const winRes2 = precosRow.find(p => normalizarEmail(p.email) === normalizarEmail(emailEscolhido));
-        if (winRes2) {
-          totalMenorPrecoGeral += (winRes2.val * qtd);
+          totalMenorPrecoGeral += (winRes.val * qtd);
         }
       } else if (!emailEscolhido && melhorPreco) {
         totalMenorPrecoGeral += (melhorPreco.val * qtd);
@@ -19924,8 +20243,11 @@ linhas.forEach((tr, index) => {
 
       let badgeSemaforoLinha = "";
       if (ehDivergenciaLinha) {
-        const iconDiv = (infoLinha.tipo === 'QTD') ? 'fa-triangle-exclamation' : 'fa-tag';
-        const txtDiv = (infoLinha.tipo === 'QTD') ? '🚨 Atenção: Divergência de Quantidade' : '⚠️ Atenção: Preço Divergente';
+        const iconDiv = (infoLinha.tipo === 'QTD' || infoLinha.tipo === 'PRECO_MARCA') ? 'fa-triangle-exclamation' : 'fa-tag';
+        let txtDiv = '⚠️ Atenção: Preço Divergente';
+        if (infoLinha.tipo === 'QTD') txtDiv = '🚨 Atenção: Divergência de Quantidade';
+        else if (infoLinha.tipo === 'PRECO_MARCA') txtDiv = '🚨 Atenção: Preço e Marca Divergentes';
+        else if (infoLinha.tipo === 'MARCA') txtDiv = '⚠️ Atenção: Marca Divergente';
         badgeSemaforoLinha = `<span style="background:rgba(239,68,68,0.22); border:1px solid #ef4444; color:#fca5a5; padding:2px 8px; border-radius:12px; font-size:10px; font-weight:bold; display:inline-flex; align-items:center; gap:4px; box-shadow:0 0 8px rgba(239,68,68,0.2);" title="${infoLinha.motivos.join(' | ')}"><i class="fa-solid ${iconDiv}" style="color:#ef4444;"></i> ${txtDiv}</span>`;
       } else if (ehConformeLinha) {
         badgeSemaforoLinha = `<span style="background:rgba(16,185,129,0.15); border:1px solid #10b981; color:#6ee7b7; padding:2px 8px; border-radius:12px; font-size:10px; font-weight:bold; display:inline-flex; align-items:center; gap:4px;"><i class="fa-solid fa-circle-check" style="color:#10b981;"></i> 100% Conforme</span>`;
@@ -19953,19 +20275,14 @@ linhas.forEach((tr, index) => {
                    ${(nomeProd !== nomeItem && nomeProd) ? `<div style="font-size:12px; color:#888;">${nomeProd}</div>` : ''}
                    ${(ehNaoComprar && motivoItem) ? `<div style="font-size:11px; color:#f87171; margin-top:3px;"><i class="fa-solid fa-circle-exclamation"></i> Motivo: ${motivoItem}</div>` : ''}
                </td>
-               <td style="text-align:center; color:#ccc;" class="col-fixa-2">${prod.marca || "-"}</td>
+               <td style="text-align:center; color:#ccc;" class="col-fixa-2">${(prod.marca && prod.marca !== "undefined" && prod.marca !== "null") ? prod.marca : "-"}</td>
                <td style="text-align:center; color:#ccc;" class="col-fixa-emb">${prod.embalagem || "Unidade"}</td>
                <td style="text-align:center; color:#ccc;" class="col-fixa-3">${qtd}</td>`;
 
       respostas.forEach(r => {
-        const pItem = (r.itens || []).find(it =>
-          normalizarTexto(it.produto) === normalizarTexto(nomeProd) ||
-          normalizarTexto(it.nome) === normalizarTexto(nomeProd) ||
-          normalizarTexto(it.produto) === normalizarTexto(nomeItem) ||
-          normalizarTexto(it.nome) === normalizarTexto(nomeItem)
-        );
-        const valor = pItem ? (Number(pItem.preco) || Number(pItem.valor) || 0) : 0;
-        const rankIndex = precosRow.findIndex(x => x.email === r.email);
+        const pItem = buscarItemRespostaHelper(r, idx, nomeItem, nomeProd);
+        const valor = parsePrecoItemHelper(pItem);
+        const rankIndex = precosRow.findIndex(x => normalizarEmail(x.email) === normalizarEmail(r.email));
 
         let badge = "";
         let textColor = "#fff";
@@ -19994,21 +20311,29 @@ linhas.forEach((tr, index) => {
               const parecerEsc = (itemAud.parecer || "").replace(/"/g, '&quot;');
               const clickAction = `onclick="window.abrirDetalheAuditoriaItem('${idCotacaoAtual}', '${r.email}', ${idx})"`;
 
-              if (st.includes("DIVERGENCIA_QTD")) {
+              if (st.includes("DIVERGENCIA_PRECO") && st.includes("MARCA")) {
+                const txt = resumo || `Anexo: ${itemAud.precoAnexo || '-'} | Marca: ${itemAud.marcaAnexo || '-'}`;
+                badgeAuditoriaItem = `<div ${clickAction} style="margin-top:6px; background:rgba(239,68,68,0.25); border:1px solid #ef4444; color:#fca5a5; font-size:10px; font-weight:bold; padding:3px 7px; border-radius:5px; display:inline-flex; align-items:center; gap:4px; cursor:pointer; max-width:195px; text-align:left; line-height:1.2;" title="${parecerEsc}"><i class="fa-solid fa-triangle-exclamation" style="color:#ef4444;"></i> ${txt}</div>`;
+              } else if (st.includes("DIVERGENCIA_QTD")) {
                 const txt = resumo || (itemAud.qtdAnexo && itemAud.qtdAnexo !== "-" ? `Qtd anexo: ${itemAud.qtdAnexo} (pediu ${qtd})` : `Qtd diverge do pedido`);
                 badgeAuditoriaItem = `<div ${clickAction} style="margin-top:6px; background:rgba(239,68,68,0.22); border:1px solid #ef4444; color:#fca5a5; font-size:10px; font-weight:bold; padding:3px 7px; border-radius:5px; display:inline-flex; align-items:center; gap:4px; cursor:pointer; max-width:180px; text-align:left; line-height:1.2;" title="${parecerEsc}"><i class="fa-solid fa-triangle-exclamation" style="color:#ef4444;"></i> ${txt}</div>`;
               } else if (st.includes("DIVERGENCIA_PRECO")) {
                 const txt = resumo || (itemAud.precoAnexo && itemAud.precoAnexo !== "-" ? `Anexo: ${itemAud.precoAnexo}` : `Preço difere do anexo`);
-                badgeAuditoriaItem = `<div ${clickAction} style="margin-top:6px; background:rgba(245,158,11,0.22); border:1px solid #f59e0b; color:#fde68a; font-size:10px; font-weight:bold; padding:3px 7px; border-radius:5px; display:inline-flex; align-items:center; gap:4px; cursor:pointer; max-width:180px; text-align:left; line-height:1.2;" title="${parecerEsc}"><i class="fa-solid fa-tag" style="color:#f59e0b;"></i> ${txt}</div>`;
+                const isTrocado = !!itemAud._precoTrocadoCom || txt.toLowerCase().includes("trocad");
+                const bgPreco = isTrocado ? "rgba(239,68,68,0.24)" : "rgba(245,158,11,0.22)";
+                const borderPreco = isTrocado ? "#ef4444" : "#f59e0b";
+                const colorPreco = isTrocado ? "#fca5a5" : "#fde68a";
+                const iconPreco = isTrocado ? "fa-triangle-exclamation" : "fa-tag";
+                badgeAuditoriaItem = `<div ${clickAction} style="margin-top:6px; background:${bgPreco}; border:1px solid ${borderPreco}; color:${colorPreco}; font-size:10px; font-weight:bold; padding:3px 7px; border-radius:5px; display:inline-flex; align-items:center; gap:4px; cursor:pointer; max-width:190px; text-align:left; line-height:1.2;" title="${parecerEsc}"><i class="fa-solid ${iconPreco}" style="color:${borderPreco};"></i> ${txt}</div>`;
               } else if (st.includes("DIVERGENCIA_MARCA")) {
-                const txt = resumo || `Marca diverge`;
-                badgeAuditoriaItem = `<div ${clickAction} style="margin-top:6px; background:rgba(168,85,247,0.22); border:1px solid #a855f7; color:#d8b4fe; font-size:10px; font-weight:bold; padding:3px 7px; border-radius:5px; display:inline-flex; align-items:center; gap:4px; cursor:pointer; max-width:180px; text-align:left; line-height:1.2;" title="${parecerEsc}"><i class="fa-solid fa-tag" style="color:#c084fc;"></i> ${txt}</div>`;
+                const txt = resumo || `Marca: ${itemAud.marcaAnexo || 'Difere'}`;
+                badgeAuditoriaItem = `<div ${clickAction} style="margin-top:6px; background:rgba(168,85,247,0.22); border:1px solid #a855f7; color:#d8b4fe; font-size:10px; font-weight:bold; padding:3px 7px; border-radius:5px; display:inline-flex; align-items:center; gap:4px; cursor:pointer; max-width:185px; text-align:left; line-height:1.2;" title="${parecerEsc}"><i class="fa-solid fa-tag" style="color:#c084fc;"></i> ${txt}</div>`;
               } else if (st.includes("MATERIAL_OK") || st === "OK") {
                 const txt = resumo || `Anexo 100% OK`;
-                const isDesc = (resumo && resumo.toLowerCase().includes("desc")) || (parecerEsc && parecerEsc.toLowerCase().includes("desc"));
+                const isDesc = /\bc\/\s*desc\b|\bcom\s+desconto\b|\bdesconto\s+comercial\b/i.test(resumo + " " + parecerEsc);
                 const corBadge = isDesc ? "#3ab9b6" : "#10b981";
                 const bgBadge = isDesc ? "rgba(58,185,182,0.18)" : "rgba(16,185,129,0.16)";
-                const iconeBadge = isDesc ? "fa-circle-check" : "fa-circle-check";
+                const iconeBadge = "fa-circle-check";
                 badgeAuditoriaItem = `<div ${clickAction} style="margin-top:6px; background:${bgBadge}; border:1px solid ${corBadge}; color:#fff; font-size:10px; font-weight:bold; padding:3px 7px; border-radius:5px; display:inline-flex; align-items:center; gap:4px; cursor:pointer; max-width:180px; text-align:left; line-height:1.2;" title="${parecerEsc}"><i class="fa-solid ${iconeBadge}" style="color:${corBadge};"></i> ${txt}</div>`;
               } else if (st.includes("NAO_COTADO") || st.includes("NAO_CONSTA_ANEXO") || st.includes("AUSENTE_ANEXO")) {
                 if (valor > 0) {
@@ -20330,7 +20655,28 @@ linhas.forEach((tr, index) => {
       const cot = cotacoes[index];
       cot.status = 'aberta';
       cot.prazoEncerrado = false;
+      cot.reaberta = true;
       cot.dataFechamento = dataFechamentoFormatada;
+      delete cot.decisoes;
+      delete cot.adjudicacao;
+
+      // 🧹 Limpa decisões antigas em cache para forçar recálculo automático de menor preço quando novos fornecedores responderem
+      const idCotReaberta = String(cot.numero || cot.id);
+      if (window.decisoesAnalise && window.decisoesAnalise[idCotReaberta]) {
+        delete window.decisoesAnalise[idCotReaberta];
+      }
+      try {
+        const decSalvas = JSON.parse(localStorage.getItem("decisoesAnalise")) || {};
+        if (decSalvas[idCotReaberta]) {
+          delete decSalvas[idCotReaberta];
+          localStorage.setItem("decisoesAnalise", JSON.stringify(decSalvas));
+        }
+        const decManuais = JSON.parse(localStorage.getItem("decisoesManuaisAnalise")) || {};
+        if (decManuais[idCotReaberta]) {
+          delete decManuais[idCotReaberta];
+          localStorage.setItem("decisoesManuaisAnalise", JSON.stringify(decManuais));
+        }
+      } catch (eDec) {}
 
               try {
             localStorage.setItem("cotacoes", JSON.stringify(cotacoes));
@@ -20478,6 +20824,20 @@ linhas.forEach((tr, index) => {
     // 2. Salva usando a chave por INDEX (item_0, item_1...)
     decisoes[numeroCotacao][keyItem] = emailFornecedor;
     localStorage.setItem('decisoesAnalise', JSON.stringify(decisoes));
+
+    // 2.1. Registra que esta decisão foi alterada MANUALMENTE pelo comprador para a quantidade atual de respostas
+    try {
+      let decisoesManuais = JSON.parse(localStorage.getItem('decisoesManuaisAnalise')) || {};
+      if (!decisoesManuais[numeroCotacao]) decisoesManuais[numeroCotacao] = {};
+      const qtdRespAtual = (window._qtdRespostasAnalise && window._qtdRespostasAnalise[numeroCotacao]) || 0;
+      decisoesManuais[numeroCotacao][keyItem] = {
+        email: emailFornecedor,
+        manual: true,
+        qtdRespostas: qtdRespAtual,
+        timestamp: Date.now()
+      };
+      localStorage.setItem('decisoesManuaisAnalise', JSON.stringify(decisoesManuais));
+    } catch (eMan) {}
 
     // Atualiza memória
     if (!window.decisoesAnalise) window.decisoesAnalise = {};
