@@ -263,13 +263,46 @@
        A tela inicial de login e autocadastro é SEMPRE no estilo original.
        As cores de tema só mudam na parte interna do sistema.
        ======================================================== */
-    body:has(#login-container:not([style*="display: none"])),
-    body:has(#trabalhe-conosco:not([style*="display: none"])) {
+    body {
+      background-color: var(--fundo);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    #login-container::before {
+      content: "";
+      position: fixed;
+      right: -420px;
+      bottom: -460px;
+      width: 1100px;
+      height: 1100px;
+      background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 720 720'%3E%3Cg fill='none' stroke='%233A2034' stroke-width='1.5'%3E%3Ccircle cx='360' cy='360' r='358'/%3E%3Ccircle cx='360' cy='360' r='270'/%3E%3Ccircle cx='360' cy='360' r='180'/%3E%3C/g%3E%3C/svg%3E") no-repeat center / contain;
+      opacity: 0.6;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    #login-container[style*="display: none"]::before,
+    #login-container[style*="display:none"]::before {
+      display: none !important;
+      content: none !important;
+    }
+
+    body:has(#login-container:not([style*="display: none"]):not([style*="display:none"])) {
+      background-color: #170E15 !important;
+      color: #ffffff !important;
+    }
+
+    body:has(#trabalhe-conosco:not([style*="display: none"]):not([style*="display:none"])) {
       background-color: #000000 !important;
       color: #ffffff !important;
     }
 
-    #login-container,
+    #login-container {
+      background-color: #170E15 !important;
+      color: #ffffff !important;
+    }
+
     #trabalhe-conosco {
       background-color: #000000 !important;
       color: #ffffff !important;
@@ -1706,6 +1739,8 @@
     }
 
     .login-box {
+      position: relative;
+      z-index: 1;
       background: #111;
       box-shadow: 0 0 15px rgba(102, 17, 85, 0.5);
       border-radius: 8px;
